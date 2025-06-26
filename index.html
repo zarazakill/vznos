@@ -1,0 +1,192 @@
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Квитанция СНТ «Березка-2»</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- QR code library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-container">
+                <img src="logo.png" alt="Квитанция Онлайн" class="logo-img">
+                <h1>Оплата взносов СНТ «Березка-2»</h1>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="form-container">
+                <form id="paymentForm" class="payment-form">
+                    <section class="form-section">
+                        <h2><span class="section-number">1</span> Ваши данные</h2>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="plotNumber">№ участка*</label>
+                                <input type="text" id="plotNumber" name="plotNumber" placeholder="123А" required pattern="[0-9]+[А-Яа-я]?" class="highlight-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="payerName">ФИО плательщика*</label>
+                                <input type="text" id="payerName" name="payerName" placeholder="Иванов Иван Иванович" required>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section">
+                        <h2><span class="section-number">2</span> Тип платежа</h2>
+                        <div class="payment-types">
+                            <div class="payment-type-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="paymentType[]" value="Членские взносы" id="membershipCheck" checked>
+                                    Членские взносы (1400 руб/сотка)
+                                </label>
+                                <div class="form-group payment-amount" id="membershipAmount">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="plotSotkas">Размер участка (соток)</label>
+                                            <input type="number" id="plotSotkas" name="plotSotkas" step="0.01" min="0" placeholder="6.00">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="membershipSum">Сумма (руб.)</label>
+                                            <input type="number" id="membershipSum" name="membershipSum" step="0.01" min="0" placeholder="8400.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="payment-type-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="paymentType[]" value="Целевые взносы" id="targetCheck">
+                                    Целевые взносы
+                                </label>
+                                <div class="form-group payment-amount" id="targetAmount" style="display:none;">
+                                    <label for="targetSum">Сумма (руб.)</label>
+                                    <input type="number" id="targetSum" name="targetSum" step="0.01" min="0" placeholder="1000.00">
+                                </div>
+                            </div>
+
+                            <div class="payment-type-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="paymentType[]" value="Электроэнергия" id="electricityCheck">
+                                    Электроэнергия (3.50 руб/кВт·ч)
+                                </label>
+                                <div id="electricityInputs" style="display:none;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="meterReadingPrev">Предыдущие показания (кВт)</label>
+                                            <input type="number" id="meterReadingPrev" name="meterReadingPrev" placeholder="Например, 1500" min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="meterReadingCurr">Текущие показания (кВт)</label>
+                                            <input type="number" id="meterReadingCurr" name="meterReadingCurr" placeholder="Например, 1650" min="0" step="1">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="electricitySumInput">Сумма (руб.)</label>
+                                        <input type="number" id="electricitySumInput" name="electricitySumInput" step="0.01" min="0" placeholder="500.00">
+                                    </div>
+                                    <div class="electricity-calc">
+                                        Расход: <span id="kwhUsed">0</span> кВт
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section">
+                        <h2><span class="section-number">3</span> Детализация платежей</h2>
+                        <div class="payment-breakdown">
+                            <div class="breakdown-item" id="membershipBreakdown" style="display:none;">
+                                <span class="breakdown-label">Членские взносы:</span>
+                                <span class="breakdown-amount" id="membershipDisplay">0.00 руб.</span>
+                            </div>
+                            <div class="breakdown-item" id="targetBreakdown" style="display:none;">
+                                <span class="breakdown-label">Целевые взносы:</span>
+                                <span class="breakdown-amount" id="targetDisplay">0.00 руб.</span>
+                            </div>
+                            <div class="breakdown-item" id="electricityBreakdown" style="display:none;">
+                                <span class="breakdown-label">Электроэнергия:</span>
+                                <span class="breakdown-amount" id="electricityDisplay">0.00 руб.</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="form-section">
+                        <h2><span class="section-number">4</span> Итоговая сумма</h2>
+                        <div class="form-group total-amount">
+                            <label>Общая сумма к оплате:</label>
+                            <div id="totalAmount">0.00 руб.</div>
+                        </div>
+                    </section>
+
+                    <div class="form-footer">
+                        <button type="submit" class="submit-btn">
+                            <span class="btn-text">Сформировать квитанцию</span>
+                            <span class="btn-icon">→</span>
+                        </button>
+                        <button type="button" class="submit-btn qr-code-btn" id="generateQrBtn">
+                            <span class="btn-text">Сформировать QR-код</span>
+                            <span class="btn-icon"></span>
+                        </button>
+                        <button type="button" class="submit-btn sbp-btn" id="paySberbankBtn">
+                            <span class="btn-text">Оплатить через Сбербанк Онлайн (СПБ)</span>
+                            <span class="btn-icon"></span>
+                        </button>
+                        <p class="required-hint">* Поля, обязательные для заполнения</p>
+                    </div>
+                </form>
+            </div>
+
+            <div class="info-container">
+                <div class="info-card">
+                    <h3>Реквизиты для оплаты</h3>
+                    <div class="requisites">
+                        <p><strong id="requisitesRecipient">Получатель:</strong> СНТ «Березка-2»</p>
+                        <p><strong id="requisitesINN">ИНН:</strong> 5433118499</p>
+                        <p><strong id="requisitesKPP">КПП:</strong> 543301001</p>
+                        <p><strong id="requisitesBank">Банк:</strong> Сибирский Банк ПАО Сбербанк</p>
+                        <p><strong id="requisitesRS">Р/с:</strong> 40703810644050040322</p>
+                        <p><strong id="requisitesBIK">БИК:</strong> 045004641</p>
+                        <p><strong id="requisitesKS">Кор.счет:</strong> 30101810500000000641</p>
+                    </div>
+                </div>
+
+                <div class="info-card qr-card">
+                    <h3>QR-код для оплаты</h3>
+                    <canvas id="qrCanvas" class="qr-code-img"></canvas>
+                    <button id="downloadQrBtn" class="download-btn" disabled>Скачать QR-код</button>
+                    <p>Отсканируйте для быстрой оплаты</p>
+                </div>
+
+                <div class="info-card contacts">
+                    <h3>Контакты</h3>
+                    <p><strong>Председатель:</strong> Чернов Владимир Борисович</p>
+                    <p><strong>Телефон:</strong> +7 (913) 921-31-15</p>
+                    <p><strong>Email:</strong> info@snt-berezka2.ru</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Модальное окно для квитанции -->
+        <div id="receiptModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div id="receiptContentWrapper">
+                    <div id="receiptContent" class="receipt-container">
+                        <!-- Содержимое квитанции будет здесь -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="printBtn" class="action-btn">Печать</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Подключаем библиотеки -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
+        <script src="app.js"></script>
+    </div>
+</body>
+</html>
