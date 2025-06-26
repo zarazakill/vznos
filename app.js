@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_QR_CANVAS = 'qrCanvas'; // New QR Canvas ID
     const ELEM_DOWNLOAD_QR_BTN = 'downloadQrBtn'; // New Download Button ID
     const ELEM_PAY_SBERBANK_BTN = 'paySberbankBtn'; // New Sberbank Online button
+    const ELEM_SBERBANK_LINK_DISPLAY = 'sberbankLinkDisplay'; // New element for Sberbank link display
 
     // Elements for form
     const paymentForm = document.getElementById('paymentForm');
@@ -38,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const printBtn = document.getElementById(ELEM_PRINT_BTN);
     const generateQrBtn = document.getElementById(ELEM_GENERATE_QR_BTN); // New QR button
     const paySberbankBtn = document.getElementById(ELEM_PAY_SBERBANK_BTN); // New Sberbank Online button
+    const sberbankLinkDisplay = document.getElementById(ELEM_SBERBANK_LINK_DISPLAY); // Get reference to the new element
 
     // QR code elements
     const qrCanvas = document.getElementById(ELEM_QR_CANVAS);
@@ -302,6 +304,8 @@ document.addEventListener('DOMContentLoaded', function() {
         membershipBreakdown.style.display = membershipCheck.checked ? 'flex' : 'none';
         targetBreakdown.style.display = targetCheck.checked ? 'flex' : 'none';
         electricityBreakdown.style.display = electricityCheck.checked ? 'flex' : 'none';
+        
+        sberbankLinkDisplay.style.display = 'none'; // Hide Sberbank link display on form changes
         
         calculateTotal(); // Final total calculation after initial states
     };
@@ -797,186 +801,287 @@ document.addEventListener('DOMContentLoaded', function() {
     // QR code generation handler (for the main page QR display)
     generateQrBtn.addEventListener('click', displayQrCodeOnCanvas);
 
-    // Sberbank Online payment link handler - улучшенная версия
+    // Улучшенный обработчик для Сбербанк Онлайн с поддержкой разных схем URL
     paySberbankBtn.addEventListener('click', async function(event) {
         event.preventDefault();
         
-        // Блокировка кнопки и индикация загрузки
-        const btn = this;
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Подготовка платежа...';
-
+        const originalText = this.textContent;
+        this.disabled = true;
+        this.textContent = 'Подготовка платежа...';
+        sberbankLinkDisplay.style.display = 'none'; // Hide previous links
+        
         try {
-            // Валидация формы
             const formData = validateForm();
-            if (!formData) throw new Error('Проверьте заполнение формы');
-
-            // Формирование данных платежа
-            const paymentData = {
-                recipient: REQUISITES.Name,
-                account: REQUISITES.PersonalAcc,
-                bik: REQUISITES.BIC,
-                inn: REQUISITES.PayeeINN,
-                kpp: REQUISITES.KPP,
-                amount: formData.totalAmount.toFixed(2),
-                purpose: buildPaymentPurpose(formData)
-            };
-
-            // Генерация URL
-            const { deepLink, webUrl } = generatePaymentUrls(paymentData);
+            if (!formData) {
+                throw new Error('Ошибка валидации формы');
+            }
             
-            // Определение платформы
-            const platform = detectPlatform();
+            // Справочник корр. счетов по БИК
+            const BIK_TO_COR_ACCOUNT = {
+                '045004641': '30101810500000000641', // Сбербанк Новосибирск (Existing one in REQUISITES)
+                '044525225': '30101810400000000225', // Сбербанк Москва
+                '044030653': '30101810500000000653', // Сбербанк СПб
+                '046577674': '30101810200000000674', // Сбербанк Екатеринбург
+                // Добавьте другие БИК при необходимости
+            };
+            
+            // Получаем корр. счет
+            const getCorrespondentAccount = (bik) => {
+                return BIK_TO_COR_ACCOUNT[bik] || '';
+            };
+            
+            // Формируем назначение платежа
+            const formatPaymentPurpose = (formData) => {
+                const parts = [];
+                
+                if (formData.membershipSum > 0) {
+                    parts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.`);
+                }
+                
+                if (formData.targetSum > 0) {
+                    parts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.`);
+                }
+                
+                if (formData.electricitySum > 0) {
+                    const kwh = parseFloat(kwhUsedElement.textContent) || 0;
+                    parts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. (${kwh} кВт)`);
+                }
+                
+                const purposeText = parts.join(', ');
+                const fullPurpose = `${purposeText} за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
+                
+                // Проверяем длину (макс. 210 символов для Сбербанка)
+                if (fullPurpose.length > 210) {
+                    console.warn('Назначение платежа превышает 210 символов:', fullPurpose.length);
+                    // Сокращаем если нужно
+                    const shortPurpose = `Платежи за уч. № ${formData.plotNumber}, сумма: ${formData.totalAmount.toFixed(2)} руб., ${formData.payerName}`;
+                    return shortPurpose.length <= 210 ? shortPurpose : shortPurpose.substring(0, 207) + '...';
+                }
+                
+                return fullPurpose;
+            };
+            
+            // Подготавливаем параметры
+            const paymentParams = {
+                recipientName: REQUISITES.Name,
+                recipientAccount: REQUISITES.PersonalAcc,
+                recipientBankBik: REQUISITES.BIC,
+                recipientBankName: REQUISITES.BankName || 'ПАО Сбербанк',
+                recipientCorAccount: getCorrespondentAccount(REQUISITES.BIC),
+                recipientInn: REQUISITES.PayeeINN || '',
+                recipientKpp: REQUISITES.KPP || '',
+                paymentAmount: formData.totalAmount.toFixed(2),
+                paymentPurpose: formatPaymentPurpose(formData)
+            };
+            
+            // Проверяем обязательные поля
+            const requiredFields = ['recipientName', 'recipientAccount', 'recipientBankBik', 'paymentAmount', 'paymentPurpose'];
+            const missingFields = requiredFields.filter(field => !paymentParams[field]);
+            
+            if (missingFields.length > 0) {
+                throw new Error(`Отсутствуют обязательные поля: ${missingFields.join(', ')}`);
+            }
+            
+            // Создаем URL параметры
+            const createUrlParams = (params) => {
+                return Object.entries(params)
+                    .filter(([_, value]) => value && value !== '')
+                    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+                    .join('&');
+            };
+            
+            const urlParams = createUrlParams(paymentParams);
+            
+            // Различные схемы URL для попыток
+            const deepLinks = [
+                `sberbankapi://transfer?${urlParams}`,           // Основная схема
+                `sberbankonline://transfer?${urlParams}`,        // Альтернативная схема
+                `com.sberbank.mobile://transfer?${urlParams}`    // Еще одна возможная схема
+            ];
+            
+            // Веб fallback
+            const webUrl = `https://online.sberbank.ru/CSAFront/payForm.jsp?${urlParams}`;
 
-            // Обработка платежа
-            await handlePayment(deepLink, webUrl, platform);
+            // Display the link under the button
+            sberbankLinkDisplay.innerHTML = `
+                <p><strong>Прямая ссылка для Сбербанк Онлайн (мобильное приложение):</strong></p>
+                <div class="link-item">
+                    <a href="${deepLinks[0]}" target="_blank" rel="noopener noreferrer">${deepLinks[0]}</a>
+                    <button type="button" class="copy-link-btn" data-link="${deepLinks[0]}">Копировать</button>
+                </div>
+                <p><strong>Ссылка для оплаты через веб-версию (браузер):</strong></p>
+                <div class="link-item">
+                    <a href="${webUrl}" target="_blank" rel="noopener noreferrer">${webUrl}</a>
+                    <button type="button" class="copy-link-btn" data-link="${webUrl}">Копировать</button>
+                </div>
+                <p class="link-hint">Если приложение не открылось автоматически, используйте эти ссылки.</p>
+            `;
+            sberbankLinkDisplay.style.display = 'block';
 
-            // Аналитика (если подключена)
-            if (window.analytics) {
-                analytics.track('SberPayInitiated', {
-                    amount: paymentData.amount,
-                    platform: platform
+            // Add event listeners for copy buttons
+            sberbankLinkDisplay.querySelectorAll('.copy-link-btn').forEach(button => {
+                button.onclick = (e) => {
+                    const linkToCopy = e.target.dataset.link;
+                    navigator.clipboard.writeText(linkToCopy).then(() => {
+                        showNotification('Ссылка скопирована!', 'success'); // Changed to showNotification
+                        button.textContent = 'Скопировано!';
+                        setTimeout(() => button.textContent = 'Копировать', 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy text: ', err);
+                        showNotification('Не удалось скопировать ссылку.', 'error'); // Changed to showNotification
+                    });
+                };
+            });
+            
+            // Определяем устройство
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            if (isMobile) {
+                await tryMobilePayment(deepLinks, webUrl, isIOS);
+            } else {
+                handleDesktopPayment(webUrl);
+            }
+            
+            // Логирование
+            if (typeof console !== 'undefined' && console.log) {
+                console.log('Параметры платежа:', {
+                    deepLinks: deepLinks,
+                    webUrl: webUrl,
+                    params: paymentParams,
+                    device: { isMobile, isIOS }
                 });
             }
-
+            
         } catch (error) {
-            console.error('Payment Error:', error);
-            showToast(error.message || 'Ошибка при обработке платежа', 'error');
+            console.error('Ошибка инициации платежа:', error);
+            showPaymentError(error.message || 'Произошла ошибка при подготовке платежа');
+            sberbankLinkDisplay.style.display = 'none'; // Hide links if error occurs
             
         } finally {
-            // Восстановление кнопки
+            // Разблокируем кнопку
             setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                this.disabled = false;
+                this.textContent = originalText;
             }, 1000);
         }
     });
 
-    // Функция формирования назначения платежа
-    function buildPaymentPurpose(formData) {
-        const parts = [];
+    // Функция для попытки открыть мобильное приложение с несколькими схемами
+    async function tryMobilePayment(deepLinks, fallbackUrl, isIOS) {
+        let appOpened = false;
         
-        if (formData.membershipSum > 0) {
-            parts.push(`Членские: ${formData.membershipSum.toFixed(2)} руб`);
-        }
-        
-        if (formData.targetSum > 0) {
-            parts.push(`Целевые: ${formData.targetSum.toFixed(2)} руб`);
-        }
-        
-        if (formData.electricitySum > 0) {
-            const kwhUsed = parseFloat(kwhUsedElement.textContent) || 0; // Get actual displayed kWh
-            parts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)`);
-        }
-        
-        return `${parts.join(', ')} | Уч. ${formData.plotNumber} | ${formData.payerName}`;
-    }
-
-    // Генерация платежных URL
-    function generatePaymentUrls(data) {
-        const params = new URLSearchParams();
-        
-        params.append('recipientName', data.recipient);
-        params.append('recipientAccount', data.account);
-        params.append('recipientBankBik', data.bik);
-        params.append('paymentAmount', data.amount);
-        params.append('paymentPurpose', data.purpose);
-        
-        if (data.inn) params.append('recipientInn', data.inn);
-        if (data.kpp) params.append('recipientKpp', data.kpp);
-
-        return {
-            deepLink: `sberbankonline://transfer?${params.toString()}`,
-            webUrl: `https://online.sberbank.ru/CSAFront/payForm.jsp?${params.toString()}`,
-            universalLink: `https://online.sberbank.ru/deeplink/transfer?${params.toString()}`
-        };
-    }
-
-    // Определение платформы
-    function detectPlatform() {
-        const ua = navigator.userAgent;
-        
-        return {
-            isIOS: /iPhone|iPad|iPod/i.test(ua),
-            isAndroid: /Android/i.test(ua),
-            isMobile: /Mobile|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)
-        };
-    }
-
-    // Обработчик платежа
-    async function handlePayment(deepLink, webUrl, platform) {
-        // Для iOS 15+ используем Universal Links
-        if (platform.isIOS) {
-            return handleIOSPayment(deepLink, webUrl);
-        }
-        
-        // Для Android
-        if (platform.isAndroid) {
-            return handleAndroidPayment(deepLink, webUrl);
-        }
-        
-        // Для десктопа
-        return handleDesktopPayment(webUrl);
-    }
-
-    // Обработка для iOS
-    async function handleIOSPayment(deepLink, webUrl) {
-        try {
-            // Попытка открыть Universal Link
-            window.location.href = `https://online.sberbank.ru/deeplink/transfer?${deepLink.split('?')[1]}`;
+        for (let i = 0; i < deepLinks.length && !appOpened; i++) {
+            const deepLink = deepLinks[i];
+            console.log(`Попытка ${i + 1}: ${deepLink.split('?')[0]}`);
             
-            // Проверка через 1 секунду
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Если не перешли в приложение
-            if (!document.hidden) {
-                window.open(webUrl, '_blank');
-            }
-        } catch (e) {
-            window.open(webUrl, '_blank');
-        }
-    }
-
-    // Обработка для Android
-    async function handleAndroidPayment(deepLink, webUrl) {
-        // Создаем скрытый iframe для обработки intent
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = deepLink;
-        document.body.appendChild(iframe);
-        
-        // Таймер для fallback
-        const fallbackTimer = setTimeout(() => {
-            window.open(webUrl, '_blank');
-        }, 1500);
-        
-        // Очистка iframe
-        iframe.onload = () => {
-            clearTimeout(fallbackTimer);
-            setTimeout(() => {
-                if (iframe.parentNode) {
-                    document.body.removeChild(iframe);
+            try {
+                if (isIOS) {
+                    // Для iOS используем таймаут метод
+                    const startTime = Date.now();
+                    
+                    // Пытаемся открыть приложение
+                    window.location.href = deepLink;
+                    
+                    // Ждем немного
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    // Проверяем, ушли ли мы со страницы
+                    const timeDiff = Date.now() - startTime;
+                    if (document.hidden || timeDiff > 2000) {
+                        appOpened = true;
+                        console.log(`Приложение открыто через схему: ${deepLink.split('?')[0]}`);
+                        break;
+                    }
+                    
+                } else {
+                    // Для Android используем visibility API
+                    const visibilityHandler = () => {
+                        if (document.hidden) {
+                            appOpened = true;
+                            console.log(`Приложение открыто через схему: ${deepLink.split('?')[0]}`);
+                        }
+                    };
+                    
+                    document.addEventListener('visibilitychange', visibilityHandler);
+                    
+                    // Создаем скрытый iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = deepLink;
+                    document.body.appendChild(iframe);
+                    
+                    // Ждем результат
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Очистка
+                    document.removeEventListener('visibilitychange', visibilityHandler);
+                    if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
+                    }
+                    
+                    if (appOpened) break;
                 }
-            }, 3000);
-        };
-    }
-
-    // Обработка для десктопа
-    function handleDesktopPayment(webUrl) {
-        const paymentWindow = window.open(webUrl, 'sberbank_pay', 'width=800,height=600');
+                
+            } catch (error) {
+                console.warn(`Ошибка при попытке ${i + 1}:`, error);
+                continue;
+            }
+        }
         
-        if (!paymentWindow) {
-            // Если popup заблокирован
-            if (confirm('Открыть страницу оплаты в новом окне?')) {
-                window.open(webUrl, '_blank');
+        // Если ни одна схема не сработала, открываем веб-версию
+        if (!appOpened) {
+            console.log('Приложение не открылось, переходим к веб-версии');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            if (document.hasFocus()) {
+                window.open(fallbackUrl, '_blank');
             }
         }
     }
 
-    // Вспомогательная функция для уведомлений
-    function showToast(message, type = 'info') {
-        // Реализация toast-уведомления
+    // Функция для desktop платежей
+    function handleDesktopPayment(webUrl) {
+        try {
+            const paymentWindow = window.open(
+                webUrl, 
+                'sberbank_payment', 
+                'width=900,height=700,scrollbars=yes,resizable=yes,location=yes'
+            );
+            
+            if (!paymentWindow || paymentWindow.closed) {
+                throw new Error('Popup заблокирован');
+            }
+            
+            // Отслеживаем состояние окна
+            const checkWindow = setInterval(() => {
+                if (paymentWindow.closed) {
+                    clearInterval(checkWindow);
+                    console.log('Окно платежа закрыто пользователем');
+                }
+            }, 1000);
+            
+            // Очистка через 10 минут
+            setTimeout(() => clearInterval(checkWindow), 600000);
+            
+        } catch (error) {
+            console.error('Ошибка открытия окна:', error);
+            
+            // Fallback - копируем ссылку
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(webUrl).then(() => {
+                    alert('Окно платежа заблокировано браузером. Ссылка скопирована в буфер обмена - вставьте её в адресную строку.');
+                }).catch(() => {
+                    prompt('Окно платежа заблокировано. Скопируйте ссылку:', webUrl);
+                });
+            } else {
+                prompt('Окно платежа заблокировано. Скопируйте ссылку:', webUrl);
+            }
+        }
+    }
+
+    // Вспомогательная функция для уведомлений (renamed from showToast)
+    function showNotification(message, type = 'info') {
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
         toast.textContent = message;
@@ -985,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', function() {
             top: 20px;
             right: 20px;
             padding: 12px 24px;
-            background: ${type === 'error' ? '#f44336' : '#2196F3'};
+            background: ${type === 'error' ? '#f44336' : (type === 'success' ? '#4CAF50' : '#2196F3')};
             color: white;
             border-radius: 4px;
             z-index: 10000;
@@ -1014,6 +1119,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 300);
         }, 5000);
+    }
+
+    // Функция показа ошибок (uses showNotification)
+    function showPaymentError(message) {
+        if (typeof showNotification === 'function') {
+            showNotification(message, 'error');
+        } else {
+            alert(`Ошибка платежа: ${message}`);
+        }
     }
 
     // QR code download handler
