@@ -8,10 +8,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_MEMBERSHIP_CHECK = 'membershipCheck';
     const ELEM_TARGET_CHECK = 'targetCheck';
     const ELEM_ELECTRICITY_CHECK = 'electricityCheck';
-    const ELEM_PLOT_SOTKAS = 'plotSotkas';
-    const ELEM_MEMBERSHIP_SUM = 'membershipSum';
+    const ELEM_PLOT_SOTKAS = 'plotSotkas'; // Now readonly, derived from membershipSum
+    const ELEM_MEMBERSHIP_SUM = 'membershipSum'; // Primary input for membership
     const ELEM_TARGET_SUM = 'targetSum';
-    const ELEM_METER_PREV = 'meterReadingPrev';
+    const ELEM_METER_PREV = 'meterReadingPrev'; // Now readonly, informational
     const ELEM_METER_CURR = 'meterReadingCurr';
     const ELEM_KWH_USED = 'kwhUsed';
     const ELEM_ELECTRICITY_SUM_INPUT = 'electricitySumInput';
@@ -90,20 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         element.style.display = check.checked ? 'block' : 'none';
     };
 
-    // Calculate membership fee based on plot size (sotkas)
-    function updateMembershipSumFromSotkas() {
-        if (!membershipCheck.checked) {
-            membershipSumInput.value = '0.00'; // Clear sum if checkbox is unchecked
-            calculateTotal();
-            return;
-        }
-        const sotkas = parseFloat(plotSotkasInput.value) || 0;
-        const membershipSum = sotkas * MEMBERSHIP_TARIFF;
-        membershipSumInput.value = membershipSum.toFixed(2);
-        calculateTotal();
-    }
-
-    // Calculate plot size based on membership fee
+    // Calculate plot size based on membership fee (main driver now)
     function updateSotkasFromMembershipSum() {
         if (!membershipCheck.checked) {
             plotSotkasInput.value = ''; // Clear sotkas if checkbox is unchecked
@@ -121,134 +108,77 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- Electricity calculation logic ---
-    // Calculates electricity based on meter readings
-    function calculateElectricityFromMeterReadings() {
-        const prev = parseFloat(meterReadingPrevInput.value) || 0;
-        const curr = parseFloat(meterReadingCurrInput.value) || 0; // curr is now integer from input
-        let kwh = 0;
-        let sum = 0;
-
-        if (curr >= prev) {
-            kwh = curr - prev;
-            sum = kwh * ELECTRICITY_TARIFF;
-        }
-        kwhUsedElement.textContent = Math.round(kwh); // Display as whole number
-        electricitySumInput.value = sum.toFixed(2);
-    }
-
-    // Calculates electricity based on manual sum input and previous reading if available
-    function calculateElectricityFromSum() {
-        const sum = parseFloat(electricitySumInput.value) || 0;
-        let kwh = 0;
-
-        if (ELECTRICITY_TARIFF > 0) {
-            kwh = sum / ELECTRICITY_TARIFF;
-        }
-        kwhUsedElement.textContent = Math.round(kwh); // Display as whole number
-
-        // If previous reading exists, calculate current reading as a whole number
-        const prev = parseFloat(meterReadingPrevInput.value);
-        if (!isNaN(prev) && prev >= 0) {
-            meterReadingCurrInput.value = Math.round(prev + kwh); // Round to nearest whole number
-        } else {
-            meterReadingCurrInput.value = ''; // Clear current if prev is not there
-        }
-    }
-
-    // Handles input for meter reading fields, setting readOnly states
-    function handleMeterInput() {
-        if (!electricityCheck.checked) return;
-
-        const prev = parseFloat(meterReadingPrevInput.value);
-        const curr = parseFloat(meterReadingCurrInput.value); // curr is now integer from input
-
-        if ((!isNaN(prev) && prev >= 0) && (!isNaN(curr) && curr >= 0)) {
-            // User is providing both meter readings
-            electricitySumInput.readOnly = true;
-            calculateElectricityFromMeterReadings();
-        } else {
-            // User has cleared one or both meter readings, or input is incomplete.
-            // Revert to allowing manual sum input.
-            electricitySumInput.readOnly = false;
-            electricitySumInput.value = ''; // Clear sum value
-            kwhUsedElement.textContent = '0'; // Clear kwh display
-            // Don't clear meter inputs here, user might be in middle of typing
-            // If meterReadingCurr is cleared by user, it's fine.
-        }
-        calculateTotal();
-    }
-
-    // Handles input for manual electricity sum, setting readOnly states
-    function handleSumInput() {
-        if (!electricityCheck.checked) return;
-
-        const sum = parseFloat(electricitySumInput.value);
-        const prev = parseFloat(meterReadingPrevInput.value);
-
-        if (!isNaN(sum) && sum > 0) {
-            // User is entering manual sum
-            calculateElectricityFromSum(); // This now updates kwhUsed and meterReadingCurrInput (rounded)
-            meterReadingCurrInput.readOnly = true; // Current reading is always calculated or empty in this mode
-            if (isNaN(prev) || prev < 0) {
-                // If no valid previous reading, then previous also becomes read-only and cleared
-                meterReadingPrevInput.readOnly = true;
-                meterReadingPrevInput.value = '';
-            } else {
-                meterReadingPrevInput.readOnly = false; // Prev reading can be edited
-            }
-        } else {
-            // User has cleared manual sum
-            electricitySumInput.readOnly = false;
-            meterReadingPrevInput.readOnly = false; // Allow editing of all meter inputs
-            meterReadingCurrInput.readOnly = false;
-            kwhUsedElement.textContent = '0';
-            meterReadingCurrInput.value = ''; // Clear current reading as it's no longer derived
-        }
-        calculateTotal();
-    }
-
-    // Initializes the state of electricity inputs based on checkbox and existing values
-    function initElectricityInputs() {
+    function updateElectricityFields() {
         if (!electricityCheck.checked) {
-            electricityInputsDiv.style.display = 'none';
-            meterReadingPrevInput.value = '';
+            // If checkbox is unchecked, clear and reset states
             meterReadingCurrInput.value = '';
             electricitySumInput.value = '';
             kwhUsedElement.textContent = '0';
-            meterReadingPrevInput.readOnly = false;
             meterReadingCurrInput.readOnly = false;
             electricitySumInput.readOnly = false;
-        } else {
-            electricityInputsDiv.style.display = 'block';
-            const hasPrevReading = meterReadingPrevInput.value !== '';
-            const hasCurrReading = meterReadingCurrInput.value !== '';
-            const hasManualSum = electricitySumInput.value !== '';
-
-            // Prioritize input states. If values are pre-filled, try to match a mode.
-            if (hasManualSum && parseFloat(electricitySumInput.value) > 0) { // Check value if it's set
-                handleSumInput(); // Re-evaluate based on sum
-            } else if (hasPrevReading && hasCurrReading && parseFloat(meterReadingCurrInput.value) >= parseFloat(meterReadingPrevInput.value)) { // Check values if they are set
-                handleMeterInput(); // Re-evaluate based on meters
-            } else if (hasPrevReading && parseFloat(meterReadingPrevInput.value) >= 0) {
-                // Only previous reading was pre-filled (common after autofill).
-                // Leave sum and current empty, allow user to fill either.
-                meterReadingCurrInput.value = ''; // Ensure current is cleared
-                electricitySumInput.value = ''; // Ensure sum is cleared
-                meterReadingPrevInput.readOnly = false;
-                meterReadingCurrInput.readOnly = false;
-                electricitySumInput.readOnly = false;
-                kwhUsedElement.textContent = '0';
-            } else {
-                // No values pre-filled or invalid, clear everything and make editable.
-                meterReadingPrevInput.value = '';
-                meterReadingCurrInput.value = '';
-                electricitySumInput.value = '';
-                kwhUsedElement.textContent = '0';
-                meterReadingPrevInput.readOnly = false;
-                meterReadingCurrInput.readOnly = false;
-                electricitySumInput.readOnly = false;
-            }
+            calculateTotal();
+            return;
         }
+
+        const prev = parseFloat(meterReadingPrevInput.value) || 0; // meterReadingPrev is always readonly
+        const curr = parseFloat(meterReadingCurrInput.value);
+        const manualSum = parseFloat(electricitySumInput.value);
+
+        let kwh = 0;
+        let sum = 0;
+
+        // Determine which input the user is actively filling or has filled meaningfully
+        const isCurrValid = !isNaN(curr) && curr >= 0;
+        const isSumValid = !isNaN(manualSum) && manualSum >= 0;
+
+        if (document.activeElement === meterReadingCurrInput && isCurrValid) {
+            // User is actively typing in current reading
+            if (isCurrValid && curr >= prev) {
+                kwh = curr - prev;
+                sum = kwh * ELECTRICITY_TARIFF;
+                electricitySumInput.value = sum.toFixed(2);
+                electricitySumInput.readOnly = true; // Make sum readonly
+            } else {
+                // Invalid current reading, clear calculated fields and enable sum
+                electricitySumInput.value = '';
+                electricitySumInput.readOnly = false;
+                kwh = 0;
+            }
+        } else if (document.activeElement === electricitySumInput && isSumValid) {
+            // User is actively typing in manual sum
+            sum = manualSum;
+            if (ELECTRICITY_TARIFF > 0) {
+                kwh = sum / ELECTRICITY_TARIFF;
+            }
+            meterReadingCurrInput.value = Math.round(prev + kwh);
+            meterReadingCurrInput.readOnly = true; // Make current reading readonly
+        } else if (isCurrValid && curr >= prev) {
+            // Current reading has a valid value (e.g., from autofill + subsequent entry, or just valid input)
+            kwh = curr - prev;
+            sum = kwh * ELECTRICITY_TARIFF;
+            electricitySumInput.value = sum.toFixed(2);
+            electricitySumInput.readOnly = true;
+            meterReadingCurrInput.readOnly = false;
+        } else if (isSumValid) {
+            // Manual sum has a valid value
+            sum = manualSum;
+            if (ELECTRICITY_TARIFF > 0) {
+                kwh = sum / ELECTRICITY_TARIFF;
+            }
+            meterReadingCurrInput.value = Math.round(prev + kwh);
+            meterReadingCurrInput.readOnly = true;
+            electricitySumInput.readOnly = false;
+        } else {
+            // Nothing valid entered in current or sum, or both cleared. Reset to editable.
+            meterReadingCurrInput.value = '';
+            electricitySumInput.value = '';
+            meterReadingCurrInput.readOnly = false;
+            electricitySumInput.readOnly = false;
+            kwh = 0;
+            sum = 0;
+        }
+
+        kwhUsedElement.textContent = Math.round(kwh);
         calculateTotal();
     }
     // --- End Electricity calculation logic ---
@@ -304,14 +234,26 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateTotal(); // Final total calculation after initial states
     };
 
+    // Initialize electricity inputs (on load or checkbox change)
+    function initElectricityInputs() {
+        toggleVisibility(electricityCheck, electricityInputsDiv);
+        // meterReadingPrevInput is now permanently readonly as per HTML
+        updateElectricityFields(); // Apply logic to set states correctly
+    }
+
     // --- Autocomplete/Autofill Logic for Plot Number ---
     function autofillPlotData(plotNum) {
         const foundPlot = plotData.find(p => p.plotNumber.toUpperCase() === plotNum.toUpperCase());
 
         if (foundPlot) {
             payerNameInput.value = foundPlot.payerName || '';
+            
+            // Set membership sum and derive plot sotkas
+            membershipSumInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null && foundPlot.plotSotkas > 0) 
+                                       ? (foundPlot.plotSotkas * MEMBERSHIP_TARIFF).toFixed(2) 
+                                       : '';
+            
             plotSotkasInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null) ? foundPlot.plotSotkas.toFixed(2) : '';
-            membershipSumInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null && foundPlot.plotSotkas > 0) ? (foundPlot.plotSotkas * MEMBERSHIP_TARIFF).toFixed(2) : '';
 
             targetSumInput.value = (foundPlot.targetSum !== undefined && foundPlot.targetSum !== null) ? foundPlot.targetSum.toFixed(2) : '';
             meterReadingPrevInput.value = (foundPlot.meterReadingPrev !== undefined && foundPlot.meterReadingPrev !== null) ? foundPlot.meterReadingPrev : '';
@@ -319,7 +261,7 @@ document.addEventListener('DOMContentLoaded', function() {
             electricitySumInput.value = ''; // Always clear manual electricity sum for new autofill
 
             // Also check checkboxes if corresponding sums/data are present
-            membershipCheck.checked = (parseFloat(plotSotkasInput.value) > 0) || (parseFloat(membershipSumInput.value) > 0);
+            membershipCheck.checked = (parseFloat(membershipSumInput.value) > 0);
             targetCheck.checked = parseFloat(targetSumInput.value) > 0;
             electricityCheck.checked = meterReadingPrevInput.value !== ''; // Check if there's a previous reading
         } else {
@@ -354,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error loading plot data:', error);
-            alert('Не удалось загрузить данные участков для автозаполнения. Пожалуйста, введите данные вручную.');
+            showNotification('Не удалось загрузить данные участков для автозаполнения. Пожалуйста, введите данные вручную.', 'error');
         });
     // --- End Autocomplete/Autofill Logic ---
 
@@ -364,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function validateForm() {
         // Validate payer name
         if (payerNameInput.value.trim() === '') {
-            alert('Пожалуйста, введите ФИО плательщика.');
+            showNotification('Пожалуйста, введите ФИО плательщика.', 'error');
             payerNameInput.focus();
             return false;
         }
@@ -372,7 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Validate plot number using the pattern
         const plotNumber = plotNumberInput.value.trim();
         if (!plotNumberInput.checkValidity()) {
-            alert('Номер участка должен содержать только цифры и может заканчиваться одной буквой (А-Яа-я).');
+            showNotification('Номер участка должен содержать только цифры и может заканчиваться одной буквой (А-Яа-я).', 'error');
             plotNumberInput.focus();
             return false;
         }
@@ -393,7 +335,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.paymentTypes.push('Членские взносы');
             formData.membershipSum = parseFloat(membershipSumInput.value) || 0;
             if (formData.membershipSum <= 0) {
-                alert('Сумма членских взносов должна быть больше нуля.');
+                showNotification('Сумма членских взносов должна быть больше нуля.', 'error');
                 membershipSumInput.focus();
                 return false;
             }
@@ -404,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.paymentTypes.push('Целевые взносы');
             formData.targetSum = parseFloat(targetSumInput.value) || 0;
             if (formData.targetSum <= 0) {
-                alert('Сумма целевых взносов должна быть больше нуля.');
+                showNotification('Сумма целевых взносов должна быть больше нуля.', 'error');
                 targetSumInput.focus();
                 return false;
             }
@@ -415,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.paymentTypes.push('Электроэнергия');
             formData.electricitySum = parseFloat(electricitySumInput.value) || 0;
             if (formData.electricitySum <= 0) {
-                alert('Сумма за электроэнергию должна быть больше нуля.');
+                showNotification('Сумма за электроэнергию должна быть больше нуля.', 'error');
                 electricitySumInput.focus();
                 return false;
             }
@@ -423,18 +365,14 @@ document.addEventListener('DOMContentLoaded', function() {
             if (electricitySumInput.readOnly) { // If electricity sum is read-only, it means meter readings are the primary input
                 const prevReading = parseFloat(meterReadingPrevInput.value);
                 const currReading = parseFloat(meterReadingCurrInput.value);
-                if (isNaN(prevReading) || prevReading < 0) {
-                    alert('Пожалуйста, введите корректные предыдущие показания счетчика.');
-                    meterReadingPrevInput.focus();
-                    return false;
-                }
+                
                 if (isNaN(currReading) || currReading < 0) {
-                    alert('Пожалуйста, введите корректные текущие показания счетчика (целое число).');
+                    showNotification('Пожалуйста, введите корректные текущие показания счетчика (целое число).', 'error');
                     meterReadingCurrInput.focus();
                     return false;
                 }
                 if (currReading < prevReading) {
-                    alert('Текущие показания счетчика не могут быть меньше предыдущих.');
+                    showNotification('Текущие показания счетчика не могут быть меньше предыдущих.', 'error');
                     meterReadingCurrInput.focus();
                     return false;
                 }
@@ -445,12 +383,12 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.totalAmount = calculatedTotal; // Assign the calculated total
 
         if (formData.paymentTypes.length === 0) {
-            alert('Пожалуйста, выберите хотя бы один тип платежа.');
+            showNotification('Пожалуйста, выберите хотя бы один тип платежа.', 'error');
             return false;
         }
 
         if (formData.totalAmount <= 0) {
-            alert('Общая сумма должна быть больше нуля. Проверьте введенные суммы.');
+            showNotification('Общая сумма должна быть больше нуля. Проверьте введенные суммы.', 'error');
             return false;
         }
 
@@ -462,21 +400,16 @@ document.addEventListener('DOMContentLoaded', function() {
     targetCheck.addEventListener('change', initFormState);
     electricityCheck.addEventListener('change', initElectricityInputs); // Direct call for more precise control
 
-    // Specific handler for plotSotkasInput (now type="text")
-    plotSotkasInput.addEventListener('input', function() {
-        this.value = this.value.replace(',', '.'); // Replace comma with dot for decimal input
-        // Ensure value is not negative (mimicking min="0" from original type="number")
-        if (parseFloat(this.value) < 0) {
-            this.value = '0';
-        }
-        updateMembershipSumFromSotkas(); // Recalculate based on potentially changed value
-    });
-
+    // plotSotkasInput is now readonly, its value is derived from membershipSumInput
     membershipSumInput.addEventListener('input', updateSotkasFromMembershipSum);
 
-    meterReadingPrevInput.addEventListener('input', handleMeterInput);
-    meterReadingCurrInput.addEventListener('input', handleMeterInput);
-    electricitySumInput.addEventListener('input', handleSumInput);
+    // Electricity input handlers
+    meterReadingCurrInput.addEventListener('input', updateElectricityFields);
+    electricitySumInput.addEventListener('input', updateElectricityFields);
+    meterReadingCurrInput.addEventListener('focus', updateElectricityFields); // Trigger update on focus to set readonly
+    electricitySumInput.addEventListener('focus', updateElectricityFields); // Trigger update on focus to set readonly
+    meterReadingCurrInput.addEventListener('blur', updateElectricityFields); // Trigger update on blur to reset readonly if empty
+    electricitySumInput.addEventListener('blur', updateElectricityFields); // Trigger update on blur to reset readonly if empty
 
     targetSumInput.addEventListener('input', calculateTotal);
 
@@ -638,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
         QRCode.toCanvas(qrCanvas, paymentString, { width: 280, errorCorrectionLevel: 'H' }, function (error) {
             if (error) {
                 console.error('Error generating QR code:', error);
-                alert('Ошибка при генерации QR-кода!');
+                showNotification('Ошибка при генерации QR-кода!', 'error');
                 if (downloadQrBtn) downloadQrBtn.disabled = true;
                 const context = qrCanvas.getContext('2d');
                 context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
@@ -707,7 +640,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     
                     <div class="receipt-field">
-                        <div class="receipt-field-value"> ${purpose} за участок № ${data.plotNumber}</div>
+                        <div class="receipt-field-value">${purpose} за участок № ${data.plotNumber}</div>
                         <div class="receipt-field-label">(наименование платежа)</div>
                     </div>
                     
@@ -816,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 12px 24px;
             background: ${type === 'error' ? '#f44336' : (type === 'success' ? '#4CAF50' : '#2196F3')};
             color: white;
-            border-radius: 4px;
+            border-radius: 44px; /* Changed to more pill-like */
             z-index: 10000;
             max-width: 300px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
@@ -848,7 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // QR code download handler
     downloadQrBtn.addEventListener('click', function() {
         if (!qrCanvas || qrCanvas.width === 0 || qrCanvas.height === 0) {
-            alert('Сначала сгенерируйте QR-код!');
+            showNotification('Сначала сгенерируйте QR-код!', 'info');
             return;
         }
         const link = document.createElement('a');
@@ -857,6 +790,7 @@ document.addEventListener('DOMContentLoaded', function() {
         link.download = `snt-beryozka-2_plot-${fileNamePlot}_${fileNamePayer}.png`;
         link.href = qrCanvas.toDataURL('image/png');
         link.click();
+        showNotification('QR-код скачан!', 'success');
     });
 
     // Fix for number input fields to allow only valid numbers

@@ -45,12 +45,12 @@
                                 <div class="form-group payment-amount" id="membershipAmount">
                                     <div class="form-row">
                                         <div class="form-group">
-                                            <label for="plotSotkas">Размер участка (соток)</label>
-                                            <input type="text" id="plotSotkas" name="plotSotkas" step="0.01" min="0" placeholder="6.00">
-                                        </div>
-                                        <div class="form-group">
                                             <label for="membershipSum">Сумма (руб.)</label>
                                             <input type="number" id="membershipSum" name="membershipSum" step="0.01" min="0" placeholder="8400.00">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="plotSotkas">Размер участка (соток)</label>
+                                            <input type="number" id="plotSotkas" name="plotSotkas" step="0.01" min="0" readonly>
                                         </div>
                                     </div>
                                 </div>
@@ -73,19 +73,19 @@
                                     Электроэнергия (3.50 руб/кВт·ч)
                                 </label>
                                 <div id="electricityInputs" style="display:none;">
+                                    <div class="form-group">
+                                        <label for="electricitySumInput">Сумма (руб.)</label>
+                                        <input type="number" id="electricitySumInput" name="electricitySumInput" step="0.01" min="0" placeholder="500.00">
+                                    </div>
                                     <div class="form-row">
                                         <div class="form-group">
                                             <label for="meterReadingPrev">Предыдущие показания (кВт)</label>
-                                            <input type="number" id="meterReadingPrev" name="meterReadingPrev" placeholder="Например, 1500" min="0">
+                                            <input type="number" id="meterReadingPrev" name="meterReadingPrev" min="0" readonly>
                                         </div>
                                         <div class="form-group">
                                             <label for="meterReadingCurr">Текущие показания (кВт)</label>
                                             <input type="number" id="meterReadingCurr" name="meterReadingCurr" placeholder="Например, 1650" min="0" step="1">
                                         </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="electricitySumInput">Сумма (руб.)</label>
-                                        <input type="number" id="electricitySumInput" name="electricitySumInput" step="0.01" min="0" placeholder="500.00">
                                     </div>
                                     <div class="electricity-calc">
                                         Расход: <span id="kwhUsed">0</span> кВт
