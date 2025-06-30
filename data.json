@@ -4,1371 +4,1567 @@
     "payerName": "Пахомова С.Н.",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 18613
+    "meterReadingPrev": 18613,
+    "meterReadingCurr": 18613
   },
   {
     "plotNumber": "2",
     "payerName": "Михайлов К.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9822
+    "meterReadingPrev": 9822,
+    "meterReadingCurr": 9822
   },
   {
     "plotNumber": "3",
     "payerName": "Постаногова Д.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4272
+    "meterReadingPrev": 4272,
+    "meterReadingCurr": 4272
   },
   {
     "plotNumber": "4",
     "payerName": "Нижигородов М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3100
+    "meterReadingPrev": 3100,
+    "meterReadingCurr": 3100
   },
   {
-    "plotNumber": "4а",
+    "plotNumber": "4",
     "payerName": "Шевченко В.Л",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9244
+    "meterReadingPrev": 9244,
+    "meterReadingCurr": 9244
   },
   {
     "plotNumber": "5",
     "payerName": "Цибин Ю.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2247
+    "meterReadingPrev": 2247,
+    "meterReadingCurr": 2247
   },
   {
     "plotNumber": "6",
     "payerName": "Семенова А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1664
+    "meterReadingPrev": 1664,
+    "meterReadingCurr": 1664
   },
   {
     "plotNumber": "7",
     "payerName": "Шарыпова Л.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9978
+    "meterReadingPrev": 9978,
+    "meterReadingCurr": 9978
   },
   {
     "plotNumber": "8",
     "payerName": "Кочетков В.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 14299
+    "meterReadingPrev": 14299,
+    "meterReadingCurr": 14299
   },
   {
     "plotNumber": "9",
     "payerName": "Телятина Т.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7008
+    "meterReadingPrev": 7008,
+    "meterReadingCurr": 7008
   },
   {
     "plotNumber": "10",
     "payerName": "Никифорова Т.Л",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 14548
+    "meterReadingPrev": 14548,
+    "meterReadingCurr": 14548
   },
   {
-    "plotNumber": "10а",
+    "plotNumber": "10",
     "payerName": "Раюшкина Л.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2070
+    "meterReadingPrev": 2070,
+    "meterReadingCurr": 2070
   },
   {
     "plotNumber": "11",
     "payerName": "Бикчурина Л.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 16076
+    "meterReadingPrev": 16076,
+    "meterReadingCurr": 16076
   },
   {
     "plotNumber": "12",
     "payerName": "Субодров И.Л",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2807
+    "meterReadingPrev": 2807,
+    "meterReadingCurr": 2807
   },
   {
     "plotNumber": "13",
     "payerName": "Руднева Л.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5465
+    "meterReadingPrev": 5465,
+    "meterReadingCurr": 5465
   },
   {
     "plotNumber": "14",
     "payerName": "Хандрик О.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6841
+    "meterReadingPrev": 6841,
+    "meterReadingCurr": 6841
   },
   {
     "plotNumber": "15",
     "payerName": "Баженов А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6494
+    "meterReadingPrev": 6494,
+    "meterReadingCurr": 6494
   },
   {
     "plotNumber": "16",
     "payerName": "Видякин Н.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3026
+    "meterReadingPrev": 3026,
+    "meterReadingCurr": 3026
   },
   {
     "plotNumber": "17",
     "payerName": "Петров Михаил Николаевич",
     "plotSotkas": 4.67,
     "targetSum": 0,
-    "meterReadingPrev": 8660
+    "meterReadingPrev": 8660,
+    "meterReadingCurr": 8660
   },
   {
     "plotNumber": "18",
     "payerName": "Гордина Е.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 184
+    "meterReadingPrev": 184,
+    "meterReadingCurr": 184
   },
   {
     "plotNumber": "19",
     "payerName": "Болдырева Е.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1413
+    "meterReadingPrev": 1413,
+    "meterReadingCurr": 1413
   },
   {
     "plotNumber": "20",
     "payerName": "Васильев А.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2401
+    "meterReadingPrev": 2401,
+    "meterReadingCurr": 2401
   },
   {
     "plotNumber": "21",
     "payerName": "Думнов В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 49817
+    "meterReadingPrev": 49817,
+    "meterReadingCurr": 49817
   },
   {
     "plotNumber": "22",
     "payerName": "Раков В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 900
+    "meterReadingPrev": 900,
+    "meterReadingCurr": 900
   },
   {
     "plotNumber": "23",
     "payerName": "Федоренко В.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 12431
+    "meterReadingPrev": 12431,
+    "meterReadingCurr": 12431
   },
   {
     "plotNumber": "24",
     "payerName": "Макарова Г.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 16277
+    "meterReadingPrev": 16277,
+    "meterReadingCurr": 16277
   },
   {
     "plotNumber": "25",
     "payerName": "Пахомова С.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9713
+    "meterReadingPrev": 9713,
+    "meterReadingCurr": 9713
   },
   {
     "plotNumber": "26",
     "payerName": "Абрамова Э.З",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7205
+    "meterReadingPrev": 7205,
+    "meterReadingCurr": 7205
   },
   {
     "plotNumber": "27",
     "payerName": "Бекасова О.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2000
+    "meterReadingPrev": 2000,
+    "meterReadingCurr": 2000
   },
   {
     "plotNumber": "28",
     "payerName": "Ермакова Г.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 18600
+    "meterReadingPrev": 18600,
+    "meterReadingCurr": 18600
   },
   {
     "plotNumber": "29",
     "payerName": "Кузнецова Н.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3976
+    "meterReadingPrev": 3976,
+    "meterReadingCurr": 3976
   },
   {
     "plotNumber": "30",
     "payerName": "Буренина Н.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 8414
+    "meterReadingPrev": 8414,
+    "meterReadingCurr": 8414
   },
   {
     "plotNumber": "31",
     "payerName": "Соловьева Л.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3643
+    "meterReadingPrev": 3643,
+    "meterReadingCurr": 3643
   },
   {
     "plotNumber": "32",
     "payerName": "Зайцева О.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 50283
+    "meterReadingPrev": 50283,
+    "meterReadingCurr": 50283
   },
   {
     "plotNumber": "33",
     "payerName": "Кириллова О.Д",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1556
+    "meterReadingPrev": 1556,
+    "meterReadingCurr": 1556
   },
   {
     "plotNumber": "34",
     "payerName": "Забродина Н.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 200
+    "meterReadingPrev": 200,
+    "meterReadingCurr": 200
   },
   {
     "plotNumber": "35",
     "payerName": "Зубарева А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2592
+    "meterReadingPrev": 2592,
+    "meterReadingCurr": 2592
   },
   {
     "plotNumber": "36",
     "payerName": "Артембева Т.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 358
+    "meterReadingPrev": 358,
+    "meterReadingCurr": 358
   },
   {
     "plotNumber": "37",
     "payerName": "Елестратова Т.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1900
+    "meterReadingPrev": 1900,
+    "meterReadingCurr": 1900
   },
   {
     "plotNumber": "38",
     "payerName": "Николаев В.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1114
+    "meterReadingPrev": 1114,
+    "meterReadingCurr": 1114
   },
   {
     "plotNumber": "39",
     "payerName": "ЕнаеваО.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4440
+    "meterReadingPrev": 4440,
+    "meterReadingCurr": 4440
   },
   {
     "plotNumber": "40",
     "payerName": "Конгро А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1616
+    "meterReadingPrev": 1616,
+    "meterReadingCurr": 1616
   },
   {
     "plotNumber": "41",
     "payerName": "Валишевский А.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7495
+    "meterReadingPrev": 7495,
+    "meterReadingCurr": 7495
   },
   {
     "plotNumber": "42",
     "payerName": "Дуплищев А.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 829
+    "meterReadingPrev": 829,
+    "meterReadingCurr": 829
   },
   {
     "plotNumber": "43",
     "payerName": "Тихоненко О.Ф",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3502
+    "meterReadingPrev": 3502,
+    "meterReadingCurr": 3502
   },
   {
     "plotNumber": "44",
     "payerName": "Шустова Л.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 479
+    "meterReadingPrev": 479,
+    "meterReadingCurr": 479
   },
   {
     "plotNumber": "45",
     "payerName": "Жалова Г.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6
+    "meterReadingPrev": 6,
+    "meterReadingCurr": 6
   },
   {
     "plotNumber": "46",
     "payerName": "Ермолаева В.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9357
+    "meterReadingPrev": 9357,
+    "meterReadingCurr": 9357
   },
   {
     "plotNumber": "46а",
     "payerName": "Ермолаева В.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 233
+    "meterReadingPrev": 233,
+    "meterReadingCurr": 233
   },
   {
     "plotNumber": "47",
     "payerName": "Антонов Л.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 154
+    "meterReadingPrev": 154,
+    "meterReadingCurr": 154
   },
   {
     "plotNumber": "48",
     "payerName": "Прокопьев Н.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3000
+    "meterReadingPrev": 3000,
+    "meterReadingCurr": 3000
   },
   {
     "plotNumber": "49",
     "payerName": "Новикова В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "50",
     "payerName": "Белляева В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2259
+    "meterReadingPrev": 2259,
+    "meterReadingCurr": 2259
   },
   {
     "plotNumber": "51",
     "payerName": "Комарова Е.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1563
+    "meterReadingPrev": 1563,
+    "meterReadingCurr": 1563
   },
   {
     "plotNumber": "52",
     "payerName": "Сажина Л.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 20150
+    "meterReadingPrev": 20150,
+    "meterReadingCurr": 20150
   },
   {
     "plotNumber": "53",
     "payerName": "Максимова Н.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5000
+    "meterReadingPrev": 5000,
+    "meterReadingCurr": 5000
   },
   {
     "plotNumber": "54",
     "payerName": "Бражкина В.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3354
+    "meterReadingPrev": 3354,
+    "meterReadingCurr": 3354
   },
   {
     "plotNumber": "55",
     "payerName": "Зверева А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5271
+    "meterReadingPrev": 5271,
+    "meterReadingCurr": 5271
   },
   {
     "plotNumber": "56",
     "payerName": "Евлантьев С.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1565
+    "meterReadingPrev": 1565,
+    "meterReadingCurr": 1565
   },
   {
     "plotNumber": "57",
     "payerName": "Ракова А.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 13250
+    "meterReadingPrev": 13250,
+    "meterReadingCurr": 13250
   },
   {
     "plotNumber": "58",
     "payerName": "Тулупов С.К",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 17700
+    "meterReadingPrev": 17700,
+    "meterReadingCurr": 17700
   },
   {
     "plotNumber": "59",
     "payerName": "Семенова С.К",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 232
+    "meterReadingPrev": 232,
+    "meterReadingCurr": 232
   },
   {
     "plotNumber": "60",
     "payerName": "Здоменщук Ю.О",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 11632
+    "meterReadingPrev": 11632,
+    "meterReadingCurr": 11632
   },
   {
     "plotNumber": "61",
     "payerName": "Церцвадзе Г.З",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9606
+    "meterReadingPrev": 9606,
+    "meterReadingCurr": 9606
   },
   {
     "plotNumber": "62",
     "payerName": "Коволева Е.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 958
+    "meterReadingPrev": 958,
+    "meterReadingCurr": 958
   },
   {
     "plotNumber": "63",
     "payerName": "Токорева О.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2615
+    "meterReadingPrev": 2615,
+    "meterReadingCurr": 2615
   },
   {
     "plotNumber": "64",
     "payerName": "Зайцева Е.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5989
+    "meterReadingPrev": 5989,
+    "meterReadingCurr": 5989
   },
   {
     "plotNumber": "65",
     "payerName": "Платов А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1216
+    "meterReadingPrev": 1216,
+    "meterReadingCurr": 1216
   },
   {
     "plotNumber": "66",
     "payerName": "Семчишина Н.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1115
+    "meterReadingPrev": 1115,
+    "meterReadingCurr": 1115
   },
   {
     "plotNumber": "67",
     "payerName": "Земальдинова Т.Д",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4897
+    "meterReadingPrev": 4897,
+    "meterReadingCurr": 4897
   },
   {
     "plotNumber": "68",
     "payerName": "Шутова В.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2124
+    "meterReadingPrev": 2124,
+    "meterReadingCurr": 2124
   },
   {
     "plotNumber": "69",
     "payerName": "Березина Л.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 965
+    "meterReadingPrev": 965,
+    "meterReadingCurr": 965
   },
   {
     "plotNumber": "70",
     "payerName": "Маюра Н.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7576
+    "meterReadingPrev": 7576,
+    "meterReadingCurr": 7576
   },
   {
     "plotNumber": "71",
     "payerName": "Жиленков А.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 322
+    "meterReadingPrev": 322,
+    "meterReadingCurr": 322
   },
   {
     "plotNumber": "72",
     "payerName": "Казимов Р.З",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6463
+    "meterReadingPrev": 6463,
+    "meterReadingCurr": 6463
   },
   {
     "plotNumber": "73",
     "payerName": "Рагулин А.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1239
+    "meterReadingPrev": 1239,
+    "meterReadingCurr": 1239
   },
   {
     "plotNumber": "74",
     "payerName": "Кузнецов В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 44
+    "meterReadingPrev": 44,
+    "meterReadingCurr": 44
   },
   {
     "plotNumber": "75",
     "payerName": "Чернова Ж.А.",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5563.714
+    "meterReadingPrev": 5563.714,
+    "meterReadingCurr": 5563.714
   },
   {
-    "plotNumber": "75а",
+    "plotNumber": "75",
     "payerName": "Чернова Ж.А.",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2848
+    "meterReadingPrev": 2848,
+    "meterReadingCurr": 2848
   },
   {
     "plotNumber": "76",
     "payerName": "Ферро Н.Б",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1824
+    "meterReadingPrev": 1824,
+    "meterReadingCurr": 1824
   },
   {
     "plotNumber": "77",
     "payerName": "Вычерова И.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1425
+    "meterReadingPrev": 1425,
+    "meterReadingCurr": 1425
   },
   {
     "plotNumber": "78",
     "payerName": "Олешко Р.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 13551
+    "meterReadingPrev": 13551,
+    "meterReadingCurr": 13551
   },
   {
     "plotNumber": "79",
     "payerName": "Рыжкова Л.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 10604
+    "meterReadingPrev": 10604,
+    "meterReadingCurr": 10604
   },
   {
     "plotNumber": "80",
     "payerName": "Скубаева О.Е",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6168
+    "meterReadingPrev": 6168,
+    "meterReadingCurr": 6168
   },
   {
     "plotNumber": "81",
     "payerName": "Константинов Ю.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7463
+    "meterReadingPrev": 7463,
+    "meterReadingCurr": 7463
   },
   {
-    "plotNumber": "81а",
+    "plotNumber": "81",
     "payerName": "Лаврищев Ю.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 11177
+    "meterReadingPrev": 11177,
+    "meterReadingCurr": 11177
   },
   {
     "plotNumber": "83",
     "payerName": "Старовойтова Г.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 12222
+    "meterReadingPrev": 12222,
+    "meterReadingCurr": 12222
   },
   {
     "plotNumber": "84",
     "payerName": "Яричена И.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4748
+    "meterReadingPrev": 4748,
+    "meterReadingCurr": 4748
   },
   {
     "plotNumber": "85",
     "payerName": "Блиновский В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2593
+    "meterReadingPrev": 2593,
+    "meterReadingCurr": 2593
   },
   {
     "plotNumber": "86",
     "payerName": "Тарабыкина Л.Ф",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 8560
+    "meterReadingPrev": 8560,
+    "meterReadingCurr": 8560
   },
   {
     "plotNumber": "87",
     "payerName": "Прайс О.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4829
+    "meterReadingPrev": 4829,
+    "meterReadingCurr": 4829
   },
   {
     "plotNumber": "88",
     "payerName": "Кутафина А.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4691
+    "meterReadingPrev": 4691,
+    "meterReadingCurr": 4691
   },
   {
     "plotNumber": "89",
     "payerName": "Малаховская Ю.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1871
+    "meterReadingPrev": 1871,
+    "meterReadingCurr": 1871
   },
   {
     "plotNumber": "90",
     "payerName": "Михайлова Н.Я",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 815
+    "meterReadingPrev": 815,
+    "meterReadingCurr": 815
   },
   {
     "plotNumber": "91",
     "payerName": "Грачева С.Л",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3002
+    "meterReadingPrev": 3002,
+    "meterReadingCurr": 3002
   },
   {
     "plotNumber": "92",
     "payerName": "Челядинов Ю.Ф",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 460
+    "meterReadingPrev": 460,
+    "meterReadingCurr": 460
   },
   {
     "plotNumber": "93",
     "payerName": "Крыласов Л.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6961
+    "meterReadingPrev": 6961,
+    "meterReadingCurr": 6961
   },
   {
     "plotNumber": "94",
     "payerName": "Трубицина Г.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9577
+    "meterReadingPrev": 9577,
+    "meterReadingCurr": 9577
   },
   {
     "plotNumber": "95",
     "payerName": "Погорелова Е.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4090
+    "meterReadingPrev": 4090,
+    "meterReadingCurr": 4090
   },
   {
     "plotNumber": "96",
     "payerName": "Папич О.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6263
+    "meterReadingPrev": 6263,
+    "meterReadingCurr": 6263
   },
   {
     "plotNumber": "97",
     "payerName": "Семиколенов С.Т",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4817
+    "meterReadingPrev": 4817,
+    "meterReadingCurr": 4817
   },
   {
     "plotNumber": "98",
     "payerName": "Журавлева М.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4845
+    "meterReadingPrev": 4845,
+    "meterReadingCurr": 4845
   },
   {
     "plotNumber": "99",
     "payerName": "Хасанова Ю.Б",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 365
+    "meterReadingPrev": 365,
+    "meterReadingCurr": 365
   },
   {
     "plotNumber": "100",
     "payerName": "Поляков В.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 8540
+    "meterReadingPrev": 8540,
+    "meterReadingCurr": 8540
   },
   {
     "plotNumber": "101",
     "payerName": "Атакишев Р.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7490
+    "meterReadingPrev": 7490,
+    "meterReadingCurr": 7490
   },
   {
     "plotNumber": "102",
     "payerName": "Чернышов Д.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4856.429
+    "meterReadingPrev": 4856.429,
+    "meterReadingCurr": 4856.429
   },
   {
     "plotNumber": "103",
     "payerName": "Болотова Е.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5696
+    "meterReadingPrev": 5696,
+    "meterReadingCurr": 5696
   },
   {
     "plotNumber": "104",
     "payerName": "Аборина Т.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 10027
+    "meterReadingPrev": 10027,
+    "meterReadingCurr": 10027
   },
   {
     "plotNumber": "105",
     "payerName": "Балацкий Ю.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 398
+    "meterReadingPrev": 398,
+    "meterReadingCurr": 398
   },
   {
     "plotNumber": "106",
     "payerName": "Мурзина А.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 82500
+    "meterReadingPrev": 82500,
+    "meterReadingCurr": 82500
   },
   {
     "plotNumber": "107",
     "payerName": "Горбунов В.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 50
+    "meterReadingPrev": 50,
+    "meterReadingCurr": 50
   },
   {
     "plotNumber": "108",
     "payerName": "Клованич Е.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1794.714
+    "meterReadingPrev": 1794.714,
+    "meterReadingCurr": 1794.714
   },
   {
     "plotNumber": "109",
     "payerName": "Пинегин К.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3163
+    "meterReadingPrev": 3163,
+    "meterReadingCurr": 3163
   },
   {
     "plotNumber": "110",
     "payerName": "Мироненко А.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 219
+    "meterReadingPrev": 219,
+    "meterReadingCurr": 219
   },
   {
     "plotNumber": "111",
     "payerName": "Шуляков А.",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4413
+    "meterReadingPrev": 4413,
+    "meterReadingCurr": 4413
   },
   {
     "plotNumber": "112",
     "payerName": "Ципленкина Л.Л",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1350
+    "meterReadingPrev": 1350,
+    "meterReadingCurr": 1350
   },
   {
     "plotNumber": "113",
     "payerName": "Рыбьяков Ю.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7195
+    "meterReadingPrev": 7195,
+    "meterReadingCurr": 7195
   },
   {
     "plotNumber": "114",
     "payerName": "Олешко С.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1790
+    "meterReadingPrev": 1790,
+    "meterReadingCurr": 1790
   },
   {
     "plotNumber": "115",
     "payerName": "Корженко К.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1136
+    "meterReadingPrev": 1136,
+    "meterReadingCurr": 1136
   },
   {
     "plotNumber": "116",
     "payerName": "Большакова Т.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 15118
+    "meterReadingPrev": 15118,
+    "meterReadingCurr": 15118
   },
   {
     "plotNumber": "117",
     "payerName": "Лосев А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1068
+    "meterReadingPrev": 1068,
+    "meterReadingCurr": 1068
   },
   {
     "plotNumber": "118",
     "payerName": "Суборев С.Е",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2875
+    "meterReadingPrev": 2875,
+    "meterReadingCurr": 2875
   },
   {
     "plotNumber": "119",
     "payerName": "Лосев А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 705
+    "meterReadingPrev": 705,
+    "meterReadingCurr": 705
   },
   {
     "plotNumber": "120",
     "payerName": "Шляпина Л.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1563
+    "meterReadingPrev": 1563,
+    "meterReadingCurr": 1563
   },
   {
     "plotNumber": "121",
     "payerName": "Ворчак И.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1033
+    "meterReadingPrev": 1033,
+    "meterReadingCurr": 1033
   },
   {
     "plotNumber": "122",
     "payerName": "Маляренко С.Ф",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2653
+    "meterReadingPrev": 2653,
+    "meterReadingCurr": 2653
   },
   {
     "plotNumber": "123",
     "payerName": "Ворчак Ю.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 34897
+    "meterReadingPrev": 34897,
+    "meterReadingCurr": 34897
   },
   {
     "plotNumber": "124",
     "payerName": "Скоробагатых А.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 50004
+    "meterReadingPrev": 50004,
+    "meterReadingCurr": 50004
   },
   {
     "plotNumber": "125",
     "payerName": "Скоробагатых Г.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5570
+    "meterReadingPrev": 5570,
+    "meterReadingCurr": 5570
   },
   {
     "plotNumber": "126",
     "payerName": "Лапицкая Г.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5648
+    "meterReadingPrev": 5648,
+    "meterReadingCurr": 5648
   },
   {
     "plotNumber": "127",
     "payerName": "Шилова Т.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 661
+    "meterReadingPrev": 661,
+    "meterReadingCurr": 661
   },
   {
     "plotNumber": "128",
     "payerName": "Кравцов С.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1627
+    "meterReadingPrev": 1627,
+    "meterReadingCurr": 1627
   },
   {
     "plotNumber": "129",
     "payerName": "Волкова А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 332
+    "meterReadingPrev": 332,
+    "meterReadingCurr": 332
   },
   {
     "plotNumber": "130",
     "payerName": "Савельева Е.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1179.143
+    "meterReadingPrev": 1179.143,
+    "meterReadingCurr": 1179.143
   },
   {
     "plotNumber": "131",
     "payerName": "Савинцева Т.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7232
+    "meterReadingPrev": 7232,
+    "meterReadingCurr": 7232
   },
   {
     "plotNumber": "132",
     "payerName": "Аргал Г.П",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3823
+    "meterReadingPrev": 3823,
+    "meterReadingCurr": 3823
   },
   {
     "plotNumber": "133",
     "payerName": "Бауэр Е.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3608
+    "meterReadingPrev": 3608,
+    "meterReadingCurr": 3608
   },
   {
     "plotNumber": "134",
     "payerName": "Латонин Б.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4838
+    "meterReadingPrev": 4838,
+    "meterReadingCurr": 4838
   },
   {
     "plotNumber": "135",
     "payerName": "Белозерова Е.Ф",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5130
+    "meterReadingPrev": 5130,
+    "meterReadingCurr": 5130
   },
   {
     "plotNumber": "136",
     "payerName": "Аманова С.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 600
+    "meterReadingPrev": 600,
+    "meterReadingCurr": 600
   },
   {
     "plotNumber": "137",
     "payerName": "Базина Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4898
+    "meterReadingPrev": 4898,
+    "meterReadingCurr": 4898
   },
   {
     "plotNumber": "138",
     "payerName": "Кондратенко Л.Ф",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 20469
+    "meterReadingPrev": 20469,
+    "meterReadingCurr": 20469
   },
   {
     "plotNumber": "139",
     "payerName": "Сергеева А.З",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3397
+    "meterReadingPrev": 3397,
+    "meterReadingCurr": 3397
   },
   {
     "plotNumber": "140",
     "payerName": "Савинцев Н.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 750
+    "meterReadingPrev": 750,
+    "meterReadingCurr": 750
   },
   {
     "plotNumber": "141",
     "payerName": "Климов С.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1560
+    "meterReadingPrev": 1560,
+    "meterReadingCurr": 1560
   },
   {
     "plotNumber": "142",
     "payerName": "Ражкова Д.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9648
+    "meterReadingPrev": 9648,
+    "meterReadingCurr": 9648
   },
   {
     "plotNumber": "143",
     "payerName": "Зайцева Г.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2875
+    "meterReadingPrev": 2875,
+    "meterReadingCurr": 2875
   },
   {
     "plotNumber": "144",
     "payerName": "Захаренко И.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6019
+    "meterReadingPrev": 6019,
+    "meterReadingCurr": 6019
   },
   {
     "plotNumber": "145",
     "payerName": "Приходько О.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1685
+    "meterReadingPrev": 1685,
+    "meterReadingCurr": 1685
   },
   {
     "plotNumber": "146",
     "payerName": "Гусев Д.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3229
+    "meterReadingPrev": 3229,
+    "meterReadingCurr": 3229
   },
   {
     "plotNumber": "147",
     "payerName": "Злобина З.Д",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2975
+    "meterReadingPrev": 2975,
+    "meterReadingCurr": 2975
   },
   {
     "plotNumber": "148",
     "payerName": "Дудков А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2400
+    "meterReadingPrev": 2400,
+    "meterReadingCurr": 2400
   },
   {
     "plotNumber": "149",
     "payerName": "ВАНАГ ЕЛЕНА ВЛАДИМИРОВН А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3711
+    "meterReadingPrev": 3711,
+    "meterReadingCurr": 3711
   },
   {
     "plotNumber": "150",
     "payerName": "Приходько О.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 11279
+    "meterReadingPrev": 11279,
+    "meterReadingCurr": 11279
   },
   {
     "plotNumber": "151",
     "payerName": "ВАНАГ ЕЛЕНА ВЛАДИМИРОВН А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 535
+    "meterReadingPrev": 535,
+    "meterReadingCurr": 535
   },
   {
     "plotNumber": "152",
     "payerName": "Гельцер К.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 430
+    "meterReadingPrev": 430,
+    "meterReadingCurr": 430
   },
   {
     "plotNumber": "153",
     "payerName": "Хохлова Е.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1618
+    "meterReadingPrev": 1618,
+    "meterReadingCurr": 1618
   },
   {
     "plotNumber": "154",
     "payerName": "Юдина С.Д",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 8042
+    "meterReadingPrev": 8042,
+    "meterReadingCurr": 8042
   },
   {
     "plotNumber": "157",
     "payerName": "Морозова Т.Т",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3944
+    "meterReadingPrev": 3944,
+    "meterReadingCurr": 3944
   },
   {
     "plotNumber": "",
     "payerName": "Морозова Т.Т",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 453
+    "meterReadingPrev": 453,
+    "meterReadingCurr": 453
   },
   {
     "plotNumber": "158",
     "payerName": "Журавлева И.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 29007
+    "meterReadingPrev": 29007,
+    "meterReadingCurr": 29007
   },
   {
     "plotNumber": "159",
     "payerName": "Романова Т.Н",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 700
+    "meterReadingPrev": 700,
+    "meterReadingCurr": 700
   },
   {
     "plotNumber": "160",
     "payerName": "Кузьмина Е.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2735
+    "meterReadingPrev": 2735,
+    "meterReadingCurr": 2735
   },
   {
     "plotNumber": "161",
     "payerName": "Сакун Н.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4900
+    "meterReadingPrev": 4900,
+    "meterReadingCurr": 4900
   },
   {
     "plotNumber": "162",
     "payerName": "Шумкина Л",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3972
+    "meterReadingPrev": 3972,
+    "meterReadingCurr": 3972
   },
   {
     "plotNumber": "163",
     "payerName": "Боровой С.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3870
+    "meterReadingPrev": 3870,
+    "meterReadingCurr": 3870
   },
   {
     "plotNumber": "164",
     "payerName": "Раткевич В.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 360
+    "meterReadingPrev": 360,
+    "meterReadingCurr": 360
   },
   {
     "plotNumber": "165",
     "payerName": "Банаев А.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 3080
+    "meterReadingPrev": 3080,
+    "meterReadingCurr": 3080
   },
   {
     "plotNumber": "166",
     "payerName": "Терехона Л.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 387
+    "meterReadingPrev": 387,
+    "meterReadingCurr": 387
   },
   {
     "plotNumber": "167",
     "payerName": "Тихонова О.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5831
+    "meterReadingPrev": 5831,
+    "meterReadingCurr": 5831
   },
   {
     "plotNumber": "168",
     "payerName": "Еланцев С.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 5388
+    "meterReadingPrev": 5388,
+    "meterReadingCurr": 5388
   },
   {
     "plotNumber": "169",
     "payerName": "Мазурик П.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 353
+    "meterReadingPrev": 353,
+    "meterReadingCurr": 353
   },
   {
     "plotNumber": "170",
     "payerName": "Мусохропова Г.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 10000
+    "meterReadingPrev": 10000,
+    "meterReadingCurr": 10000
   },
   {
     "plotNumber": "171",
     "payerName": "Пантюхов В.М",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1548.714
+    "meterReadingPrev": 1548.714,
+    "meterReadingCurr": 1548.714
   },
   {
     "plotNumber": "172",
     "payerName": "Розов Ю.А",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2557
+    "meterReadingPrev": 2557,
+    "meterReadingCurr": 2557
   },
   {
     "plotNumber": "173",
     "payerName": "Сивченко А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 6
+    "meterReadingPrev": 6,
+    "meterReadingCurr": 6
   },
   {
     "plotNumber": "174",
     "payerName": "Высоцкий В.Г",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 809
+    "meterReadingPrev": 809,
+    "meterReadingCurr": 809
   },
   {
     "plotNumber": "175",
     "payerName": "Гуляев Д.Ю",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 4997
+    "meterReadingPrev": 4997,
+    "meterReadingCurr": 4997
   },
   {
     "plotNumber": "176",
     "payerName": "Клепче В.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7594
+    "meterReadingPrev": 7594,
+    "meterReadingCurr": 7594
   },
   {
     "plotNumber": "177",
     "payerName": "Гуляева Е.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 387
+    "meterReadingPrev": 387,
+    "meterReadingCurr": 387
   },
   {
     "plotNumber": "178",
     "payerName": "Харитонова Е.И",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 1613
+    "meterReadingPrev": 1613,
+    "meterReadingCurr": 1613
   },
   {
     "plotNumber": "179",
     "payerName": "Попова С.Е",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 2450
+    "meterReadingPrev": 2450,
+    "meterReadingCurr": 2450
   },
   {
     "plotNumber": "180",
     "payerName": "Плотников С.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 831
+    "meterReadingPrev": 831,
+    "meterReadingCurr": 831
   },
   {
     "plotNumber": "182",
     "payerName": "Денисов А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "183",
     "payerName": "Калитвянская Т.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 7970
+    "meterReadingPrev": 7970,
+    "meterReadingCurr": 7970
   },
   {
     "plotNumber": "184",
     "payerName": "Денисов А.В",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 11000
+    "meterReadingPrev": 11000,
+    "meterReadingCurr": 11000
   },
   {
     "plotNumber": "185",
     "payerName": "Дьяченко А.К",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 304
+    "meterReadingPrev": 304,
+    "meterReadingCurr": 304
   },
   {
     "plotNumber": "186",
     "payerName": "Симонова Н.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 618
+    "meterReadingPrev": 618,
+    "meterReadingCurr": 618
   },
   {
     "plotNumber": "187",
     "payerName": "Ялунина Г.С",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 9450
+    "meterReadingPrev": 9450,
+    "meterReadingCurr": 9450
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   },
   {
     "plotNumber": "",
     "payerName": "",
     "plotSotkas": 0,
     "targetSum": 0,
-    "meterReadingPrev": 0
+    "meterReadingPrev": 0,
+    "meterReadingCurr": 0
   }
 ]

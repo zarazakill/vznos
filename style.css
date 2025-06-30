@@ -820,7 +820,6 @@ body {
     color: white;
 }
 
-/* New styles for Sberbank link display */
 .sberbank-link-display {
     display: none; /* Hidden by default */
     margin-top: 15px;
@@ -879,6 +878,243 @@ body {
     text-align: center;
 }
 
+.admin-content {
+    flex-direction: column;
+    gap: 20px;
+}
+
+.admin-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    padding: 20px;
+}
+
+.admin-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 8px;
+}
+
+.admin-controls {
+    display: flex;
+    gap: 10px;
+}
+
+.admin-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.data-table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+    background-color: var(--light-gray);
+    font-weight: 500;
+    color: var(--primary-dark);
+}
+
+.table-actions {
+    white-space: nowrap;
+}
+
+.edit-btn,
+.delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin: 0 2px;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.edit-btn:hover {
+    background-color: #e3f2fd;
+}
+
+.delete-btn:hover {
+    background-color: #ffebee;
+}
+
+.password-form {
+    max-width: 400px;
+}
+
+.password-form .form-group {
+    margin-bottom: 15px;
+}
+
+.editable-cell {
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: background-color 0.2s;
+}
+
+.editable-cell:hover {
+    background-color: var(--light-gray);
+}
+
+.editable-cell input {
+    width: 100%;
+    border: 1px solid var(--primary-color);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: inherit;
+}
+
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--light-gray);
+}
+
+.login-form-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-form {
+    margin-top: 20px;
+}
+
+.login-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.login-footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}
+
+.mass-receipt-content {
+    max-width: 95%;
+    width: 95%;
+}
+
+.mass-receipt-container {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 6.5pt;
+    color: #000;
+    background: #fff;
+    line-height: 1.1;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 10mm 20mm 3mm 20mm;
+    box-sizing: border-box;
+}
+
+.plot-checkbox-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.plot-checkbox-list .checkbox-label {
+    display: block;
+    margin-bottom: 8px;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.plot-checkbox-list .checkbox-label:hover {
+    background-color: var(--light-gray);
+}
+
+.mass-print-options {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.admin-link {
+    margin-top: 10px;
+    text-align: center;
+    width: 100%;
+}
+
+.admin-link a {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.8rem;
+    transition: color 0.3s;
+}
+
+.admin-link a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.receipt-page {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    height: 297mm; /* A4 height */
+    padding: 10mm;
+    box-sizing: border-box;
+}
+
+.mass-receipt-item {
+    flex: 0 0 50%; /* Each item takes 50% of the page height */
+    box-sizing: border-box;
+    padding-bottom: 10mm; /* Space between receipts */
+}
+
+.mass-receipt-item:last-child {
+    padding-bottom: 0;
+}
+
+.receipt-part {
+    padding: 0;
+    margin-bottom: 2mm;
+    background: white;
+    page-break-inside: avoid;
+    height: 65mm; /* Adjusted height for print to fit two sets per page */
+    display: flex;
+    flex-direction: row;
+    border: 1px solid black;
+}
+
+.receipt-part:last-child {
+    margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
     .main-content {
         flex-direction: column;
@@ -928,77 +1164,80 @@ body {
 }
 
 @media print {
-    body, .container, .main-content, .form-container, .info-container, .header, .modal-actions, .close-modal {
-        visibility: hidden;
-        margin: 0;
-        padding: 0;
-        height: 0;
-        overflow: hidden;
+    body > *:not(#massReceiptPrintModal):not(#receiptModal) {
+        display: none !important;
     }
     
-    .modal {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: auto;
-        background: white;
-        overflow: visible;
-        margin: 0;
-        padding: 0;
+    #receiptModal, #massReceiptPrintModal {
+        display: block !important;
+        position: static !important; /* Not fixed or absolute */
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        background: none !important; /* Remove background for print */
+        box-shadow: none !important; /* Remove shadows */
     }
-    
-    .modal-content {
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        padding: 0;
-        box-shadow: none;
-        border: none;
-        max-height: none;
-        border-radius: 0;
+
+    #receiptModal .modal-content, #massReceiptPrintModal .modal-content {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        background-color: transparent !important;
+        height: auto !important;
+        overflow: visible !important;
     }
-    
-    #receiptContentWrapper {
-        border: none;
-        overflow: visible;
-        max-height: none;
-        margin: 0;
-        padding: 0;
+
+    #receiptContentWrapper, #massReceiptContentWrapper {
+        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important; /* Remove borders */
     }
-    
-    .receipt-container, .receipt-container * {
+
+    .receipt-container, .mass-receipt-container,
+    .receipt-container *, .mass-receipt-container * {
         visibility: visible;
+        background: white; /* Ensure white background for receipts */
+        color: #000;
+    }
+
+    .receipt-page {
+        page-break-after: always;
+        height: 297mm; /* A4 height */
+        padding: 10mm;
+        margin: 0;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+    }
+    .receipt-page:last-child {
+        page-break-after: avoid; /* No page break after the last page */
     }
     
-    .receipt-container {
-        padding: 10mm 20mm 2mm 20mm;
-        margin: 0;
-        max-width: 100%;
-        width: 210mm;
-        min-height: auto;
-        font-size: 6.5pt;
+    .mass-receipt-item {
+        flex: 0 0 50%; /* Each item takes 50% of the page height */
+        box-sizing: border-box;
+        padding-bottom: 10mm; /* Space between receipts */
+        height: calc(50% - 5mm); /* Distribute space evenly, account for padding */
+    }
+    
+    .mass-receipt-item:last-child {
+        padding-bottom: 0;
     }
     
     .receipt-part {
+        height: 65mm; /* Adjusted height for print to fit two sets per page */
+        box-sizing: border-box;
         border: 1px solid black;
-        box-shadow: none;
-        page-break-inside: avoid;
-        padding: 0;
         margin-bottom: 2mm;
-        height: 65mm;
-    }
-
-    .receipt-main-content {
-        padding: 2mm;
-    }
-    
-    .receipt-part:first-child {
-        margin-top: 0;
-    }
-    
-    .receipt-part:last-child {
-        margin-bottom: 0;
     }
     
     .receipt-tear-line {

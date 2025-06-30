@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ панель СНТ «Березка-2»</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo-container">
+                <img src="logo.png" alt="СНТ Березка-2" class="logo-img">
+                <h1>Админ панель СНТ «Березка-2»</h1>
+            </div>
+            <div class="admin-controls">
+                <button id="logoutBtn" class="action-btn">Выход</button>
+            </div>
+        </header>
+
+        <main class="main-content admin-content">
+            <div class="admin-section">
+                <h2>Управление данными участков</h2>
+                
+                <div class="admin-toolbar">
+                    <button id="addPlotBtn" class="action-btn">Добавить участок</button>
+                    <button id="exportDataBtn" class="action-btn">Экспорт JSON</button>
+                    <button id="exportExcelBtn" class="action-btn">Экспорт XLSX</button>
+                    <button id="importDataBtn" class="action-btn">Импорт JSON</button>
+                    <button id="importExcelBtn" class="action-btn">Импорт XLSX</button>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                    <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display: none;">
+                    <button id="massReceiptBtn" class="action-btn">Массовая печать квитанций</button>
+                </div>
+
+                <div class="data-table-container">
+                    <table id="plotDataTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>№ участка</th>
+                                <th>ФИО плательщика</th>
+                                <th>Сумма взносов (руб.)</th>
+                                <th>Размер (соток)</th>
+                                <th>Целевые взносы</th>
+                                <th>Предыдущие показания</th>
+                                <th>Текущие показания</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="admin-section">
+                <h2>Изменить пароль</h2>
+                <form id="changePasswordForm" class="password-form">
+                    <div class="form-group">
+                        <label for="currentPassword">Текущий пароль</label>
+                        <input type="password" id="currentPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Новый пароль</label>
+                        <input type="password" id="newPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Подтвердите новый пароль</label>
+                        <input type="password" id="confirmPassword" required>
+                    </div>
+                    <button type="submit" class="action-btn">Изменить пароль</button>
+                </form>
+            </div>
+        </main>
+
+        <!-- Модальное окно для редактирования участка -->
+        <div id="editPlotModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3 id="editModalTitle">Редактировать участок</h3>
+                <form id="editPlotForm">
+                    <div class="form-group">
+                        <label for="editPlotNumber">№ участка</label>
+                        <input type="text" id="editPlotNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPayerName">ФИО плательщика</label>
+                        <input type="text" id="editPayerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPlotSotkas">Размер участка (соток)</label>
+                        <input type="number" id="editPlotSotkas" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editTargetSum">Целевые взносы (руб.)</label>
+                        <input type="number" id="editTargetSum" step="0.01" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editMeterReading">Предыдущие показания счетчика</label>
+                        <input type="number" id="editMeterReading" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editMeterReadingCurr">Текущие показания счетчика</label>
+                        <input type="number" id="editMeterReadingCurr" min="0">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="submit" class="action-btn">Сохранить</button>
+                        <button type="button" class="action-btn" onclick="closeEditModal()">Отмена</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Модальное окно для массовой печати -->
+        <div id="massReceiptModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>Массовая печать квитанций</h3>
+                <div class="mass-print-options">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="selectAllPlots"> Выбрать все участки
+                        </label>
+                    </div>
+                    <div id="plotCheckboxList" class="plot-checkbox-list"></div>
+                    <div class="modal-actions">
+                        <button id="generateMassReceiptsBtn" class="action-btn">Сформировать квитанции</button>
+                        <button type="button" class="action-btn" onclick="closeMassReceiptModal()">Отмена</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для печати квитанций -->
+        <div id="massReceiptPrintModal" class="modal">
+            <div class="modal-content mass-receipt-content">
+                <span class="close-modal">&times;</span>
+                <div id="massReceiptContentWrapper">
+                    <div id="massReceiptContent" class="mass-receipt-container">
+                        <!-- Содержимое квитанций будет здесь -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="printMassReceiptsBtn" class="action-btn">Печать всех квитанций</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
