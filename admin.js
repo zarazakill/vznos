@@ -452,8 +452,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const plot = plotData[index];
             if (!plot.plotNumber || !plot.payerName) continue;
 
-            let kwhUsedForReceipt = 0; // Initialize kwhUsed for this receipt
-
             const formData = {
                 plotNumber: plot.plotNumber,
                 payerName: plot.payerName,
@@ -463,8 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 targetSum: 0,
                 electricitySum: 0,
                 meterReadingPrev: plot.meterReadingPrev || 0,
-                meterReadingCurr: plot.meterReadingCurr || plot.meterReadingPrev || 0, // Ensure meterReadingCurr is at least prev if not set
-                kwhUsed: 0 // Add kwhUsed to formData
+                meterReadingCurr: plot.meterReadingCurr || 0 // Use meterReadingCurr if available, otherwise prev
             };
 
             // Рассчитываем суммы
@@ -483,20 +480,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.electricitySum = plot.electricitySum;
                 formData.paymentTypes.push('Электроэнергия');
                 formData.totalAmount += formData.electricitySum;
-                
-                // If sum is provided, but readings are also present, calculate kWh for display
-                if (formData.meterReadingCurr >= formData.meterReadingPrev) {
-                     kwhUsedForReceipt = formData.meterReadingCurr - formData.meterReadingPrev;
-                } else if (formData.electricitySum > 0 && ELECTRICITY_TARIFF > 0) {
-                     kwhUsedForReceipt = formData.electricitySum / ELECTRICITY_TARIFF;
-                }
             } else if (formData.meterReadingCurr > formData.meterReadingPrev) {
-                kwhUsedForReceipt = formData.meterReadingCurr - formData.meterReadingPrev;
-                formData.electricitySum = kwhUsedForReceipt * ELECTRICITY_TARIFF;
+                const usage = formData.meterReadingCurr - formData.meterReadingPrev;
+                formData.electricitySum = usage * ELECTRICITY_TARIFF;
                 formData.paymentTypes.push('Электроэнергия');
                 formData.totalAmount += formData.electricitySum;
             }
-            formData.kwhUsed = kwhUsedForReceipt; // Store calculated kWh usage
 
             // Always generate receipts, even if the total amount is zero
             // If total amount is 0, still print, user requested mass print
@@ -630,11 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let paymentDetails = [];
         if (data.membershipSum > 0) paymentDetails.push(`Членские взносы: ${data.membershipSum.toFixed(2)} руб.`);
         if (data.targetSum > 0) paymentDetails.push(`Целевые взносы: ${data.targetSum.toFixed(2)} руб.`);
-        if (data.electricitySum > 0) {
-            // Use kwhUsed from data if available, otherwise just print the sum
-            const kwhDisplay = (data.kwhUsed !== undefined && data.kwhUsed > 0) ? ` (${Math.round(data.kwhUsed)} кВт)` : '';
-            paymentDetails.push(`Электроэнергия: ${data.electricitySum.toFixed(2)} руб.${kwhDisplay}`);
-        }
+        if (data.electricitySum > 0) paymentDetails.push(`Электроэнергия: ${data.electricitySum.toFixed(2)} руб.`);
         
         const qrCodeHtml = (title === 'Извещение' && qrCodeDataURL) ?
             `<div class="receipt-qr-code-container">
