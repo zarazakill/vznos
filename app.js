@@ -526,61 +526,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to generate QR code and display it on the main canvas
-    async function displayQrCodeOnCanvas() {
-        const formData = validateForm();
-        if (!formData) {
-            const context = qrCanvas.getContext('2d');
-            context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-            if (downloadQrBtn) downloadQrBtn.disabled = true;
-            return;
-        }
-
-        let purposeParts = [];
-        if (formData.membershipSum > 0) {
-            purposeParts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.`);
-        }
-        if (formData.targetSum > 0) {
-            purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.`);
-        }
-        if (formData.electricitySum > 0) {
-            const kwhUsed = parseFloat(kwhUsedElement.textContent) || 0; // Get actual displayed kWh
-            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)`);
-        }
-        let purposeString = '';
-        if (purposeParts.length > 0) {
-            purposeString = purposeParts.join(', ') + ` за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
-        } else {
-            // Fallback if no payment types are selected (though validation should prevent this)
-            purposeString = `Оплата за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
-        }
-
-        const totalAmountKopecks = (formData.totalAmount * 100).toFixed(0);
-
-        const paymentString =
-            `ST00012|Name=${REQUISITES.Name}` +
-            `|PersonalAcc=${REQUISITES.PersonalAcc}` +
-            `|BankName=${REQUISITES.BankName}` +
-            `|BIC=${REQUISITES.BIC}` +
-            `|CorrespAcc=${REQUISITES.CorrespAcc}` +
-            `|PayeeINN=${REQUISITES.PayeeINN}` +
-            (REQUISITES.KPP ? `|KPP=${REQUISITES.KPP}` : '') +
-            `|Sum=${totalAmountKopecks}` +
-            `|Purpose=${purposeString}`;
-        
-        QRCode.toCanvas(qrCanvas, paymentString, { width: 280, errorCorrectionLevel: 'H' }, function (error) {
-            if (error) {
-                console.error('Error generating QR code:', error);
-                showNotification('Ошибка при генерации QR-кода!', 'error');
-                if (downloadQrBtn) downloadQrBtn.disabled = true;
-                const context = qrCanvas.getContext('2d');
-                context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-            } else {
-                if (downloadQrBtn) downloadQrBtn.disabled = false;
-            }
-        });
-    }
-    
     // Function to create one part of the receipt (Notice or Receipt)
     function createReceiptPart(title, data, amountInWords, formattedDate, qrCodeDataURL = null) {
         const purpose = data.paymentTypes.join(', ');
@@ -589,7 +534,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let paymentDetails = [];
         if (data.membershipSum > 0) paymentDetails.push(`Членские взносы: ${data.membershipSum.toFixed(2)} руб.`);
         if (data.targetSum > 0) paymentDetails.push(`Целевые взносы: ${data.targetSum.toFixed(2)} руб.`);
-        if (data.electricitySum > 0) paymentDetails.push(`Электроэнергия: ${data.electricitySum.toFixed(2)} руб.`);
+        if (data.electricitySum > 0) {
+            const kwhUsed = parseFloat(kwhUsedElement.textContent) || 0; // Get actual displayed kWh from main form
+            paymentDetails.push(`Электроэнергия: ${data.electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)`);
+        }
         
         // Conditional QR code display for the "Извещение" part
         const qrCodeHtml = (title === 'Извещение' && qrCodeDataURL) ?
