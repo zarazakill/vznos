@@ -820,6 +820,7 @@ body {
     color: white;
 }
 
+/* New styles for Sberbank link display */
 .sberbank-link-display {
     display: none; /* Hidden by default */
     margin-top: 15px;
@@ -878,6 +879,7 @@ body {
     text-align: center;
 }
 
+/* Admin styles */
 .admin-content {
     flex-direction: column;
     gap: 20px;
@@ -933,6 +935,23 @@ body {
     color: var(--primary-dark);
 }
 
+/* Styles for editable table inputs */
+.data-table input.editable-cell-input {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.85rem; /* Slightly smaller than main form inputs */
+    transition: border 0.3s;
+    box-sizing: border-box; /* Crucial for width: 100% */
+}
+
+.data-table input.editable-cell-input:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
 .table-actions {
     white-space: nowrap;
 }
@@ -957,6 +976,33 @@ body {
     background-color: #ffebee;
 }
 
+.data-table .table-actions button.save-btn {
+    background-color: #4CAF50; /* Green for save */
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    margin-right: 5px;
+    transition: background-color 0.2s;
+}
+
+.data-table .table-actions button.save-btn:hover:not(:disabled) {
+    background-color: #388E3C;
+}
+
+.data-table .table-actions button.save-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Ensure the action buttons are properly sized and aligned */
+.data-table .table-actions .edit-btn,
+.data-table .table-actions .delete-btn {
+    font-size: 1rem; /* Adjust icon size */
+    padding: 4px;
+}
+
 .password-form {
     max-width: 400px;
 }
@@ -965,25 +1011,7 @@ body {
     margin-bottom: 15px;
 }
 
-.editable-cell {
-    cursor: pointer;
-    padding: 2px 4px;
-    border-radius: 3px;
-    transition: background-color 0.2s;
-}
-
-.editable-cell:hover {
-    background-color: var(--light-gray);
-}
-
-.editable-cell input {
-    width: 100%;
-    border: 1px solid var(--primary-color);
-    padding: 2px 4px;
-    border-radius: 3px;
-    font-size: inherit;
-}
-
+/* Login page styles */
 .login-container {
     display: flex;
     justify-content: center;
@@ -1020,6 +1048,7 @@ body {
     text-decoration: underline;
 }
 
+/* Mass receipt styles */
 .mass-receipt-content {
     max-width: 95%;
     width: 95%;
@@ -1083,36 +1112,17 @@ body {
 
 .receipt-page {
     page-break-after: always;
+    height: 297mm;
     display: flex;
     flex-direction: column;
-    height: 297mm; /* A4 height */
+    gap: 10mm;
     padding: 10mm;
     box-sizing: border-box;
 }
 
 .mass-receipt-item {
-    flex: 0 0 50%; /* Each item takes 50% of the page height */
-    box-sizing: border-box;
-    padding-bottom: 10mm; /* Space between receipts */
-}
-
-.mass-receipt-item:last-child {
-    padding-bottom: 0;
-}
-
-.receipt-part {
-    padding: 0;
-    margin-bottom: 2mm;
-    background: white;
+    flex: 1;
     page-break-inside: avoid;
-    height: 65mm; /* Adjusted height for print to fit two sets per page */
-    display: flex;
-    flex-direction: row;
-    border: 1px solid black;
-}
-
-.receipt-part:last-child {
-    margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
@@ -1164,80 +1174,91 @@ body {
 }
 
 @media print {
-    body > *:not(#massReceiptPrintModal):not(#receiptModal) {
-        display: none !important;
-    }
-    
-    #receiptModal, #massReceiptPrintModal {
-        display: block !important;
-        position: static !important; /* Not fixed or absolute */
-        width: auto !important;
-        height: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-        background: none !important; /* Remove background for print */
-        box-shadow: none !important; /* Remove shadows */
-    }
-
-    #receiptModal .modal-content, #massReceiptPrintModal .modal-content {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        background-color: transparent !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-
-    #receiptContentWrapper, #massReceiptContentWrapper {
-        display: block !important;
-        max-height: none !important;
-        overflow: visible !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important; /* Remove borders */
-    }
-
-    .receipt-container, .mass-receipt-container,
-    .receipt-container *, .mass-receipt-container * {
-        visibility: visible;
-        background: white; /* Ensure white background for receipts */
-        color: #000;
-    }
-
-    .receipt-page {
-        page-break-after: always;
-        height: 297mm; /* A4 height */
-        padding: 10mm;
+    body, .container, .main-content, .form-container, .info-container, .header, .modal-actions, .close-modal {
+        visibility: hidden;
         margin: 0;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-    }
-    .receipt-page:last-child {
-        page-break-after: avoid; /* No page break after the last page */
+        padding: 0;
+        height: 0;
+        overflow: hidden;
     }
     
-    .mass-receipt-item {
-        flex: 0 0 50%; /* Each item takes 50% of the page height */
-        box-sizing: border-box;
-        padding-bottom: 10mm; /* Space between receipts */
-        height: calc(50% - 5mm); /* Distribute space evenly, account for padding */
+    .modal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto;
+        background: white;
+        overflow: visible;
+        margin: 0;
+        padding: 0;
     }
     
-    .mass-receipt-item:last-child {
-        padding-bottom: 0;
+    .modal-content {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        max-height: none;
+        border-radius: 0;
+    }
+    
+    #receiptContentWrapper {
+        border: none;
+        overflow: visible;
+        max-height: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    #massReceiptPrintModal, #massReceiptPrintModal * {
+        visibility: visible;
+    }
+    
+    #massReceiptPrintModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .receipt-container, .receipt-container *, .mass-receipt-container, .mass-receipt-container * {
+        visibility: visible;
+    }
+    
+    .receipt-container, .mass-receipt-container {
+        padding: 10mm 20mm 2mm 20mm;
+        margin: 0;
+        max-width: 100%;
+        width: 210mm;
+        min-height: auto;
+        font-size: 6.5pt;
     }
     
     .receipt-part {
-        height: 65mm; /* Adjusted height for print to fit two sets per page */
-        box-sizing: border-box;
         border: 1px solid black;
+        box-shadow: none;
+        page-break-inside: avoid;
+        padding: 0;
         margin-bottom: 2mm;
+        height: 65mm;
+    }
+
+    .receipt-main-content {
+        padding: 2mm;
+    }
+    
+    .receipt-part:first-child {
+        margin-top: 0;
+    }
+    
+    .receipt-part:last-child {
+        margin-bottom: 0;
     }
     
     .receipt-tear-line {

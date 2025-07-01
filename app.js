@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             targetSumInput.value = (foundPlot.targetSum !== undefined && foundPlot.targetSum !== null) ? foundPlot.targetSum.toFixed(2) : '';
             meterReadingPrevInput.value = (foundPlot.meterReadingPrev !== undefined && foundPlot.meterReadingPrev !== null) ? foundPlot.meterReadingPrev : '';
-            meterReadingCurrInput.value = (foundPlot.meterReadingCurr !== undefined && foundPlot.meterReadingCurr !== null) ? foundPlot.meterReadingCurr : '';
+            meterReadingCurrInput.value = ''; // Always clear current reading for new input
             electricitySumInput.value = ''; // Always clear manual electricity sum for new autofill
 
             // Also check checkboxes if corresponding sums/data are present
@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     
                     <div class="receipt-amount-words">
-                        <strong>Сумма прописью:</strong> ${amountInWords}
+                        <strong>Sумма прописью:</strong> ${amountInWords}
                     </div>
                     
                     <div class="receipt-footer">

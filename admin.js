@@ -12,25 +12,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    const MEMBERSHIP_TARIFF = 1400; // Define membership tariff for admin calculations
+    const ELECTRICITY_TARIFF = 3.5; // Define electricity tariff for admin calculations
+
     let plotData = [];
-    let editingIndex = -1;
-    const MEMBERSHIP_TARIFF = 1400; // 1400 руб за сотку
 
     // Элементы интерфейса
     const logoutBtn = document.getElementById('logoutBtn');
-    const addPlotBtn = document.getElementById('addPlotBtn');
     const exportDataBtn = document.getElementById('exportDataBtn');
-    const exportExcelBtn = document.getElementById('exportExcelBtn');
     const importDataBtn = document.getElementById('importDataBtn');
-    const importExcelBtn = document.getElementById('importExcelBtn');
     const importFileInput = document.getElementById('importFileInput');
-    const importExcelInput = document.getElementById('importExcelInput');
     const massReceiptBtn = document.getElementById('massReceiptBtn');
     const plotDataTable = document.getElementById('plotDataTable').getElementsByTagName('tbody')[0];
     const changePasswordForm = document.getElementById('changePasswordForm');
 
     // Модальные окна
-    const editPlotModal = document.getElementById('editPlotModal');
     const massReceiptModal = document.getElementById('massReceiptModal');
     const massReceiptPrintModal = document.getElementById('massReceiptPrintModal');
 
@@ -39,17 +35,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработчики событий
     logoutBtn.addEventListener('click', logout);
-    addPlotBtn.addEventListener('click', () => openEditModal());
     exportDataBtn.addEventListener('click', exportData);
-    exportExcelBtn.addEventListener('click', exportExcel);
     importDataBtn.addEventListener('click', () => importFileInput.click());
-    importExcelBtn.addEventListener('click', () => importExcelInput.click());
     importFileInput.addEventListener('change', importData);
-    importExcelInput.addEventListener('change', importExcel);
     massReceiptBtn.addEventListener('click', openMassReceiptModal);
-    if (changePasswordForm) {
-        changePasswordForm.addEventListener('submit', changePassword);
-    }
+    changePasswordForm.addEventListener('submit', changePassword);
 
     // Обработчики модальных окон
     document.querySelectorAll('.close-modal').forEach(btn => {
@@ -58,21 +48,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.getElementById('editPlotForm').addEventListener('submit', savePlot);
-    if (document.getElementById('selectAllPlots')) {
-        document.getElementById('selectAllPlots').addEventListener('change', toggleSelectAllPlots);
-    }
-    if (document.getElementById('generateMassReceiptsBtn')) {
-        document.getElementById('generateMassReceiptsBtn').addEventListener('click', generateMassReceipts);
-    }
-    if (document.getElementById('printMassReceiptsBtn')) {
-        document.getElementById('printMassReceiptsBtn').addEventListener('click', () => {
-            // Add a small delay to allow browser to render content before printing
-            setTimeout(() => {
-                window.print();
-            }, 100); 
-        });
-    }
+    document.getElementById('selectAllPlots').addEventListener('change', toggleSelectAllPlots);
+    document.getElementById('generateMassReceiptsBtn').addEventListener('click', generateMassReceipts);
+    document.getElementById('printMassReceiptsBtn').addEventListener('click', () => window.print());
 
     // Функции
     function logout() {
@@ -83,9 +61,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadPlotData() {
         try {
-            const response = await fetch('data.json');
-            const data = await response.json();
-            plotData = data.filter(plot => plot.plotNumber && plot.payerName); // Фильтруем пустые записи
+            const storedData = localStorage.getItem('plotData');
+            if (storedData) {
+                plotData = JSON.parse(storedData);
+            } else {
+                const response = await fetch('data.json');
+                const data = await response.json();
+                plotData = data
+                    .filter(plot => plot.plotNumber && plot.payerName)
+                    .map(plot => ({
+                        ...plot,
+                        meterReadingCurr: plot.meterReadingCurr !== undefined ? plot.meterReadingCurr : plot.meterReadingPrev,
+                        electricitySum: plot.electricitySum !== undefined ? plot.electricitySum : 0,
+                        // Initialize membershipSum. Prefer existing, otherwise calculate from plotSotkas from data.json.
+                        membershipSum: plot.membershipSum !== undefined && plot.membershipSum !== null
+                                       ? parseFloat(plot.membershipSum)
+                                       : ((plot.plotSotkas !== undefined && plot.plotSotkas !== null) ? parseFloat(plot.plotSotkas) * MEMBERSHIP_TARIFF : 0)
+                    }));
+                saveDataToLocalStorage(); // Save fetched data to local storage for persistence
+            }
+            // After membershipSum is initialized, ensure plotSotkas is derived from it for consistency with UI.
+            plotData.forEach(plot => {
+                if (plot.membershipSum !== undefined && plot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
+                    plot.plotSotkas = plot.membershipSum / MEMBERSHIP_TARIFF;
+                } else {
+                    plot.plotSotkas = 0; // If membershipSum is 0 or invalid, plotSotkas is 0.
+                }
+            });
+
             renderTable();
         } catch (error) {
             console.error('Ошибка загрузки данных:', error);
@@ -97,121 +100,162 @@ document.addEventListener('DOMContentLoaded', function() {
         plotDataTable.innerHTML = '';
         plotData.forEach((plot, index) => {
             const row = plotDataTable.insertRow();
-            row.innerHTML = `
-                <td><span class="editable-cell" data-field="plotNumber" data-index="${index}">${plot.plotNumber}</span></td>
-                <td><span class="editable-cell" data-field="payerName" data-index="${index}">${plot.payerName}</span></td>
-                <td><span class="editable-cell" data-field="membershipSum" data-index="${index}">${((plot.plotSotkas || 0) * MEMBERSHIP_TARIFF).toFixed(2)}</span></td>
-                <td><span class="editable-cell" data-field="plotSotkas" data-index="${index}">${(plot.plotSotkas || 0).toFixed(2)}</span></td>
-                <td><span class="editable-cell" data-field="targetSum" data-index="${index}">${plot.targetSum || 0}</span></td>
-                <td><span class="editable-cell" data-field="meterReadingPrev" data-index="${index}">${plot.meterReadingPrev || 0}</span></td>
-                <td><span class="editable-cell" data-field="meterReadingCurr" data-index="${index}">${plot.meterReadingCurr || 0}</span></td>
-                <td class="table-actions">
-                    <button onclick="openEditModal(${index})" class="edit-btn">✏️</button>
-                    <button onclick="deletePlot(${index})" class="delete-btn">🗑️</button>
-                </td>
-            `;
-        });
+            row.dataset.index = index; // Store index on the row
 
-        // Добавляем обработчики для редактирования ячеек
-        document.querySelectorAll('.editable-cell').forEach(cell => {
-            cell.addEventListener('click', function() {
-                if (this.querySelector('input')) return; // Уже редактируется
-                
-                const field = this.dataset.field;
-                const index = parseInt(this.dataset.index);
-                const currentValue = this.textContent;
-                
-                // Создаем input для редактирования
+            // Function to create an editable cell
+            const createEditableCell = (field, type = 'text', step = null, min = null, pattern = null) => {
+                const cell = row.insertCell();
                 const input = document.createElement('input');
-                input.type = field.includes('Sum') || field.includes('Sotkas') || field.includes('Reading') ? 'number' : 'text';
-                if (input.type === 'number') {
-                    input.step = field.includes('Sotkas') || field.includes('Sum') ? '0.01' : '1';
-                    input.min = '0';
+                input.type = type;
+                input.value = plot[field] !== undefined && plot[field] !== null ? plot[field] : '';
+                input.dataset.field = field; // Store field name
+                input.className = 'editable-cell-input';
+                
+                if (type === 'number') {
+                    if (step !== null) input.step = step;
+                    if (min !== null) input.min = min;
+                    // Add input validation for numbers only, allowing empty string
+                    input.addEventListener('input', function() {
+                        this.value = this.value.replace(',', '.'); // Allow comma as decimal separator
+                        if (this.value === '' || /^-?\d*\.?\d*$/.test(this.value)) {
+                            // Valid input, do nothing special
+                        } else {
+                            this.value = this.value.match(/^-?\d*\.?\d*/)?.[0] || '';
+                        }
+                    });
                 }
-                input.value = currentValue;
-                input.style.width = '100%';
-                input.style.border = '1px solid var(--primary-color)';
+                if (pattern) {
+                    input.pattern = pattern;
+                }
+
+                if (field === 'plotNumber' && typeof Inputmask !== 'undefined') {
+                    Inputmask({
+                        mask: '9{1,4}[A]',
+                        placeholder: '',
+                        definitions: {
+                            'A': { validator: '[АAаа]', casing: 'upper' }
+                        },
+                        keepStatic: true // Important for pattern to work well
+                    }).mask(input);
+                }
                 
-                this.innerHTML = '';
-                this.appendChild(input);
-                input.focus();
-                input.select();
-                
-                const saveEdit = () => {
-                    const newValue = input.type === 'number' ? parseFloat(input.value) || 0 : input.value.trim();
-                    
-                    if (field === 'membershipSum') {
-                        // Если редактируется сумма членских взносов, пересчитываем сотки
-                        plotData[index].plotSotkas = newValue / MEMBERSHIP_TARIFF;
-                    } else {
-                        plotData[index][field] = newValue;
-                    }
-                    
-                    saveDataToLocalStorage();
-                    renderTable();
-                    showNotification('Данные обновлены', 'success');
-                };
-                
-                const cancelEdit = () => {
-                    this.textContent = currentValue;
-                };
-                
-                input.addEventListener('blur', saveEdit);
-                input.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter') {
-                        saveEdit();
-                    } else if (e.key === 'Escape') {
-                        cancelEdit();
-                    }
+                input.addEventListener('input', () => {
+                    // Enable save button for this row
+                    const saveBtn = row.querySelector('.save-btn');
+                    if (saveBtn) saveBtn.disabled = false;
                 });
-            });
+                
+                cell.appendChild(input);
+                return cell;
+            };
+
+            // Function to create a read-only cell
+            const createReadOnlyCell = (value) => {
+                const cell = row.insertCell();
+                cell.textContent = value !== undefined && value !== null ? value.toFixed(2) : '0.00';
+                return cell;
+            };
+
+            createEditableCell('plotNumber', 'text', null, null, '[0-9]+[А-Яа-я]?'); // Apply pattern for plot number
+            createEditableCell('payerName');
+            
+            // Make membershipSum editable
+            createEditableCell('membershipSum', 'number', '0.01', '0');
+
+            // Make plotSotkas read-only, derived from membershipSum
+            createReadOnlyCell(plot.plotSotkas); // plot.plotSotkas is already updated to reflect membershipSum
+
+            createEditableCell('targetSum', 'number', '0.01', '0');
+            createEditableCell('meterReadingPrev', 'number', '1', '0');
+            createEditableCell('meterReadingCurr', 'number', '1', '0');
+            createEditableCell('electricitySum', 'number', '0.01', '0');
+
+            const actionsCell = row.insertCell();
+            actionsCell.className = 'table-actions';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = '💾'; // Save icon
+            saveBtn.className = 'action-btn save-btn';
+            saveBtn.title = 'Сохранить изменения';
+            saveBtn.disabled = true; // Initially disabled
+            saveBtn.addEventListener('click', () => saveRow(index));
+            actionsCell.appendChild(saveBtn);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = '🗑️'; // Delete icon
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.title = 'Удалить участок';
+            deleteBtn.addEventListener('click', () => deletePlot(index));
+            actionsCell.appendChild(deleteBtn);
         });
     }
 
-    function openEditModal(index = -1) {
-        editingIndex = index;
-        const modal = editPlotModal;
-        const form = document.getElementById('editPlotForm');
-        
-        if (index >= 0) {
-            const plot = plotData[index];
-            document.getElementById('editModalTitle').textContent = 'Редактировать участок';
-            document.getElementById('editPlotNumber').value = plot.plotNumber;
-            document.getElementById('editPayerName').value = plot.payerName;
-            document.getElementById('editPlotSotkas').value = plot.plotSotkas || '';
-            document.getElementById('editTargetSum').value = plot.targetSum || '';
-            document.getElementById('editMeterReading').value = plot.meterReadingPrev || '';
-            document.getElementById('editMeterReadingCurr').value = plot.meterReadingCurr || '';
-        } else {
-            document.getElementById('editModalTitle').textContent = 'Добавить участок';
-            form.reset();
+    function saveRow(index) {
+        const row = plotDataTable.rows[index]; // Get the specific row
+        const plot = plotData[index]; // Get the data object
+        let hasChanges = false;
+        let isValid = true;
+
+        row.querySelectorAll('.editable-cell-input').forEach(input => {
+            const field = input.dataset.field;
+            let newValue;
+
+            if (input.type === 'number') {
+                // For number inputs, ensure value is a valid number or empty string
+                newValue = parseFloat(input.value);
+                if (isNaN(newValue)) {
+                    newValue = 0; // Default to 0 if not a valid number
+                }
+            } else { // For text inputs
+                newValue = input.value.trim();
+                // Basic validation for plotNumber and payerName
+                if ((field === 'plotNumber' || field === 'payerName') && newValue === '') {
+                    isValid = false;
+                    showNotification(`Поле "${field === 'plotNumber' ? 'Номер участка' : 'ФИО плательщика'}" не может быть пустым.`, 'error');
+                    input.focus();
+                } else if (field === 'plotNumber' && input.checkValidity && !input.checkValidity()) {
+                    isValid = false;
+                    showNotification('Номер участка должен содержать только цифры и может заканчиваться одной буквой (А-Яа-я).', 'error');
+                    input.focus();
+                }
+            }
+            
+            if (plot[field] !== newValue) {
+                plot[field] = newValue;
+                hasChanges = true;
+            }
+        });
+
+        if (!isValid) {
+            return; // Stop if any validation fails
         }
-        
-        modal.style.display = 'block';
-    }
 
-    function savePlot(e) {
-        e.preventDefault();
-        
-        const plotData_new = {
-            plotNumber: document.getElementById('editPlotNumber').value.trim(),
-            payerName: document.getElementById('editPayerName').value.trim(),
-            plotSotkas: parseFloat(document.getElementById('editPlotSotkas').value) || 0,
-            targetSum: parseFloat(document.getElementById('editTargetSum').value) || 0,
-            meterReadingPrev: parseFloat(document.getElementById('editMeterReading').value) || 0,
-            meterReadingCurr: parseFloat(document.getElementById('editMeterReadingCurr').value) || 0
-        };
-
-        if (editingIndex >= 0) {
-            plotData[editingIndex] = plotData_new;
-        } else {
-            plotData.push(plotData_new);
+        // Specific logic for membershipSum and plotSotkas relationship
+        // plot.membershipSum is now directly from the editable input.
+        // plot.plotSotkas must be derived from plot.membershipSum.
+        if (plot.membershipSum !== undefined && plot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
+            const newPlotSotkas = plot.membershipSum / MEMBERSHIP_TARIFF;
+            // Only update if it actually changes (comparing fixed values for precision)
+            if (parseFloat(plot.plotSotkas).toFixed(2) !== newPlotSotkas.toFixed(2)) {
+                plot.plotSotkas = newPlotSotkas;
+                hasChanges = true;
+            }
+        } else { // If membershipSum is 0 or invalid, plotSotkas should be 0.
+            if (plot.plotSotkas !== 0) {
+                plot.plotSotkas = 0;
+                hasChanges = true;
+            }
         }
 
-        saveDataToLocalStorage();
-        renderTable();
-        closeEditModal();
-        showNotification('Данные сохранены', 'success');
+        if (hasChanges) {
+            saveDataToLocalStorage();
+            renderTable(); // Re-render the whole table to update all states
+            showNotification('Данные участка сохранены', 'success');
+        } else {
+            showNotification('Нет изменений для сохранения', 'info');
+            const saveBtn = row.querySelector('.save-btn');
+            if (saveBtn) saveBtn.disabled = true; // Disable save button if no changes
+        }
     }
 
     function deletePlot(index) {
@@ -228,119 +272,143 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function exportData() {
-        const dataStr = JSON.stringify(plotData, null, 2);
-        const dataBlob = new Blob([dataStr], {type: 'application/json'});
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `snt_berezka_data_${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-        showNotification('Данные экспортированы в JSON', 'success');
-    }
+        try {
+            // Подготавливаем данные для экспорта в Excel
+            const excelData = plotData.map(plot => ({
+                'Номер участка': plot.plotNumber || '',
+                'ФИО плательщика': plot.payerName || '',
+                'Членские взносы (руб.)': plot.membershipSum || 0, // Export membershipSum directly
+                'Размер участка (соток)': plot.plotSotkas || 0, // Export plotSotkas (which is now derived)
+                'Целевые взносы (руб.)': plot.targetSum || 0,
+                'Предыдущие показания (кВт)': plot.meterReadingPrev || 0,
+                'Текущие показания (кВт)': plot.meterReadingCurr || 0,
+                'Сумма электроэнергии (руб.)': plot.electricitySum || 0
+            }));
 
-    function exportExcel() {
-        // Подготавливаем данные для экспорта
-        const exportData = plotData.map(plot => ({
-            'Номер участка': plot.plotNumber,
-            'ФИО плательщика': plot.payerName,
-            'Размер участка (соток)': plot.plotSotkas || 0,
-            'Целевые взносы (руб.)': plot.targetSum || 0,
-            'Предыдущие показания': plot.meterReadingPrev || 0,
-            'Текущие показания': plot.meterReadingCurr || 0
-        }));
-
-        // Создаем книгу Excel
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        
-        // Добавляем лист в книгу
-        XLSX.utils.book_append_sheet(wb, ws, 'Участки СНТ Березка-2');
-        
-        // Сохраняем файл
-        const fileName = `snt_berezka_data_${new Date().toISOString().split('T')[0]}.xlsx`;
-        XLSX.writeFile(wb, fileName);
-        
-        showNotification('Данные экспортированы в XLSX', 'success');
+            // Создаем рабочую книгу
+            const workbook = XLSX.utils.book_new();
+            
+            // Создаем лист из данных
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            
+            // Устанавливаем ширину колонок (adjusted for new order)
+            const columnWidths = [
+                { wch: 15 }, // Номер участка
+                { wch: 30 }, // ФИО плательщика
+                { wch: 25 }, // Членские взносы (руб.)
+                { wch: 20 }, // Размер участка (соток)
+                { wch: 20 }, // Целевые взносы
+                { wch: 25 }, // Предыдущие показания
+                { wch: 25 }, // Текущие показания
+                { wch: 25 }  // Сумма электроэнергии
+            ];
+            worksheet['!cols'] = columnWidths;
+            
+            // Добавляем лист в книгу
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Участки СНТ');
+            
+            // Генерируем имя файла с датой
+            const date = new Date().toISOString().split('T')[0];
+            const filename = `snt_berezka_2_uchastki_${date}.xlsx`;
+            
+            // Сохраняем файл
+            XLSX.writeFile(workbook, filename);
+            
+            showNotification('Данные экспортированы в Excel', 'success');
+            
+        } catch (error) {
+            console.error('Ошибка экспорта:', error);
+            showNotification('Ошибка при экспорте данных', 'error');
+        }
     }
 
     function importData(e) {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const importedData = JSON.parse(e.target.result);
-                if (Array.isArray(importedData)) {
-                    // Добавляем поле meterReadingCurr если его нет
-                    const updatedData = importedData.map(plot => ({
-                        ...plot,
-                        meterReadingCurr: plot.meterReadingCurr || plot.meterReadingPrev || 0
-                    }));
-                    plotData = updatedData;
-                    saveDataToLocalStorage();
-                    renderTable();
-                    showNotification('Данные импортированы из JSON', 'success');
-                } else {
-                    throw new Error('Неверный формат файла');
-                }
-            } catch (error) {
-                showNotification('Ошибка импорта: ' + error.message, 'error');
-            }
-        };
-        reader.readAsText(file);
-    }
+        try {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    // Читаем Excel файл
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Берем первый лист
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Конвертируем в JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (!Array.isArray(jsonData) || jsonData.length === 0) {
+                        throw new Error('Файл не содержит данных или имеет неверный формат');
+                    }
+                    
+                    // Преобразуем данные в нужный формат
+                    const importedData = jsonData.map(row => {
+                        const importedPlot = {
+                            plotNumber: String(row['Номер участка'] || row['plotNumber'] || '').trim(),
+                            payerName: String(row['ФИО плательщика'] || row['payerName'] || '').trim(),
+                            // Prefer importing membershipSum if available from the new Excel structure
+                            membershipSum: parseFloat(row['Членские взносы (руб.)'] || row['membershipSum'] || 0),
+                            targetSum: parseFloat(row['Целевые взносы (руб.)'] || row['targetSum'] || 0),
+                            meterReadingPrev: parseFloat(row['Предыдущие показания (кВт)'] || row['meterReadingPrev'] || 0),
+                            meterReadingCurr: parseFloat(row['Текущие показания (кВт)'] || row['meterReadingCurr'] || 0),
+                            electricitySum: parseFloat(row['Сумма электроэнергии (руб.)'] || row['electricitySum'] || 0)
+                        };
 
-    function importExcel(e) {
-        const file = e.target.files[0];
-        if (!file) return;
+                        // If membershipSum was not directly provided, try to derive from plotSotkas if present in imported row
+                        if (importedPlot.membershipSum === 0 && (row['Размер участка (соток)'] !== undefined || row['plotSotkas'] !== undefined)) {
+                             const importedSotkas = parseFloat(row['Размер участка (соток)'] || row['plotSotkas'] || 0);
+                             if (importedSotkas > 0) {
+                                 importedPlot.membershipSum = importedSotkas * MEMBERSHIP_TARIFF;
+                             }
+                        }
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                
-                // Читаем первый лист
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                
-                // Преобразуем в JSON
-                const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                
-                // Преобразуем в формат приложения
-                const importedData = jsonData.map(row => ({
-                    plotNumber: String(row['Номер участка'] || row.plotNumber || ''),
-                    payerName: String(row['ФИО плательщика'] || row.payerName || ''),
-                    plotSotkas: Number(row['Размер участка (соток)'] || row.plotSotkas || 0),
-                    targetSum: Number(row['Целевые взносы (руб.)'] || row.targetSum || 0),
-                    meterReadingPrev: Number(row['Предыдущие показания'] || row.meterReadingPrev || 0),
-                    meterReadingCurr: Number(row['Текущие показания'] || row.meterReadingCurr || row.meterReadingPrev || 0)
-                })).filter(plot => plot.plotNumber && plot.payerName); // Фильтруем пустые записи
-                
-                if (importedData.length > 0) {
-                    plotData = importedData;
-                    saveDataToLocalStorage();
-                    renderTable();
-                    showNotification(`Импортировано ${importedData.length} записей из XLSX`, 'success');
-                } else {
-                    throw new Error('Не найдено данных для импорта или неверный формат');
+                        // Now, ensure plotSotkas is derived from membershipSum for consistency within the data model
+                        if (importedPlot.membershipSum !== undefined && importedPlot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
+                            importedPlot.plotSotkas = importedPlot.membershipSum / MEMBERSHIP_TARIFF;
+                        } else {
+                            importedPlot.plotSotkas = 0;
+                        }
+                        
+                        return importedPlot;
+                    }).filter(plot => plot.plotNumber && plot.payerName); // Фильтруем пустые записи
+                    
+                    if (importedData.length === 0) {
+                        throw new Error('В файле не найдено валидных записей с номером участка и ФИО');
+                    }
+                    
+                    // Подтверждение импорта
+                    const confirmMsg = `Найдено ${importedData.length} записей для импорта. Это заменит все существующие данные. Продолжить?`;
+                    if (confirm(confirmMsg)) {
+                        plotData = importedData;
+                        saveDataToLocalStorage();
+                        renderTable();
+                        showNotification(`Импортировано ${importedData.length} записей`, 'success');
+                    }
+                    
+                } catch (error) {
+                    console.error('Ошибка обработки файла:', error);
+                    showNotification('Ошибка импорта: ' + error.message, 'error');
                 }
-                
-            } catch (error) {
-                console.error('Ошибка импорта Excel:', error);
-                showNotification('Ошибка импорта XLSX: ' + error.message, 'error');
-            }
-        };
-        reader.readAsArrayBuffer(file);
+            };
+            
+            reader.readAsArrayBuffer(file);
+            
+        } catch (error) {
+            console.error('Ошибка чтения файла:', error);
+            showNotification('Ошибка при чтении файла', 'error');
+        }
+        
+        // Очищаем input для возможности повторного выбора того же файла
+        e.target.value = '';
     }
 
     function openMassReceiptModal() {
         const modal = massReceiptModal;
         const checkboxList = document.getElementById('plotCheckboxList');
-        
-        if (!checkboxList) return;
         
         checkboxList.innerHTML = '';
         plotData.forEach((plot, index) => {
@@ -375,89 +443,87 @@ document.addEventListener('DOMContentLoaded', function() {
         const receiptsContainer = document.getElementById('massReceiptContent');
         receiptsContainer.innerHTML = '';
 
-        const ELECTRICITY_TARIFF = 3.5;
+        // Создаем контейнер для страниц
+        let currentPage = document.createElement('div');
+        currentPage.className = 'receipt-page';
+        receiptsContainer.appendChild(currentPage);
 
-        for (let i = 0; i < selectedIndices.length; i += 2) {
-            // Создаем страницу с двумя квитанциями
-            const pageDiv = document.createElement('div');
-            pageDiv.className = 'receipt-page';
-            
-            // Первая квитанция
-            const index1 = selectedIndices[i];
-            const plot1 = plotData[index1];
-            if (plot1.plotNumber && plot1.payerName) {
-                const receipt1 = await createReceiptForPlot(plot1, ELECTRICITY_TARIFF);
-                pageDiv.appendChild(receipt1);
+        for (const index of selectedIndices) {
+            const plot = plotData[index];
+            if (!plot.plotNumber || !plot.payerName) continue;
+
+            const formData = {
+                plotNumber: plot.plotNumber,
+                payerName: plot.payerName,
+                paymentTypes: [],
+                totalAmount: 0,
+                membershipSum: 0,
+                targetSum: 0,
+                electricitySum: 0,
+                meterReadingPrev: plot.meterReadingPrev || 0,
+                meterReadingCurr: plot.meterReadingCurr || 0 // Use meterReadingCurr if available, otherwise prev
+            };
+
+            // Рассчитываем суммы
+            if (plot.membershipSum > 0) { // Use stored membershipSum directly
+                formData.membershipSum = plot.membershipSum;
+                formData.paymentTypes.push('Членские взносы');
+                formData.totalAmount += formData.membershipSum;
             }
-            
-            // Вторая квитанция (если есть)
-            if (i + 1 < selectedIndices.length) {
-                const index2 = selectedIndices[i + 1];
-                const plot2 = plotData[index2];
-                if (plot2.plotNumber && plot2.payerName) {
-                    const receipt2 = await createReceiptForPlot(plot2, ELECTRICITY_TARIFF);
-                    pageDiv.appendChild(receipt2);
+            if (plot.targetSum > 0) {
+                formData.targetSum = plot.targetSum;
+                formData.paymentTypes.push('Целевые взносы');
+                formData.totalAmount += formData.targetSum;
+            }
+            // If electricitySum is directly provided in data, use it. Otherwise, calculate from readings.
+            if (plot.electricitySum > 0) { // Prefer pre-calculated sum if available
+                formData.electricitySum = plot.electricitySum;
+                formData.paymentTypes.push('Электроэнергия');
+                formData.totalAmount += formData.electricitySum;
+            } else if (formData.meterReadingCurr > formData.meterReadingPrev) {
+                const usage = formData.meterReadingCurr - formData.meterReadingPrev;
+                formData.electricitySum = usage * ELECTRICITY_TARIFF;
+                formData.paymentTypes.push('Электроэнергия');
+                formData.totalAmount += formData.electricitySum;
+            }
+
+            // Always generate receipts, even if the total amount is zero
+            // If total amount is 0, still print, user requested mass print
+            { 
+                const today = new Date();
+                const formattedDate = today.toLocaleDateString('ru-RU');
+                const amountInWords = numberToWords(formData.totalAmount);
+
+                // Генерируем QR код
+                const qrCodeDataURL = await generateQrCodeDataURLForReceipt(formData);
+
+                // Создаем элемент квитанции
+                const receiptDiv = document.createElement('div');
+                receiptDiv.className = 'mass-receipt-item';
+                receiptDiv.innerHTML =
+                    createReceiptPart('Извещение', formData, amountInWords, formattedDate, qrCodeDataURL) +
+                    '<div class="receipt-tear-line"></div>' +
+                    createReceiptPart('Квитанция', formData, amountInWords, formattedDate, null);
+
+                // Добавляем квитанцию на текущую страницу
+                currentPage.appendChild(receiptDiv);
+
+                // Если на странице уже 2 квитанции, создаем новую страницу
+                if (currentPage.children.length >= 2) {
+                    currentPage = document.createElement('div');
+                    currentPage.className = 'receipt-page';
+                    receiptsContainer.appendChild(currentPage);
                 }
             }
-            
-            receiptsContainer.appendChild(pageDiv);
         }
 
         massReceiptModal.style.display = 'none';
         massReceiptPrintModal.style.display = 'block';
-    }
 
-    async function createReceiptForPlot(plot, ELECTRICITY_TARIFF) {
-        const formData = {
-            plotNumber: plot.plotNumber,
-            payerName: plot.payerName,
-            paymentTypes: [],
-            totalAmount: 0,
-            membershipSum: 0,
-            targetSum: 0,
-            electricitySum: 0
-        };
-
-        // Рассчитываем суммы
-        if (plot.plotSotkas > 0) {
-            formData.membershipSum = plot.plotSotkas * MEMBERSHIP_TARIFF;
-            formData.paymentTypes.push('Членские взносы');
-            formData.totalAmount += formData.membershipSum;
-        }
-
-        if (plot.targetSum > 0) {
-            formData.targetSum = plot.targetSum;
-            formData.paymentTypes.push('Целевые взносы');
-            formData.totalAmount += formData.targetSum;
-        }
-
-        if (plot.meterReadingCurr && plot.meterReadingPrev && plot.meterReadingCurr > plot.meterReadingPrev) {
-            const usage = plot.meterReadingCurr - plot.meterReadingPrev;
-            formData.electricitySum = usage * ELECTRICITY_TARIFF;
-            formData.paymentTypes.push('Электроэнергия');
-            formData.totalAmount += formData.electricitySum;
-        }
-
-        if (formData.totalAmount > 0) {
-            const today = new Date();
-            const formattedDate = today.toLocaleDateString('ru-RU');
-            const amountInWords = numberToWords(formData.totalAmount);
-
-            // Генерируем QR код
-            const qrCodeDataURL = await generateQrCodeDataURLForReceipt(formData);
-
-            // Создаем контейнер для квитанции
-            const receiptDiv = document.createElement('div');
-            receiptDiv.className = 'mass-receipt-item';
-            receiptDiv.innerHTML = 
-                createReceiptPart('Извещение', formData, amountInWords, formattedDate, qrCodeDataURL) +
-                '<div class="receipt-tear-line"></div>' +
-                createReceiptPart('Квитанция', formData, amountInWords, formattedDate, null);
-            
-            return receiptDiv;
-        }
-        
-        return document.createElement('div');
+        // Даем время на рендеринг перед печатью
+        setTimeout(() => {
+            window.print();
+        }, 500);
     }
 
     function changePassword(e) {
@@ -492,9 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Вспомогательные функции
-    window.openEditModal = openEditModal;
     window.deletePlot = deletePlot;
-    window.closeEditModal = () => editPlotModal.style.display = 'none';
     window.closeMassReceiptModal = () => massReceiptModal.style.display = 'none';
 
     // Функции для генерации квитанций 
@@ -519,7 +583,13 @@ document.addEventListener('DOMContentLoaded', function() {
             purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.`);
         }
         if (formData.electricitySum > 0) {
-            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб.`);
+            // In admin, we don't have kwhUsedElement. Use plot data for calculation if available.
+            let kwhForPurpose = 0;
+            const currentPlot = plotData.find(p => p.plotNumber === formData.plotNumber && p.payerName === formData.payerName);
+            if (currentPlot && currentPlot.meterReadingCurr > currentPlot.meterReadingPrev) {
+                kwhForPurpose = currentPlot.meterReadingCurr - currentPlot.meterReadingPrev;
+            }
+            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. ${kwhForPurpose > 0 ? `(${kwhForPurpose} кВт)` : ''}`);
         }
         
         const purposeString = purposeParts.join(', ') + ` за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
@@ -614,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     
                     <div class="receipt-amount-words">
-                        <strong>Сумма прописью:</strong> ${amountInWords}
+                        <strong>Sумма прописью:</strong> ${amountInWords}
                     </div>
                     
                     <div class="receipt-footer">

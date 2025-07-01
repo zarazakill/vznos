@@ -6,7 +6,6 @@
     <title>Админ панель СНТ «Березка-2»</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -25,13 +24,9 @@
                 <h2>Управление данными участков</h2>
                 
                 <div class="admin-toolbar">
-                    <button id="addPlotBtn" class="action-btn">Добавить участок</button>
-                    <button id="exportDataBtn" class="action-btn">Экспорт JSON</button>
-                    <button id="exportExcelBtn" class="action-btn">Экспорт XLSX</button>
-                    <button id="importDataBtn" class="action-btn">Импорт JSON</button>
-                    <button id="importExcelBtn" class="action-btn">Импорт XLSX</button>
-                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
-                    <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display: none;">
+                    <button id="exportDataBtn" class="action-btn">Экспорт в Excel</button>
+                    <button id="importDataBtn" class="action-btn">Импорт из Excel</button>
+                    <input type="file" id="importFileInput" accept=".xlsx,.xls" style="display: none;">
                     <button id="massReceiptBtn" class="action-btn">Массовая печать квитанций</button>
                 </div>
 
@@ -41,11 +36,12 @@
                             <tr>
                                 <th>№ участка</th>
                                 <th>ФИО плательщика</th>
-                                <th>Сумма взносов (руб.)</th>
+                                <th>Членские взносы (руб.)</th>
                                 <th>Размер (соток)</th>
                                 <th>Целевые взносы</th>
                                 <th>Предыдущие показания</th>
-                                <th>Текущие показания</th>
+                                <th>Текущие показания (кВт)</th>
+                                <th>Сумма электроэнергии (руб.)</th>
                                 <th>Действия</th>
                             </tr>
                         </thead>
@@ -74,45 +70,6 @@
             </div>
         </main>
 
-        <!-- Модальное окно для редактирования участка -->
-        <div id="editPlotModal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h3 id="editModalTitle">Редактировать участок</h3>
-                <form id="editPlotForm">
-                    <div class="form-group">
-                        <label for="editPlotNumber">№ участка</label>
-                        <input type="text" id="editPlotNumber" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editPayerName">ФИО плательщика</label>
-                        <input type="text" id="editPayerName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editPlotSotkas">Размер участка (соток)</label>
-                        <input type="number" id="editPlotSotkas" step="0.01" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="editTargetSum">Целевые взносы (руб.)</label>
-                        <input type="number" id="editTargetSum" step="0.01" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="editMeterReading">Предыдущие показания счетчика</label>
-                        <input type="number" id="editMeterReading" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="editMeterReadingCurr">Текущие показания счетчика</label>
-                        <input type="number" id="editMeterReadingCurr" min="0">
-                    </div>
-                    <div class="modal-actions">
-                        <button type="submit" class="action-btn">Сохранить</button>
-                        <button type="button" class="action-btn" onclick="closeEditModal()">Отмена</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Модальное окно для массовой печати -->
         <div id="massReceiptModal" class="modal">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
@@ -132,7 +89,6 @@
             </div>
         </div>
 
-        <!-- Модальное окно для печати квитанций -->
         <div id="massReceiptPrintModal" class="modal">
             <div class="modal-content mass-receipt-content">
                 <span class="close-modal">&times;</span>
@@ -149,6 +105,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
     <script src="admin.js"></script>
 </body>
 </html>
