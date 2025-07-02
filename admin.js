@@ -23,11 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const importDataBtn = document.getElementById('importDataBtn');
     const importFileInput = document.getElementById('importFileInput');
     const massReceiptBtn = document.getElementById('massReceiptBtn');
-    const plotDataTable = document.getElementById('plotDataTable').getElementsByTagName('tbody')[0];
+    const plotDataTable = document.getElementById('plotDataTable');
+    const plotDataTableBody = plotDataTable.getElementsByTagName('tbody')[0];
     const changePasswordForm = document.getElementById('changePasswordForm');
 
     // Модальные окна
-    const massReceiptModal = document.getElementById('massReceiptModal');
     const massReceiptPrintModal = document.getElementById('massReceiptPrintModal');
 
     // Загрузка данных
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
     exportDataBtn.addEventListener('click', exportData);
     importDataBtn.addEventListener('click', () => importFileInput.click());
     importFileInput.addEventListener('change', importData);
-    massReceiptBtn.addEventListener('click', openMassReceiptModal);
+    massReceiptBtn.addEventListener('click', generateMassReceipts);
     changePasswordForm.addEventListener('submit', changePassword);
 
     // Обработчики модальных окон
@@ -49,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.getElementById('selectAllPlots').addEventListener('change', toggleSelectAllPlots);
-    document.getElementById('generateMassReceiptsBtn').addEventListener('click', generateMassReceipts);
     document.getElementById('printMassReceiptsBtn').addEventListener('click', () => window.print());
 
     // Функции
@@ -97,10 +96,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderTable() {
-        plotDataTable.innerHTML = '';
+        plotDataTableBody.innerHTML = '';
         plotData.forEach((plot, index) => {
-            const row = plotDataTable.insertRow();
+            const row = plotDataTableBody.insertRow();
             row.dataset.index = index; // Store index on the row
+
+            // 1. Checkbox Cell
+            const checkboxCell = row.insertCell();
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'plot-checkbox';
+            checkbox.value = index; // Use index to find plot data later
+            checkboxCell.appendChild(checkbox);
 
             // Function to create an editable cell
             const createEditableCell = (field, type = 'text', step = null, min = null, pattern = null) => {
@@ -153,20 +160,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const createReadOnlyCell = (value) => {
                 const cell = row.insertCell();
                 cell.textContent = value !== undefined && value !== null ? value.toFixed(2) : '0.00';
+                cell.style.backgroundColor = '#f5f5f5';
+                cell.style.color = '#666';
                 return cell;
             };
 
             createEditableCell('plotNumber', 'text', null, null, '[0-9]+[А-Яа-я]?'); // Apply pattern for plot number
             createEditableCell('payerName');
             
-            // Make membershipSum editable
+            // This line makes 'membershipSum' (Членские взносы) editable
             createEditableCell('membershipSum', 'number', '0.01', '0');
 
-            // Make plotSotkas read-only, derived from membershipSum
-            createReadOnlyCell(plot.plotSotkas); // plot.plotSotkas is already updated to reflect membershipSum
+            // 'plotSotkas' (Размер участка) is read-only and derived from 'membershipSum'
+            createReadOnlyCell(plot.plotSotkas);
 
             createEditableCell('targetSum', 'number', '0.01', '0');
-            createEditableCell('meterReadingPrev', 'number', '1', '0');
+            
+            // 'meterReadingPrev' (Предыдущие показания) is read-only and informational
+            createReadOnlyCell(plot.meterReadingPrev);
+            
             createEditableCell('meterReadingCurr', 'number', '1', '0');
             createEditableCell('electricitySum', 'number', '0.01', '0');
 
@@ -191,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function saveRow(index) {
-        const row = plotDataTable.rows[index]; // Get the specific row
+        const row = plotDataTableBody.rows[index]; // Get the specific row
         const plot = plotData[index]; // Get the data object
         let hasChanges = false;
         let isValid = true;
@@ -231,8 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Specific logic for membershipSum and plotSotkas relationship
-        // plot.membershipSum is now directly from the editable input.
-        // plot.plotSotkas must be derived from plot.membershipSum.
+        // When membershipSum is updated by the user, plotSotkas is recalculated based on it.
         if (plot.membershipSum !== undefined && plot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
             const newPlotSotkas = plot.membershipSum / MEMBERSHIP_TARIFF;
             // Only update if it actually changes (comparing fixed values for precision)
@@ -406,36 +417,16 @@ document.addEventListener('DOMContentLoaded', function() {
         e.target.value = '';
     }
 
-    function openMassReceiptModal() {
-        const modal = massReceiptModal;
-        const checkboxList = document.getElementById('plotCheckboxList');
-        
-        checkboxList.innerHTML = '';
-        plotData.forEach((plot, index) => {
-            if (plot.plotNumber && plot.payerName) {
-                const checkbox = document.createElement('label');
-                checkbox.className = 'checkbox-label';
-                checkbox.innerHTML = `
-                    <input type="checkbox" value="${index}" class="plot-checkbox">
-                    Участок ${plot.plotNumber} - ${plot.payerName}
-                `;
-                checkboxList.appendChild(checkbox);
-            }
-        });
-        
-        modal.style.display = 'block';
-    }
-
     function toggleSelectAllPlots() {
         const selectAll = document.getElementById('selectAllPlots');
-        const checkboxes = document.querySelectorAll('.plot-checkbox');
+        const checkboxes = plotDataTableBody.querySelectorAll('.plot-checkbox');
         checkboxes.forEach(cb => cb.checked = selectAll.checked);
     }
 
     async function generateMassReceipts() {
-        const selectedCheckboxes = document.querySelectorAll('.plot-checkbox:checked');
+        const selectedCheckboxes = plotDataTableBody.querySelectorAll('.plot-checkbox:checked');
         if (selectedCheckboxes.length === 0) {
-            showNotification('Выберите хотя бы один участок', 'error');
+            showNotification('Выберите хотя бы один участок в таблице', 'error');
             return;
         }
 
@@ -465,7 +456,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
             // Рассчитываем суммы
-            if (plot.membershipSum > 0) { // Use stored membershipSum directly
+            // Use stored membershipSum directly, which is now editable on the admin page.
+            if (plot.membershipSum > 0) { 
                 formData.membershipSum = plot.membershipSum;
                 formData.paymentTypes.push('Членские взносы');
                 formData.totalAmount += formData.membershipSum;
@@ -517,7 +509,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        massReceiptModal.style.display = 'none';
         massReceiptPrintModal.style.display = 'block';
 
         // Даем время на рендеринг перед печатью
@@ -559,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Вспомогательные функции
     window.deletePlot = deletePlot;
-    window.closeMassReceiptModal = () => massReceiptModal.style.display = 'none';
+    window.closeMassReceiptModal = () => massReceiptPrintModal.style.display = 'none';
 
     // Функции для генерации квитанций 
     async function generateQrCodeDataURLForReceipt(formData) {
@@ -606,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `|Purpose=${purposeString}`;
 
         try {
-            return await QRCode.toDataURL(paymentString, { width: 90, errorCorrectionLevel: 'H' });
+            return await QRCode.toDataURL(paymentString, { width: 140, errorCorrectionLevel: 'H' });
         } catch (error) {
             console.error('Error generating QR code:', error);
             return null;

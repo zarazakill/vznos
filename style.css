@@ -576,8 +576,8 @@ body {
 }
 
 .receipt-qr-code {
-    width: 25mm; 
-    height: 25mm; 
+    width: 35mm; 
+    height: 35mm; 
     max-width: 100%; 
     height: auto; 
     display: block;
@@ -927,6 +927,13 @@ body {
     padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
+    vertical-align: middle; /* Align content vertically */
+}
+
+.data-table th:first-child,
+.data-table td:first-child {
+    width: 1%; /* Make checkbox column narrow */
+    text-align: center;
 }
 
 .data-table th {
@@ -1062,7 +1069,7 @@ body {
     line-height: 1.1;
     max-width: 210mm;
     margin: 0 auto;
-    padding: 10mm 20mm 3mm 20mm;
+    padding: 0; /* Remove padding for the mass container */
     box-sizing: border-box;
 }
 
@@ -1231,7 +1238,7 @@ body {
         visibility: visible;
     }
     
-    .receipt-container, .mass-receipt-container {
+    .receipt-container {
         padding: 10mm 20mm 2mm 20mm;
         margin: 0;
         max-width: 100%;
@@ -1282,8 +1289,8 @@ body {
     .cashier-label-right { font-size: 5.5pt; }
 
     .receipt-qr-code {
-        width: 25mm; 
-        height: 25mm; 
+        width: 35mm; 
+        height: 35mm; 
         border: 1px solid #000; 
     }
     .receipt-qr-code-container {

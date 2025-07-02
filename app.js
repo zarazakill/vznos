@@ -518,7 +518,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             // Generate QR code data URL with a size suitable for the receipt
-            const qrDataURL = await QRCode.toDataURL(paymentString, { width: 90, errorCorrectionLevel: 'H' }); // 90px source will be around 25mm print
+            const qrDataURL = await QRCode.toDataURL(paymentString, { width: 140, errorCorrectionLevel: 'H' }); // 140px source is suitable for ~35mm print
             return qrDataURL;
         } catch (error) {
             console.error('Error generating QR code data URL:', error);
