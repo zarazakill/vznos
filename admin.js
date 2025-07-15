@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const changePasswordForm = document.getElementById('changePasswordForm');
 
     // Модальные окна
-    const massReceiptPrintModal = document.getElementById('massReceiptPrintModal');
+    const massReceiptModal = document.getElementById('massReceiptModal'); // Main mass receipt selection modal
+    const massReceiptPrintModal = document.getElementById('massReceiptPrintModal'); // Modal for displaying mass receipts
+    const singleReceiptModal = document.getElementById('singleReceiptModal'); // New modal for single receipt
 
     // Загрузка данных
     loadPlotData();
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     exportDataBtn.addEventListener('click', exportData);
     importDataBtn.addEventListener('click', () => importFileInput.click());
     importFileInput.addEventListener('change', importData);
-    massReceiptBtn.addEventListener('click', generateMassReceipts);
+    massReceiptBtn.addEventListener('click', openMassReceiptSelectionModal); // Change to open selection modal
     changePasswordForm.addEventListener('submit', changePassword);
 
     // Обработчики модальных окон
@@ -48,8 +50,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.getElementById('selectAllPlots').addEventListener('change', toggleSelectAllPlots);
+    document.getElementById('selectAllPlots').addEventListener('change', toggleSelectAllPlots); // Checkbox in table header
+    
+    // Checkbox in mass print modal
+    document.getElementById('selectAllPlotsCheckboxModal').addEventListener('change', toggleSelectAllPlotsModal);
+
+    document.getElementById('generateMassReceiptsBtn').addEventListener('click', generateMassReceipts);
     document.getElementById('printMassReceiptsBtn').addEventListener('click', () => window.print());
+    document.getElementById('printSingleReceiptBtn').addEventListener('click', () => window.print()); // New print button for single receipt modal
 
     // Функции
     function logout() {
@@ -72,10 +80,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         ...plot,
                         meterReadingCurr: plot.meterReadingCurr !== undefined ? plot.meterReadingCurr : plot.meterReadingPrev,
                         electricitySum: plot.electricitySum !== undefined ? plot.electricitySum : 0,
+                        workSum: plot.workSum !== undefined ? plot.workSum : 0,
+                        workYear: plot.workYear || '',
                         // Initialize membershipSum. Prefer existing, otherwise calculate from plotSotkas from data.json.
                         membershipSum: plot.membershipSum !== undefined && plot.membershipSum !== null
                                        ? parseFloat(plot.membershipSum)
-                                       : ((plot.plotSotkas !== undefined && plot.plotSotkas !== null) ? parseFloat(plot.plotSotkas) * MEMBERSHIP_TARIFF : 0)
+                                       : ((plot.plotSotkas !== undefined && plot.plotSotkas !== null) ? parseFloat(plot.plotSotkas) * MEMBERSHIP_TARIFF : 0),
+                        // Initialize comment fields
+                        membershipComment: plot.membershipComment || '',
+                        targetComment: plot.targetComment || '',
+                        workComment: plot.workComment || '',
+                        electricityComment: plot.electricityComment || ''
                     }));
                 saveDataToLocalStorage(); // Save fetched data to local storage for persistence
             }
@@ -175,12 +190,20 @@ document.addEventListener('DOMContentLoaded', function() {
             createReadOnlyCell(plot.plotSotkas);
 
             createEditableCell('targetSum', 'number', '0.01', '0');
+            createEditableCell('workSum', 'number', '0.01', '0');
+            createEditableCell('workYear', 'number', '1', '2020');
             
             // 'meterReadingPrev' (Предыдущие показания) is read-only and informational
             createReadOnlyCell(plot.meterReadingPrev);
             
             createEditableCell('meterReadingCurr', 'number', '1', '0');
             createEditableCell('electricitySum', 'number', '0.01', '0');
+
+            // Add comment fields
+            createEditableCell('membershipComment', 'text');
+            createEditableCell('targetComment', 'text');
+            createEditableCell('workComment', 'text');
+            createEditableCell('electricityComment', 'text');
 
             const actionsCell = row.insertCell();
             actionsCell.className = 'table-actions';
@@ -192,6 +215,13 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.disabled = true; // Initially disabled
             saveBtn.addEventListener('click', () => saveRow(index));
             actionsCell.appendChild(saveBtn);
+
+            const printBtn = document.createElement('button'); // New print button for each row
+            printBtn.textContent = '🖨️'; // Print icon
+            printBtn.className = 'action-btn print-single-btn';
+            printBtn.title = 'Напечатать квитанцию';
+            printBtn.addEventListener('click', () => printSingleReceipt(index));
+            actionsCell.appendChild(printBtn);
 
             const deleteBtn = document.createElement('button');
             deleteBtn.textContent = '🗑️'; // Delete icon
@@ -225,10 +255,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     isValid = false;
                     showNotification(`Поле "${field === 'plotNumber' ? 'Номер участка' : 'ФИО плательщика'}" не может быть пустым.`, 'error');
                     input.focus();
+                    return; // Stop current iteration if invalid
                 } else if (field === 'plotNumber' && input.checkValidity && !input.checkValidity()) {
                     isValid = false;
                     showNotification('Номер участка должен содержать только цифры и может заканчиваться одной буквой (А-Яа-я).', 'error');
                     input.focus();
+                    return; // Stop current iteration if invalid
                 }
             }
             
@@ -291,9 +323,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Членские взносы (руб.)': plot.membershipSum || 0, // Export membershipSum directly
                 'Размер участка (соток)': plot.plotSotkas || 0, // Export plotSotkas (which is now derived)
                 'Целевые взносы (руб.)': plot.targetSum || 0,
+                'Отработка (руб.)': plot.workSum || 0,
+                'Год отработки': plot.workYear || '',
                 'Предыдущие показания (кВт)': plot.meterReadingPrev || 0,
                 'Текущие показания (кВт)': plot.meterReadingCurr || 0,
-                'Сумма электроэнергии (руб.)': plot.electricitySum || 0
+                'Сумма электроэнергии (руб.)': plot.electricitySum || 0,
+                'Комментарий к членским взносам': plot.membershipComment || '',
+                'Комментарий к целевым взносам': plot.targetComment || '',
+                'Комментарий к отработке': plot.workComment || '',
+                'Комментарий к электроэнергии': plot.electricityComment || ''
             }));
 
             // Создаем рабочую книгу
@@ -309,9 +347,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 { wch: 25 }, // Членские взносы (руб.)
                 { wch: 20 }, // Размер участка (соток)
                 { wch: 20 }, // Целевые взносы
+                { wch: 20 }, // Отработка (руб.)
+                { wch: 15 }, // Год отработки
                 { wch: 25 }, // Предыдущие показания
                 { wch: 25 }, // Текущие показания
-                { wch: 25 }  // Сумма электроэнергии
+                { wch: 25 }, // Сумма электроэнергии
+                { wch: 30 }, // Комментарий к членским взносам
+                { wch: 30 }, // Комментарий к целевым взносам
+                { wch: 30 }, // Комментарий к отработке
+                { wch: 30 }  // Комментарий к электроэнергии
             ];
             worksheet['!cols'] = columnWidths;
             
@@ -364,9 +408,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Prefer importing membershipSum if available from the new Excel structure
                             membershipSum: parseFloat(row['Членские взносы (руб.)'] || row['membershipSum'] || 0),
                             targetSum: parseFloat(row['Целевые взносы (руб.)'] || row['targetSum'] || 0),
+                            workSum: parseFloat(row['Отработка (руб.)'] || row['workSum'] || 0),
+                            workYear: String(row['Год отработки'] || row['workYear'] || '').trim(),
                             meterReadingPrev: parseFloat(row['Предыдущие показания (кВт)'] || row['meterReadingPrev'] || 0),
                             meterReadingCurr: parseFloat(row['Текущие показания (кВт)'] || row['meterReadingCurr'] || 0),
-                            electricitySum: parseFloat(row['Сумма электроэнергии (руб.)'] || row['electricitySum'] || 0)
+                            electricitySum: parseFloat(row['Сумма электроэнергии (руб.)'] || row['electricitySum'] || 0),
+                            membershipComment: String(row['Комментарий к членским взносам'] || row['membershipComment'] || '').trim(),
+                            targetComment: String(row['Комментарий к целевым взносам'] || row['targetComment'] || '').trim(),
+                            workComment: String(row['Комментарий к отработке'] || row['workComment'] || '').trim(),
+                            electricityComment: String(row['Комментарий к электроэнергии'] || row['electricityComment'] || '').trim()
                         };
 
                         // If membershipSum was not directly provided, try to derive from plotSotkas if present in imported row
@@ -423,10 +473,33 @@ document.addEventListener('DOMContentLoaded', function() {
         checkboxes.forEach(cb => cb.checked = selectAll.checked);
     }
 
+    function toggleSelectAllPlotsModal() {
+        const selectAllModal = document.getElementById('selectAllPlotsCheckboxModal');
+        const checkboxes = document.querySelectorAll('#plotCheckboxList .plot-checkbox-modal');
+        checkboxes.forEach(cb => cb.checked = selectAllModal.checked);
+    }
+
+    function openMassReceiptSelectionModal() {
+        const plotCheckboxList = document.getElementById('plotCheckboxList');
+        plotCheckboxList.innerHTML = ''; // Clear previous list
+
+        plotData.forEach((plot, index) => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            label.innerHTML = `
+                <input type="checkbox" class="plot-checkbox-modal" value="${index}">
+                Участок № ${plot.plotNumber} - ${plot.payerName}
+            `;
+            plotCheckboxList.appendChild(label);
+        });
+
+        massReceiptModal.style.display = 'block';
+    }
+
     async function generateMassReceipts() {
-        const selectedCheckboxes = plotDataTableBody.querySelectorAll('.plot-checkbox:checked');
+        const selectedCheckboxes = document.querySelectorAll('#plotCheckboxList .plot-checkbox-modal:checked');
         if (selectedCheckboxes.length === 0) {
-            showNotification('Выберите хотя бы один участок в таблице', 'error');
+            showNotification('Выберите хотя бы один участок для массовой печати', 'error');
             return;
         }
 
@@ -434,7 +507,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const receiptsContainer = document.getElementById('massReceiptContent');
         receiptsContainer.innerHTML = '';
 
-        // Создаем контейнер для страниц
         let currentPage = document.createElement('div');
         currentPage.className = 'receipt-page';
         receiptsContainer.appendChild(currentPage);
@@ -443,78 +515,113 @@ document.addEventListener('DOMContentLoaded', function() {
             const plot = plotData[index];
             if (!plot.plotNumber || !plot.payerName) continue;
 
-            const formData = {
-                plotNumber: plot.plotNumber,
-                payerName: plot.payerName,
-                paymentTypes: [],
-                totalAmount: 0,
-                membershipSum: 0,
-                targetSum: 0,
-                electricitySum: 0,
-                meterReadingPrev: plot.meterReadingPrev || 0,
-                meterReadingCurr: plot.meterReadingCurr || 0 // Use meterReadingCurr if available, otherwise prev
-            };
+            const receiptHtml = await generateReceiptHtml(plot, true); // Generate with QR
+            
+            const receiptDiv = document.createElement('div');
+            receiptDiv.className = 'mass-receipt-item';
+            receiptDiv.innerHTML = receiptHtml;
 
-            // Рассчитываем суммы
-            // Use stored membershipSum directly, which is now editable on the admin page.
-            if (plot.membershipSum > 0) { 
-                formData.membershipSum = plot.membershipSum;
-                formData.paymentTypes.push('Членские взносы');
-                formData.totalAmount += formData.membershipSum;
-            }
-            if (plot.targetSum > 0) {
-                formData.targetSum = plot.targetSum;
-                formData.paymentTypes.push('Целевые взносы');
-                formData.totalAmount += formData.targetSum;
-            }
-            // If electricitySum is directly provided in data, use it. Otherwise, calculate from readings.
-            if (plot.electricitySum > 0) { // Prefer pre-calculated sum if available
-                formData.electricitySum = plot.electricitySum;
-                formData.paymentTypes.push('Электроэнергия');
-                formData.totalAmount += formData.electricitySum;
-            } else if (formData.meterReadingCurr > formData.meterReadingPrev) {
-                const usage = formData.meterReadingCurr - formData.meterReadingPrev;
-                formData.electricitySum = usage * ELECTRICITY_TARIFF;
-                formData.paymentTypes.push('Электроэнергия');
-                formData.totalAmount += formData.electricitySum;
-            }
+            // Add receipt to current page
+            currentPage.appendChild(receiptDiv);
 
-            // Always generate receipts, even if the total amount is zero
-            // If total amount is 0, still print, user requested mass print
-            { 
-                const today = new Date();
-                const formattedDate = today.toLocaleDateString('ru-RU');
-                const amountInWords = numberToWords(formData.totalAmount);
-
-                // Генерируем QR код
-                const qrCodeDataURL = await generateQrCodeDataURLForReceipt(formData);
-
-                // Создаем элемент квитанции
-                const receiptDiv = document.createElement('div');
-                receiptDiv.className = 'mass-receipt-item';
-                receiptDiv.innerHTML =
-                    createReceiptPart('Извещение', formData, amountInWords, formattedDate, qrCodeDataURL) +
-                    '<div class="receipt-tear-line"></div>' +
-                    createReceiptPart('Квитанция', formData, amountInWords, formattedDate, null);
-
-                // Добавляем квитанцию на текущую страницу
-                currentPage.appendChild(receiptDiv);
-
-                // Если на странице уже 2 квитанции, создаем новую страницу
-                if (currentPage.children.length >= 2) {
-                    currentPage = document.createElement('div');
-                    currentPage.className = 'receipt-page';
-                    receiptsContainer.appendChild(currentPage);
-                }
+            // If current page has 2 receipts, create a new page for the next receipts
+            if (currentPage.children.length >= 2) {
+                currentPage = document.createElement('div');
+                currentPage.className = 'receipt-page';
+                receiptsContainer.appendChild(currentPage);
             }
         }
-
+        
+        // Hide the selection modal and show the print preview modal
+        massReceiptModal.style.display = 'none';
         massReceiptPrintModal.style.display = 'block';
 
-        // Даем время на рендеринг перед печатью
+        // Give some time for rendering before printing
         setTimeout(() => {
-            window.print();
+            // window.print(); // Commented out to allow user to manually print from modal
         }, 500);
+    }
+
+    async function printSingleReceipt(index) {
+        const plot = plotData[index];
+        if (!plot.plotNumber || !plot.payerName) {
+            showNotification('Данные для этого участка неполные.', 'error');
+            return;
+        }
+
+        const receiptContent = document.getElementById('singleReceiptContent');
+        receiptContent.innerHTML = await generateReceiptHtml(plot, true); // Generate with QR
+
+        singleReceiptModal.style.display = 'block';
+    }
+
+    async function generateReceiptHtml(plot, includeQr) {
+        const formData = {
+            plotNumber: plot.plotNumber,
+            payerName: plot.payerName,
+            paymentTypes: [],
+            totalAmount: 0,
+            membershipSum: 0,
+            targetSum: 0,
+            workSum: 0,
+            workYear: plot.workYear || '',
+            electricitySum: 0,
+            meterReadingPrev: plot.meterReadingPrev || 0,
+            meterReadingCurr: plot.meterReadingCurr || 0,
+            membershipComment: plot.membershipComment || '',
+            targetComment: plot.targetComment || '',
+            workComment: plot.workComment || '',
+            electricityComment: plot.electricityComment || ''
+        };
+
+        // Calculate sums based on plot data, assuming admin data is the source of truth
+        if (plot.membershipSum > 0) { 
+            formData.membershipSum = plot.membershipSum;
+            formData.paymentTypes.push('Членские взносы');
+            formData.totalAmount += formData.membershipSum;
+            formData.membershipComment = plot.membershipComment || '';
+        }
+        if (plot.targetSum > 0) {
+            formData.targetSum = plot.targetSum;
+            formData.paymentTypes.push('Целевые взносы');
+            formData.totalAmount += formData.targetSum;
+            formData.targetComment = plot.targetComment || '';
+        }
+        if (plot.workSum > 0) {
+            formData.workSum = plot.workSum;
+            formData.workYear = plot.workYear || '';
+            formData.paymentTypes.push('Отработка');
+            formData.totalAmount += formData.workSum;
+            formData.workComment = plot.workComment || '';
+        }
+        // Prioritize explicit electricitySum from data, otherwise calculate from meter readings
+        if (plot.electricitySum > 0) { 
+            formData.electricitySum = plot.electricitySum;
+            formData.paymentTypes.push('Электроэнергия');
+            formData.totalAmount += formData.electricitySum;
+            formData.electricityComment = plot.electricityComment || '';
+        } else if (formData.meterReadingCurr > formData.meterReadingPrev) {
+            const usage = formData.meterReadingCurr - formData.meterReadingPrev;
+            formData.electricitySum = usage * ELECTRICITY_TARIFF;
+            formData.paymentTypes.push('Электроэнергия');
+            formData.totalAmount += formData.electricitySum;
+            formData.electricityComment = plot.electricityComment || '';
+        }
+
+        const today = new Date();
+        const formattedDate = today.toLocaleDateString('ru-RU');
+        const amountInWords = numberToWords(formData.totalAmount);
+
+        let qrCodeDataURL = null;
+        if (includeQr) {
+            qrCodeDataURL = await generateQrCodeDataURLForReceipt(formData);
+        }
+
+        return `
+            ${createReceiptPart('Извещение', formData, amountInWords, formattedDate, qrCodeDataURL)}
+            <div class="receipt-tear-line"></div>
+            ${createReceiptPart('Квитанция', formData, amountInWords, formattedDate, null)}
+        `;
     }
 
     function changePassword(e) {
@@ -550,7 +657,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Вспомогательные функции
     window.deletePlot = deletePlot;
-    window.closeMassReceiptModal = () => massReceiptPrintModal.style.display = 'none';
+    window.closeMassReceiptModal = () => massReceiptModal.style.display = 'none'; // Close mass selection modal
+    window.closeMassReceiptPrintModal = () => massReceiptPrintModal.style.display = 'none'; // Close mass print modal
+    window.closeSingleReceiptModal = () => singleReceiptModal.style.display = 'none'; // Close single receipt modal
 
     // Функции для генерации квитанций 
     async function generateQrCodeDataURLForReceipt(formData) {
@@ -568,19 +677,23 @@ document.addEventListener('DOMContentLoaded', function() {
         let purposeParts = [];
         
         if (formData.membershipSum > 0) {
-            purposeParts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.`);
+            purposeParts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.${formData.membershipComment ? ` (${formData.membershipComment})` : ''}`);
         }
         if (formData.targetSum > 0) {
-            purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.`);
+            purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.${formData.targetComment ? ` (${formData.targetComment})` : ''}`);
+        }
+        if (formData.workSum > 0) {
+            purposeParts.push(`Отработка: ${formData.workSum.toFixed(2)} руб. за ${formData.workYear} год${formData.workComment ? ` (${formData.workComment})` : ''}`);
         }
         if (formData.electricitySum > 0) {
-            // In admin, we don't have kwhUsedElement. Use plot data for calculation if available.
+            // Need to get kWh used if it was calculated from readings, not manual sum
             let kwhForPurpose = 0;
-            const currentPlot = plotData.find(p => p.plotNumber === formData.plotNumber && p.payerName === formData.payerName);
-            if (currentPlot && currentPlot.meterReadingCurr > currentPlot.meterReadingPrev) {
-                kwhForPurpose = currentPlot.meterReadingCurr - currentPlot.meterReadingPrev;
+            if (formData.meterReadingCurr > formData.meterReadingPrev) {
+                kwhForPurpose = formData.meterReadingCurr - formData.meterReadingPrev;
+            } else if (ELECTRICITY_TARIFF > 0 && formData.electricitySum > 0) {
+                 kwhForPurpose = formData.electricitySum / ELECTRICITY_TARIFF;
             }
-            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. ${kwhForPurpose > 0 ? `(${kwhForPurpose} кВт)` : ''}`);
+            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. ${kwhForPurpose > 0 ? `(${Math.round(kwhForPurpose)} кВт)` : ''}${formData.electricityComment ? ` (${formData.electricityComment})` : ''}`);
         }
         
         const purposeString = purposeParts.join(', ') + ` за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
@@ -607,10 +720,31 @@ document.addEventListener('DOMContentLoaded', function() {
     function createReceiptPart(title, data, amountInWords, formattedDate, qrCodeDataURL = null) {
         const purpose = data.paymentTypes.join(', ');
         
+        // Form payment details
         let paymentDetails = [];
-        if (data.membershipSum > 0) paymentDetails.push(`Членские взносы: ${data.membershipSum.toFixed(2)} руб.`);
-        if (data.targetSum > 0) paymentDetails.push(`Целевые взносы: ${data.targetSum.toFixed(2)} руб.`);
-        if (data.electricitySum > 0) paymentDetails.push(`Электроэнергия: ${data.electricitySum.toFixed(2)} руб.`);
+        if (data.membershipSum > 0) {
+            const membershipText = `Членские взносы: ${data.membershipSum.toFixed(2)} руб.${data.membershipComment ? ` (${data.membershipComment})` : ''}`;
+            paymentDetails.push(membershipText);
+        }
+        if (data.targetSum > 0) {
+            const targetText = `Целевые взносы: ${data.targetSum.toFixed(2)} руб.${data.targetComment ? ` (${data.targetComment})` : ''}`;
+            paymentDetails.push(targetText);
+        }
+        if (data.workSum > 0) {
+            const workText = `Отработка: ${data.workSum.toFixed(2)} руб. за ${data.workYear} год${data.workComment ? ` (${data.workComment})` : ''}`;
+            paymentDetails.push(workText);
+        }
+        if (data.electricitySum > 0) {
+            // Need to get kWh used if it was calculated from readings, not manual sum
+            let kwhForPurpose = 0;
+            if (data.meterReadingCurr > data.meterReadingPrev) {
+                kwhForPurpose = data.meterReadingCurr - data.meterReadingPrev;
+            } else if (ELECTRICITY_TARIFF > 0 && data.electricitySum > 0) {
+                 kwhForPurpose = data.electricitySum / ELECTRICITY_TARIFF;
+            }
+            const electricityText = `Электроэнергия: ${data.electricitySum.toFixed(2)} руб. ${kwhForPurpose > 0 ? `(${Math.round(kwhForPurpose)} кВт)` : ''}${data.electricityComment ? ` (${data.electricityComment})` : ''}`;
+            paymentDetails.push(electricityText);
+        }
         
         const qrCodeHtml = (title === 'Извещение' && qrCodeDataURL) ?
             `<div class="receipt-qr-code-container">
@@ -763,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        if (rubles > 0 || result === '') {
+        if (rubles > 0 || (rubles === 0 && result === '')) { // Ensure "рублей" is added even for 0 total
             result += convertLessThanOneThousand(rubles, false) + ' ';
         }
 

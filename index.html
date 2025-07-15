@@ -53,6 +53,10 @@
                                             <input type="number" id="plotSotkas" name="plotSotkas" step="0.01" min="0" readonly>
                                         </div>
                                     </div>
+                                    <div class="form-group">
+                                        <label for="membershipComment">Комментарий (необязательно)</label>
+                                        <input type="text" id="membershipComment" name="membershipComment" placeholder="Например: за 2024 год">
+                                    </div>
                                 </div>
                             </div>
 
@@ -62,8 +66,16 @@
                                     Целевые взносы
                                 </label>
                                 <div class="form-group payment-amount" id="targetAmount" style="display:none;">
-                                    <label for="targetSum">Сумма (руб.)</label>
-                                    <input type="number" id="targetSum" name="targetSum" step="0.01" min="0" placeholder="1000.00">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="targetSum">Сумма (руб.)</label>
+                                            <input type="number" id="targetSum" name="targetSum" step="0.01" min="0" placeholder="1000.00">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="targetComment">Комментарий (необязательно)</label>
+                                            <input type="text" id="targetComment" name="targetComment" placeholder="Например: ремонт дороги">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -90,31 +102,40 @@
                                     <div class="electricity-calc">
                                         Расход: <span id="kwhUsed">0</span> кВт
                                     </div>
+                                    <div class="form-group">
+                                        <label for="electricityComment">Комментарий (необязательно)</label>
+                                        <input type="text" id="electricityComment" name="electricityComment" placeholder="Например: за декабрь 2024">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="payment-type-container">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="paymentType[]" value="Отработка" id="workCheck">
+                                    Отработка
+                                </label>
+                                <div class="form-group payment-amount" id="workAmount" style="display:none;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="workSum">Сумма (руб.)</label>
+                                            <input type="number" id="workSum" name="workSum" step="0.01" min="0" placeholder="5000.00">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="workYear">За какой год</label>
+                                            <input type="number" id="workYear" name="workYear" min="2020" max="2030" placeholder="2024">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="workComment">Комментарий (необязательно)</label>
+                                        <input type="text" id="workComment" name="workComment" placeholder="Например: уборка территории">
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     <section class="form-section">
-                        <h2><span class="section-number">3</span> Детализация платежей</h2>
-                        <div class="payment-breakdown">
-                            <div class="breakdown-item" id="membershipBreakdown" style="display:none;">
-                                <span class="breakdown-label">Членские взносы:</span>
-                                <span class="breakdown-amount" id="membershipDisplay">0.00 руб.</span>
-                            </div>
-                            <div class="breakdown-item" id="targetBreakdown" style="display:none;">
-                                <span class="breakdown-label">Целевые взносы:</span>
-                                <span class="breakdown-amount" id="targetDisplay">0.00 руб.</span>
-                            </div>
-                            <div class="breakdown-item" id="electricityBreakdown" style="display:none;">
-                                <span class="breakdown-label">Электроэнергия:</span>
-                                <span class="breakdown-amount" id="electricityDisplay">0.00 руб.</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="form-section">
-                        <h2><span class="section-number">4</span> Итоговая сумма</h2>
+                        <h2><span class="section-number">3</span> Итоговая сумма</h2>
                         <div class="form-group total-amount">
                             <label>Общая сумма к оплате:</label>
                             <div id="totalAmount">0.00 руб.</div>
@@ -125,10 +146,6 @@
                         <button type="submit" class="submit-btn">
                             <span class="btn-text">Сформировать квитанцию</span>
                             <span class="btn-icon">→</span>
-                        </button>
-                        <button type="button" class="submit-btn qr-code-btn" id="generateQrBtn">
-                            <span class="btn-text">Сформировать QR-код</span>
-                            <span class="btn-icon"></span>
                         </button>
                         <p class="required-hint">* Поля, обязательные для заполнения</p>
                         <div class="admin-link">

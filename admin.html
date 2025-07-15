@@ -40,9 +40,15 @@
                                 <th>Членские взносы (руб.)</th>
                                 <th>Размер (соток)</th>
                                 <th>Целевые взносы</th>
+                                <th>Отработка (руб.)</th>
+                                <th>Год отработки</th>
                                 <th>Предыдущие показания (кВт)</th>
                                 <th>Текущие показания (кВт)</th>
                                 <th>Сумма электроэнергии (руб.)</th>
+                                <th>Комментарий к членским взносам</th>
+                                <th>Комментарий к целевым взносам</th>
+                                <th>Комментарий к отработке</th>
+                                <th>Комментарий к электроэнергии</th>
                                 <th>Действия</th>
                             </tr>
                         </thead>
@@ -71,6 +77,7 @@
             </div>
         </main>
 
+        <!-- Модальное окно для массовой печати квитанций -->
         <div id="massReceiptModal" class="modal">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
@@ -78,7 +85,7 @@
                 <div class="mass-print-options">
                     <div class="form-group">
                         <label>
-                            <input type="checkbox" id="selectAllPlots"> Выбрать все участки
+                            <input type="checkbox" id="selectAllPlotsCheckboxModal"> Выбрать все участки
                         </label>
                     </div>
                     <div id="plotCheckboxList" class="plot-checkbox-list"></div>
@@ -90,6 +97,7 @@
             </div>
         </div>
 
+        <!-- Модальное окно для отображения и печати сгенерированных массовых квитанций -->
         <div id="massReceiptPrintModal" class="modal">
             <div class="modal-content mass-receipt-content">
                 <span class="close-modal">&times;</span>
@@ -100,6 +108,21 @@
                 </div>
                 <div class="modal-actions">
                     <button id="printMassReceiptsBtn" class="action-btn">Печать всех квитанций</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для печати одной квитанции -->
+        <div id="singleReceiptModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <div id="singleReceiptContentWrapper">
+                    <div id="singleReceiptContent" class="receipt-container">
+                        <!-- Содержимое квитанции будет здесь -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="printSingleReceiptBtn" class="action-btn">Печать</button>
                 </div>
             </div>
         </div>

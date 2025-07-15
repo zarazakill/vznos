@@ -8,9 +8,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_MEMBERSHIP_CHECK = 'membershipCheck';
     const ELEM_TARGET_CHECK = 'targetCheck';
     const ELEM_ELECTRICITY_CHECK = 'electricityCheck';
+    const ELEM_WORK_CHECK = 'workCheck';
     const ELEM_PLOT_SOTKAS = 'plotSotkas'; // Now readonly, derived from membershipSum
     const ELEM_MEMBERSHIP_SUM = 'membershipSum'; // Primary input for membership
     const ELEM_TARGET_SUM = 'targetSum';
+    const ELEM_WORK_SUM = 'workSum';
+    const ELEM_WORK_YEAR = 'workYear';
     const ELEM_METER_PREV = 'meterReadingPrev'; // Now readonly, informational
     const ELEM_METER_CURR = 'meterReadingCurr';
     const ELEM_KWH_USED = 'kwhUsed';
@@ -19,32 +22,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_RECEIPT_MODAL = 'receiptModal';
     const ELEM_RECEIPT_CONTENT = 'receiptContent';
     const ELEM_PRINT_BTN = 'printBtn';
-    const ELEM_GENERATE_QR_BTN = 'generateQrBtn'; // New QR button
-    const ELEM_QR_CANVAS = 'qrCanvas'; // New QR Canvas ID
-    const ELEM_DOWNLOAD_QR_BTN = 'downloadQrBtn'; // New Download Button ID
 
     // Elements for form
     const paymentForm = document.getElementById('paymentForm');
     const membershipCheck = document.getElementById(ELEM_MEMBERSHIP_CHECK);
     const targetCheck = document.getElementById(ELEM_TARGET_CHECK);
     const electricityCheck = document.getElementById(ELEM_ELECTRICITY_CHECK);
+    const workCheck = document.getElementById(ELEM_WORK_CHECK);
     const membershipAmountDiv = document.getElementById('membershipAmount'); // This is the div container for membership inputs
     const targetAmountDiv = document.getElementById('targetAmount'); // This is the div container for target sum input
     const electricityInputsDiv = document.getElementById('electricityInputs'); // This is the div container for electricity inputs
+    const workAmountDiv = document.getElementById('workAmount'); // This is the div container for work inputs
     const totalAmountElement = document.getElementById(ELEM_TOTAL_AMOUNT);
     const modal = document.getElementById(ELEM_RECEIPT_MODAL);
     const closeModalBtn = document.querySelector('.close-modal');
     const printBtn = document.getElementById(ELEM_PRINT_BTN);
-    const generateQrBtn = document.getElementById(ELEM_GENERATE_QR_BTN); // New QR button
-
-    // QR code elements
-    const qrCanvas = document.getElementById(ELEM_QR_CANVAS);
-    const downloadQrBtn = document.getElementById(ELEM_DOWNLOAD_QR_BTN);
 
     // Specific input fields
     const plotSotkasInput = document.getElementById(ELEM_PLOT_SOTKAS);
     const membershipSumInput = document.getElementById(ELEM_MEMBERSHIP_SUM);
     const targetSumInput = document.getElementById(ELEM_TARGET_SUM);
+    const workSumInput = document.getElementById(ELEM_WORK_SUM);
+    const workYearInput = document.getElementById(ELEM_WORK_YEAR);
     const meterReadingPrevInput = document.getElementById(ELEM_METER_PREV);
     const meterReadingCurrInput = document.getElementById(ELEM_METER_CURR);
     const kwhUsedElement = document.getElementById(ELEM_KWH_USED);
@@ -52,13 +51,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const plotNumberInput = document.getElementById(ELEM_PLOT_NUMBER);
     const payerNameInput = document.getElementById(ELEM_PAYER_NAME);
 
-    // Elements for breakdown display
-    const membershipDisplay = document.getElementById('membershipDisplay');
-    const targetDisplay = document.getElementById('targetDisplay');
-    const electricityDisplay = document.getElementById('electricityDisplay');
-    const membershipBreakdown = document.getElementById('membershipBreakdown');
-    const targetBreakdown = document.getElementById('targetBreakdown');
-    const electricityBreakdown = document.getElementById('electricityBreakdown');
+    // Comment input fields
+    const membershipCommentInput = document.getElementById('membershipComment');
+    const targetCommentInput = document.getElementById('targetComment');
+    const electricityCommentInput = document.getElementById('electricityComment');
+    const workCommentInput = document.getElementById('workComment');
 
     // Data for plot number autofill
     let plotData = [];
@@ -188,33 +185,27 @@ document.addEventListener('DOMContentLoaded', function() {
         let total = 0;
         let membershipSum = 0;
         let targetSum = 0;
+        let workSum = 0;
         let electricitySum = 0;
 
         if (membershipCheck.checked) {
             membershipSum = parseFloat(membershipSumInput.value) || 0;
             total += membershipSum;
-            membershipDisplay.textContent = membershipSum.toFixed(2) + ' руб.';
-            membershipBreakdown.style.display = 'flex';
-        } else {
-            membershipBreakdown.style.display = 'none';
         }
 
         if (targetCheck.checked) {
             targetSum = parseFloat(targetSumInput.value) || 0;
             total += targetSum;
-            targetDisplay.textContent = targetSum.toFixed(2) + ' руб.';
-            targetBreakdown.style.display = 'flex';
-        } else {
-            targetBreakdown.style.display = 'none';
+        }
+
+        if (workCheck.checked) {
+            workSum = parseFloat(workSumInput.value) || 0;
+            total += workSum;
         }
 
         if (electricityCheck.checked) {
             electricitySum = parseFloat(electricitySumInput.value) || 0;
             total += electricitySum;
-            electricityDisplay.textContent = electricitySum.toFixed(2) + ' руб.';
-            electricityBreakdown.style.display = 'flex';
-        } else {
-            electricityBreakdown.style.display = 'none';
         }
 
         totalAmountElement.textContent = total.toFixed(2) + ' руб.';
@@ -224,12 +215,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const initFormState = () => {
         toggleVisibility(membershipCheck, membershipAmountDiv);
         toggleVisibility(targetCheck, targetAmountDiv);
+        toggleVisibility(workCheck, workAmountDiv);
         initElectricityInputs(); // Initialize electricity specific inputs/logic
-        
-        // Ensure breakdown sections are visible if their checkboxes are checked
-        membershipBreakdown.style.display = membershipCheck.checked ? 'flex' : 'none';
-        targetBreakdown.style.display = targetCheck.checked ? 'flex' : 'none';
-        electricityBreakdown.style.display = electricityCheck.checked ? 'flex' : 'none';
         
         calculateTotal(); // Final total calculation after initial states
     };
@@ -256,13 +243,22 @@ document.addEventListener('DOMContentLoaded', function() {
             plotSotkasInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null) ? foundPlot.plotSotkas.toFixed(2) : '';
 
             targetSumInput.value = (foundPlot.targetSum !== undefined && foundPlot.targetSum !== null) ? foundPlot.targetSum.toFixed(2) : '';
+            workSumInput.value = (foundPlot.workSum !== undefined && foundPlot.workSum !== null) ? foundPlot.workSum.toFixed(2) : '';
+            workYearInput.value = foundPlot.workYear || '';
             meterReadingPrevInput.value = (foundPlot.meterReadingPrev !== undefined && foundPlot.meterReadingPrev !== null) ? foundPlot.meterReadingPrev : '';
             meterReadingCurrInput.value = ''; // Always clear current reading for new input
             electricitySumInput.value = ''; // Always clear manual electricity sum for new autofill
 
+            // Set comment fields
+            membershipCommentInput.value = foundPlot.membershipComment || '';
+            targetCommentInput.value = foundPlot.targetComment || '';
+            electricityCommentInput.value = foundPlot.electricityComment || '';
+            workCommentInput.value = foundPlot.workComment || '';
+
             // Also check checkboxes if corresponding sums/data are present
             membershipCheck.checked = (parseFloat(membershipSumInput.value) > 0);
             targetCheck.checked = parseFloat(targetSumInput.value) > 0;
+            workCheck.checked = parseFloat(workSumInput.value) > 0;
             electricityCheck.checked = meterReadingPrevInput.value !== ''; // Check if there's a previous reading
         } else {
             // Clear fields if no matching plot is found
@@ -270,13 +266,22 @@ document.addEventListener('DOMContentLoaded', function() {
             plotSotkasInput.value = '';
             membershipSumInput.value = ''; // Also clear derived sum
             targetSumInput.value = '';
+            workSumInput.value = '';
+            workYearInput.value = '';
             meterReadingPrevInput.value = '';
             meterReadingCurrInput.value = '';
             electricitySumInput.value = ''; // Also clear derived sum
 
+            // Clear comment fields
+            membershipCommentInput.value = '';
+            targetCommentInput.value = '';
+            electricityCommentInput.value = '';
+            workCommentInput.value = '';
+
             // Do not uncheck checkboxes automatically, let user decide payment types
             // membershipCheck.checked = false;
             // targetCheck.checked = false;
+            // workCheck.checked = false;
             // electricityCheck.checked = false;
         }
         initFormState(); // Re-initialize form state and calculations based on new values
@@ -302,6 +307,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initFormState(); // Call initial setup once after data is potentially loaded
 
+    // Event listeners
+    membershipCheck.addEventListener('change', initFormState);
+    targetCheck.addEventListener('change', initFormState);
+    workCheck.addEventListener('change', initFormState);
+    electricityCheck.addEventListener('change', initElectricityInputs); // Direct call for more precise control
+
+    // plotSotkasInput is now readonly, its value is derived from membershipSumInput
+    membershipSumInput.addEventListener('input', updateSotkasFromMembershipSum);
+
+    // Electricity input handlers
+    meterReadingCurrInput.addEventListener('input', updateElectricityFields);
+    electricitySumInput.addEventListener('input', updateElectricityFields);
+    meterReadingCurrInput.addEventListener('focus', updateElectricityFields); // Trigger update on focus to set readonly
+    electricitySumInput.addEventListener('focus', updateElectricityFields); // Trigger update on focus to set readonly
+    meterReadingCurrInput.addEventListener('blur', updateElectricityFields); // Trigger update on blur to reset readonly if empty
+    electricitySumInput.addEventListener('blur', updateElectricityFields); // Trigger update on blur to reset readonly if empty
+
+    targetSumInput.addEventListener('input', calculateTotal);
+    workSumInput.addEventListener('input', calculateTotal);
+
+    // Event listener for plot number input to trigger autofill
+    plotNumberInput.addEventListener('input', function() {
+        autofillPlotData(this.value);
+    });
+
     // Centralized validation function
     function validateForm() {
         // Validate payer name
@@ -326,7 +356,13 @@ document.addEventListener('DOMContentLoaded', function() {
             totalAmount: 0, // Will be calculated dynamically below
             membershipSum: 0,
             targetSum: 0,
-            electricitySum: 0
+            workSum: 0,
+            workYear: '',
+            electricitySum: 0,
+            membershipComment: '',
+            targetComment: '',
+            workComment: '',
+            electricityComment: ''
         };
 
         let calculatedTotal = 0;
@@ -334,6 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (membershipCheck.checked) {
             formData.paymentTypes.push('Членские взносы');
             formData.membershipSum = parseFloat(membershipSumInput.value) || 0;
+            formData.membershipComment = membershipCommentInput.value.trim();
             if (formData.membershipSum <= 0) {
                 showNotification('Сумма членских взносов должна быть больше нуля.', 'error');
                 membershipSumInput.focus();
@@ -345,6 +382,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (targetCheck.checked) {
             formData.paymentTypes.push('Целевые взносы');
             formData.targetSum = parseFloat(targetSumInput.value) || 0;
+            formData.targetComment = targetCommentInput.value.trim();
             if (formData.targetSum <= 0) {
                 showNotification('Сумма целевых взносов должна быть больше нуля.', 'error');
                 targetSumInput.focus();
@@ -353,9 +391,28 @@ document.addEventListener('DOMContentLoaded', function() {
             calculatedTotal += formData.targetSum;
         }
         
+        if (workCheck.checked) {
+            formData.paymentTypes.push('Отработка');
+            formData.workSum = parseFloat(workSumInput.value) || 0;
+            formData.workYear = workYearInput.value.trim();
+            formData.workComment = workCommentInput.value.trim();
+            if (formData.workSum <= 0) {
+                showNotification('Сумма за отработку должна быть больше нуля.', 'error');
+                workSumInput.focus();
+                return false;
+            }
+            if (!formData.workYear || formData.workYear.length !== 4) {
+                showNotification('Укажите год для отработки (например, 2024).', 'error');
+                workYearInput.focus();
+                return false;
+            }
+            calculatedTotal += formData.workSum;
+        }
+        
         if (electricityCheck.checked) {
             formData.paymentTypes.push('Электроэнергия');
             formData.electricitySum = parseFloat(electricitySumInput.value) || 0;
+            formData.electricityComment = electricityCommentInput.value.trim();
             if (formData.electricitySum <= 0) {
                 showNotification('Сумма за электроэнергию должна быть больше нуля.', 'error');
                 electricitySumInput.focus();
@@ -394,29 +451,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         return formData; // Return collected data if validation passes
     }
-
-    // Event listeners
-    membershipCheck.addEventListener('change', initFormState);
-    targetCheck.addEventListener('change', initFormState);
-    electricityCheck.addEventListener('change', initElectricityInputs); // Direct call for more precise control
-
-    // plotSotkasInput is now readonly, its value is derived from membershipSumInput
-    membershipSumInput.addEventListener('input', updateSotkasFromMembershipSum);
-
-    // Electricity input handlers
-    meterReadingCurrInput.addEventListener('input', updateElectricityFields);
-    electricitySumInput.addEventListener('input', updateElectricityFields);
-    meterReadingCurrInput.addEventListener('focus', updateElectricityFields); // Trigger update on focus to set readonly
-    electricitySumInput.addEventListener('focus', updateElectricityFields); // Trigger update on focus to set readonly
-    meterReadingCurrInput.addEventListener('blur', updateElectricityFields); // Trigger update on blur to reset readonly if empty
-    electricitySumInput.addEventListener('blur', updateElectricityFields); // Trigger update on blur to reset readonly if empty
-
-    targetSumInput.addEventListener('input', calculateTotal);
-
-    // Event listener for plot number input to trigger autofill
-    plotNumberInput.addEventListener('input', function() {
-        autofillPlotData(this.value);
-    });
 
     // Function to convert number to words (for rubles and kopecks)
     function numberToWords(num) {
@@ -525,61 +559,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return null;
         }
     }
-
-    // Function to generate QR code and display it on the main canvas
-    async function displayQrCodeOnCanvas() {
-        const formData = validateForm();
-        if (!formData) {
-            const context = qrCanvas.getContext('2d');
-            context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-            if (downloadQrBtn) downloadQrBtn.disabled = true;
-            return;
-        }
-
-        let purposeParts = [];
-        if (formData.membershipSum > 0) {
-            purposeParts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.`);
-        }
-        if (formData.targetSum > 0) {
-            purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.`);
-        }
-        if (formData.electricitySum > 0) {
-            const kwhUsed = parseFloat(kwhUsedElement.textContent) || 0; // Get actual displayed kWh
-            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)`);
-        }
-        let purposeString = '';
-        if (purposeParts.length > 0) {
-            purposeString = purposeParts.join(', ') + ` за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
-        } else {
-            // Fallback if no payment types are selected (though validation should prevent this)
-            purposeString = `Оплата за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
-        }
-
-        const totalAmountKopecks = (formData.totalAmount * 100).toFixed(0);
-
-        const paymentString =
-            `ST00012|Name=${REQUISITES.Name}` +
-            `|PersonalAcc=${REQUISITES.PersonalAcc}` +
-            `|BankName=${REQUISITES.BankName}` +
-            `|BIC=${REQUISITES.BIC}` +
-            `|CorrespAcc=${REQUISITES.CorrespAcc}` +
-            `|PayeeINN=${REQUISITES.PayeeINN}` +
-            (REQUISITES.KPP ? `|KPP=${REQUISITES.KPP}` : '') +
-            `|Sum=${totalAmountKopecks}` +
-            `|Purpose=${purposeString}`;
-        
-        QRCode.toCanvas(qrCanvas, paymentString, { width: 280, errorCorrectionLevel: 'H' }, function (error) {
-            if (error) {
-                console.error('Error generating QR code:', error);
-                showNotification('Ошибка при генерации QR-кода!', 'error');
-                if (downloadQrBtn) downloadQrBtn.disabled = true;
-                const context = qrCanvas.getContext('2d');
-                context.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
-            } else {
-                if (downloadQrBtn) downloadQrBtn.disabled = false;
-            }
-        });
-    }
     
     // Function to create one part of the receipt (Notice or Receipt)
     function createReceiptPart(title, data, amountInWords, formattedDate, qrCodeDataURL = null) {
@@ -587,9 +566,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Form payment details
         let paymentDetails = [];
-        if (data.membershipSum > 0) paymentDetails.push(`Членские взносы: ${data.membershipSum.toFixed(2)} руб.`);
-        if (data.targetSum > 0) paymentDetails.push(`Целевые взносы: ${data.targetSum.toFixed(2)} руб.`);
-        if (data.electricitySum > 0) paymentDetails.push(`Электроэнергия: ${data.electricitySum.toFixed(2)} руб.`);
+        if (data.membershipSum > 0) {
+            const membershipText = `Членские взносы: ${data.membershipSum.toFixed(2)} руб.${data.membershipComment ? ` (${data.membershipComment})` : ''}`;
+            paymentDetails.push(membershipText);
+        }
+        if (data.targetSum > 0) {
+            const targetText = `Целевые взносы: ${data.targetSum.toFixed(2)} руб.${data.targetComment ? ` (${data.targetComment})` : ''}`;
+            paymentDetails.push(targetText);
+        }
+        if (data.workSum > 0) {
+            const workText = `Отработка: ${data.workSum.toFixed(2)} руб. за ${data.workYear} год${data.workComment ? ` (${data.workComment})` : ''}`;
+            paymentDetails.push(workText);
+        }
+        if (data.electricitySum > 0) {
+            const electricityText = `Электроэнергия: ${data.electricitySum.toFixed(2)} руб.${data.electricityComment ? ` (${data.electricityComment})` : ''}`;
+            paymentDetails.push(electricityText);
+        }
         
         // Conditional QR code display for the "Извещение" part
         const qrCodeHtml = (title === 'Извещение' && qrCodeDataURL) ?
@@ -703,14 +695,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Generate the purpose string for QR code
         let purposeParts = [];
         if (formData.membershipSum > 0) {
-            purposeParts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.`);
+            purposeParts.push(`Членские взносы: ${formData.membershipSum.toFixed(2)} руб.${formData.membershipComment ? ` (${formData.membershipComment})` : ''}`);
         }
         if (formData.targetSum > 0) {
-            purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.`);
+            purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.${formData.targetComment ? ` (${formData.targetComment})` : ''}`);
+        }
+        if (formData.workSum > 0) {
+            purposeParts.push(`Отработка: ${formData.workSum.toFixed(2)} руб. за ${formData.workYear} год${formData.workComment ? ` (${formData.workComment})` : ''}`);
         }
         if (formData.electricitySum > 0) {
             const kwhUsed = parseFloat(kwhUsedElement.textContent) || 0; // Get actual displayed kWh
-            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)`);
+            purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)${formData.electricityComment ? ` (${formData.electricityComment})` : ''}`);
         }
         let purposeString = '';
         if (purposeParts.length > 0) {
@@ -733,9 +728,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById(ELEM_RECEIPT_CONTENT).innerHTML = receiptContentHTML;
         modal.style.display = 'block';
     });
-
-    // QR code generation handler (for the main page QR display)
-    generateQrBtn.addEventListener('click', displayQrCodeOnCanvas);
 
     // Вспомогательная функция для уведомлений (renamed from showToast)
     function showNotification(message, type = 'info') {
@@ -777,21 +769,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 300);
         }, 5000);
     }
-
-    // QR code download handler
-    downloadQrBtn.addEventListener('click', function() {
-        if (!qrCanvas || qrCanvas.width === 0 || qrCanvas.height === 0) {
-            showNotification('Сначала сгенерируйте QR-код!', 'info');
-            return;
-        }
-        const link = document.createElement('a');
-        const fileNamePlot = plotNumberInput.value.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_'); // Sanitize plot number
-        const fileNamePayer = payerNameInput.value.replace(/[^a-zA-Zа-яА-Я0-9\s]/g, '').replace(/\s+/g, '_'); // Sanitize payer name
-        link.download = `snt-beryozka-2_plot-${fileNamePlot}_${fileNamePayer}.png`;
-        link.href = qrCanvas.toDataURL('image/png');
-        link.click();
-        showNotification('QR-код скачан!', 'success');
-    });
 
     // Fix for number input fields to allow only valid numbers
     document.querySelectorAll('input[type="number"]').forEach(input => {
