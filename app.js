@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_KWH_USED = 'kwhUsed';
     const ELEM_ELECTRICITY_SUM_INPUT = 'electricitySumInput';
     const ELEM_TOTAL_AMOUNT = 'totalAmount';
+    const ELEM_PURPOSE_CHAR_COUNT = 'purposeCharCount';
     const ELEM_RECEIPT_MODAL = 'receiptModal';
     const ELEM_RECEIPT_CONTENT = 'receiptContent';
     const ELEM_PRINT_BTN = 'printBtn';
@@ -34,9 +35,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const electricityInputsDiv = document.getElementById('electricityInputs'); // This is the div container for electricity inputs
     const workAmountDiv = document.getElementById('workAmount'); // This is the div container for work inputs
     const totalAmountElement = document.getElementById(ELEM_TOTAL_AMOUNT);
+    const purposeCharCountElement = document.getElementById(ELEM_PURPOSE_CHAR_COUNT);
     const modal = document.getElementById(ELEM_RECEIPT_MODAL);
     const closeModalBtn = document.querySelector('.close-modal');
     const printBtn = document.getElementById(ELEM_PRINT_BTN);
+    const qrCanvas = document.getElementById('qrCanvas');
+    const downloadQrBtn = document.getElementById('downloadQrBtn');
 
     // Specific input fields
     const plotSotkasInput = document.getElementById(ELEM_PLOT_SOTKAS);
@@ -102,6 +106,58 @@ document.addEventListener('DOMContentLoaded', function() {
             plotSotkasInput.value = '0.00';
         }
         calculateTotal();
+    }
+
+    // --- NEW --- Function to update the character counter for the QR purpose string
+    function updatePurposeStringCounter() {
+        if (!purposeCharCountElement) return;
+
+        // This logic mirrors how the purposeString is built for the QR code.
+        const plotNumber = plotNumberInput.value.trim();
+        const payerName = payerNameInput.value.trim();
+        const kwhUsed = parseFloat(kwhUsedElement.textContent) || 0;
+
+        let purposeParts = [];
+        if (membershipCheck.checked) {
+            const membershipSum = parseFloat(membershipSumInput.value) || 0;
+            const membershipComment = membershipCommentInput.value.trim();
+            if (membershipSum > 0) {
+                purposeParts.push(`Членские взносы: ${membershipSum.toFixed(2)} руб.${membershipComment ? ` (${membershipComment})` : ''}`);
+            }
+        }
+        if (targetCheck.checked) {
+            const targetSum = parseFloat(targetSumInput.value) || 0;
+            const targetComment = targetCommentInput.value.trim();
+            if (targetSum > 0) {
+                purposeParts.push(`Целевые взносы: ${targetSum.toFixed(2)} руб.${targetComment ? ` (${targetComment})` : ''}`);
+            }
+        }
+        if (workCheck.checked) {
+            const workSum = parseFloat(workSumInput.value) || 0;
+            const workYear = workYearInput.value.trim();
+            const workComment = workCommentInput.value.trim();
+            if (workSum > 0) {
+                purposeParts.push(`Отработка: ${workSum.toFixed(2)} руб. за ${workYear} год${workComment ? ` (${workComment})` : ''}`);
+            }
+        }
+        if (electricityCheck.checked) {
+            const electricitySum = parseFloat(electricitySumInput.value) || 0;
+            const electricityComment = electricityCommentInput.value.trim();
+            if (electricitySum > 0) {
+                 purposeParts.push(`Электроэнергия: ${electricitySum.toFixed(2)} руб. (${kwhUsed} кВт)${electricityComment ? ` (${electricityComment})` : ''}`);
+            }
+        }
+
+        let purposeString = purposeParts.join(', ') + ` за участок № ${plotNumber}, ФИО: ${payerName}`;
+        
+        const currentLength = purposeString.length;
+        purposeCharCountElement.textContent = `${currentLength} / 150 символов`;
+
+        if (currentLength > 150) {
+            purposeCharCountElement.style.color = 'var(--error-color)';
+        } else {
+            purposeCharCountElement.style.color = 'var(--text-color)';
+        }
     }
 
     // --- Electricity calculation logic ---
@@ -209,6 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         totalAmountElement.textContent = total.toFixed(2) + ' руб.';
+        updatePurposeStringCounter(); // Update char counter whenever total is calculated
     }
 
     // Initial setup (run once on load)
@@ -305,6 +362,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     // --- End Autocomplete/Autofill Logic ---
 
+    // Download QR Code Handler
+    downloadQrBtn.addEventListener('click', function() {
+        if (this.disabled) return;
+        const link = document.createElement('a');
+        link.download = `QR_SNT_Berezka2_${plotNumberInput.value || 'payment'}.png`;
+        link.href = qrCanvas.toDataURL('image/png');
+        link.click();
+    });
+
     initFormState(); // Call initial setup once after data is potentially loaded
 
     // Event listeners
@@ -326,6 +392,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     targetSumInput.addEventListener('input', calculateTotal);
     workSumInput.addEventListener('input', calculateTotal);
+
+    // Add event listeners to all fields that affect the purpose string
+    [
+        plotNumberInput,
+        payerNameInput,
+        membershipCommentInput,
+        targetCommentInput,
+        workCommentInput,
+        workYearInput,
+        electricityCommentInput
+    ].forEach(input => input.addEventListener('input', updatePurposeStringCounter));
 
     // Event listener for plot number input to trigger autofill
     plotNumberInput.addEventListener('input', function() {
@@ -535,12 +612,37 @@ document.addEventListener('DOMContentLoaded', function() {
         return result.charAt(0).toUpperCase() + result.slice(1);
     }
     
-    // Function to generate QR code data URL
-    async function generateQrCodeDataURLForPayment(formData, purposeString) {
-        const totalAmountKopecks = (formData.totalAmount * 100).toFixed(0);
+    // Function to generate QR code data URL for the printable receipt
+    async function generateQrCodeDataURLForPrint(formData, purposeString) {
+        const paymentString = buildPaymentString(formData, purposeString);
+        try {
+            // Larger QR for print, ~38mm on A4
+            return await QRCode.toDataURL(paymentString, { width: 450, errorCorrectionLevel: 'H', margin: 1 });
+        } catch (error) {
+            console.error('Error generating print QR code data URL:', error);
+            return null;
+        }
+    }
 
-        const paymentString =
-            `ST00012|Name=${REQUISITES.Name}` +
+    // Function to generate and display QR code on the main page canvas
+    async function generateAndDisplayQrCode(formData, purposeString) {
+        const paymentString = buildPaymentString(formData, purposeString);
+        try {
+            await QRCode.toCanvas(qrCanvas, paymentString, { width: 250, errorCorrectionLevel: 'H', margin: 1 });
+            downloadQrBtn.disabled = false;
+        } catch (err) {
+            console.error('Failed to generate QR on canvas:', err);
+            downloadQrBtn.disabled = true;
+        }
+    }
+
+    // Function to build the payment string for the QR code
+    function buildPaymentString(formData, purposeString) {
+         const totalAmountKopecks = (formData.totalAmount * 100).toFixed(0);
+        // Truncate purpose string to 150 characters
+        const finalPurposeString = purposeString.length > 150 ? purposeString.substring(0, 150) : purposeString;
+
+        return `ST00012|Name=${REQUISITES.Name}` +
             `|PersonalAcc=${REQUISITES.PersonalAcc}` +
             `|BankName=${REQUISITES.BankName}` +
             `|BIC=${REQUISITES.BIC}` +
@@ -548,16 +650,7 @@ document.addEventListener('DOMContentLoaded', function() {
             `|PayeeINN=${REQUISITES.PayeeINN}` +
             (REQUISITES.KPP ? `|KPP=${REQUISITES.KPP}` : '') +
             `|Sum=${totalAmountKopecks}` +
-            `|Purpose=${purposeString}`;
-
-        try {
-            // Generate QR code data URL with a size suitable for the receipt
-            const qrDataURL = await QRCode.toDataURL(paymentString, { width: 140, errorCorrectionLevel: 'H' }); // 140px source is suitable for ~35mm print
-            return qrDataURL;
-        } catch (error) {
-            console.error('Error generating QR code data URL:', error);
-            return null;
-        }
+            `|Purpose=${finalPurposeString}`;
     }
     
     // Function to create one part of the receipt (Notice or Receipt)
@@ -715,10 +808,13 @@ document.addEventListener('DOMContentLoaded', function() {
             purposeString = `Оплата за участок № ${formData.plotNumber}, ФИО: ${formData.payerName}`;
         }
 
-        // Generate QR code data URL for the receipt
-        const qrCodeForReceipt = await generateQrCodeDataURLForPayment(formData, purposeString);
+        // --- NEW --- Generate QR code for main page display
+        await generateAndDisplayQrCode(formData, purposeString);
 
-        // Create receipt content
+        // Generate QR code data URL for the printable receipt (larger size)
+        const qrCodeForReceipt = await generateQrCodeDataURLForPrint(formData, purposeString);
+
+        // Create receipt content for modal
         const receiptContentHTML = `
             ${createReceiptPart('Извещение', formData, amountInWords, formattedDate, qrCodeForReceipt)}
             <div class="receipt-tear-line"></div>

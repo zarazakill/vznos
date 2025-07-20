@@ -25,11 +25,11 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="plotNumber">№ участка*</label>
-                                <input type="text" id="plotNumber" name="plotNumber" placeholder="123А" required pattern="[0-9]+[А-Яа-я]?" class="highlight-input">
+                                <input type="text" id="plotNumber" name="plotNumber" placeholder="123А" required pattern="[0-9]+[А-Яа-я]?" class="highlight-input" autocomplete="off" title="Введите номер участка, например 75, 17А">
                             </div>
                             <div class="form-group">
                                 <label for="payerName">ФИО плательщика*</label>
-                                <input type="text" id="payerName" name="payerName" placeholder="Иванов Иван Иванович" required>
+                                <input type="text" id="payerName" name="payerName" placeholder="Иванов Иван Иванович" required autocomplete="off">
                             </div>
                         </div>
                     </section>
@@ -139,6 +139,10 @@
                         <div class="form-group total-amount">
                             <label>Общая сумма к оплате:</label>
                             <div id="totalAmount">0.00 руб.</div>
+                        </div>
+                        <div class="form-group purpose-char-counter">
+                            <label>Длина назначения платежа для QR-кода:</label>
+                            <div id="purposeCharCount">0 / 150 символов</div>
                         </div>
                     </section>
 

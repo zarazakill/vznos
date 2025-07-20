@@ -124,6 +124,12 @@ document.addEventListener('DOMContentLoaded', function() {
             checkbox.value = index; // Use index to find plot data later
             checkboxCell.appendChild(checkbox);
 
+            // Mass print selection support
+            checkbox.title = "Для массовой печати квитанций";
+            checkbox.addEventListener('change', () => {
+                // Optional: handle state if you want to reflect in a separate mass print area
+            });
+
             // Function to create an editable cell
             const createEditableCell = (field, type = 'text', step = null, min = null, pattern = null) => {
                 const cell = row.insertCell();
@@ -481,13 +487,22 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function openMassReceiptSelectionModal() {
         const plotCheckboxList = document.getElementById('plotCheckboxList');
-        plotCheckboxList.innerHTML = ''; // Clear previous list
+        plotCheckboxList.innerHTML = '';
 
+        // Synchronize checked state between table and modal
+        const tableCheckboxes = plotDataTableBody.querySelectorAll('.plot-checkbox');
+        
         plotData.forEach((plot, index) => {
             const label = document.createElement('label');
             label.className = 'checkbox-label';
+
+            // Pre-check if plot checkbox was checked in table
+            let isChecked = false;
+            if (tableCheckboxes[index]) {
+                isChecked = tableCheckboxes[index].checked;
+            }
             label.innerHTML = `
-                <input type="checkbox" class="plot-checkbox-modal" value="${index}">
+                <input type="checkbox" class="plot-checkbox-modal" value="${index}" ${isChecked ? 'checked' : ''}>
                 Участок № ${plot.plotNumber} - ${plot.payerName}
             `;
             plotCheckboxList.appendChild(label);
@@ -497,7 +512,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function generateMassReceipts() {
+        // When "Сформировать квитанции" pressed, synchronize mass-print selection with main table
         const selectedCheckboxes = document.querySelectorAll('#plotCheckboxList .plot-checkbox-modal:checked');
+        // Also propagate selection state back to table checkboxes:
+        const tableCheckboxes = plotDataTableBody.querySelectorAll('.plot-checkbox');
+        tableCheckboxes.forEach(cb => cb.checked = false); // Reset all
+        selectedCheckboxes.forEach(cb => {
+            if (typeof cb.value !== "undefined" && tableCheckboxes[cb.value]) {
+                tableCheckboxes[cb.value].checked = true;
+            }
+        });
+
         if (selectedCheckboxes.length === 0) {
             showNotification('Выберите хотя бы один участок для массовой печати', 'error');
             return;
@@ -507,39 +532,39 @@ document.addEventListener('DOMContentLoaded', function() {
         const receiptsContainer = document.getElementById('massReceiptContent');
         receiptsContainer.innerHTML = '';
 
-        let currentPage = document.createElement('div');
-        currentPage.className = 'receipt-page';
-        receiptsContainer.appendChild(currentPage);
+        let pageCount = 0;
+        let currentPage = null;
 
-        for (const index of selectedIndices) {
-            const plot = plotData[index];
-            if (!plot.plotNumber || !plot.payerName) continue;
-
-            const receiptHtml = await generateReceiptHtml(plot, true); // Generate with QR
-            
-            const receiptDiv = document.createElement('div');
-            receiptDiv.className = 'mass-receipt-item';
-            receiptDiv.innerHTML = receiptHtml;
-
-            // Add receipt to current page
-            currentPage.appendChild(receiptDiv);
-
-            // If current page has 2 receipts, create a new page for the next receipts
-            if (currentPage.children.length >= 2) {
+        selectedIndices.forEach((index, idx) => {
+            if (idx % 2 === 0) {
+                // Create a new page. Reduce the top margin for the FIRST receipt page only.
                 currentPage = document.createElement('div');
                 currentPage.className = 'receipt-page';
+                if (pageCount === 0) {
+                    currentPage.style.paddingTop = '5mm'; // Make first page top margin smaller
+                }
                 receiptsContainer.appendChild(currentPage);
+                pageCount++;
             }
-        }
-        
+
+            const plot = plotData[index];
+            if (!plot.plotNumber || !plot.payerName) return;
+            const receiptDiv = document.createElement('div');
+            receiptDiv.className = 'mass-receipt-item';
+
+            // Generate receipt HTML synchronously for current plot
+            generateReceiptHtml(plot, true).then(receiptHtml => {
+                receiptDiv.innerHTML = receiptHtml;
+            });
+
+            currentPage.appendChild(receiptDiv);
+        });
+
         // Hide the selection modal and show the print preview modal
         massReceiptModal.style.display = 'none';
         massReceiptPrintModal.style.display = 'block';
 
-        // Give some time for rendering before printing
-        setTimeout(() => {
-            // window.print(); // Commented out to allow user to manually print from modal
-        }, 500);
+        // Wait for DOM content to update, then possibly allow printing
     }
 
     async function printSingleReceipt(index) {
@@ -661,7 +686,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.closeMassReceiptPrintModal = () => massReceiptPrintModal.style.display = 'none'; // Close mass print modal
     window.closeSingleReceiptModal = () => singleReceiptModal.style.display = 'none'; // Close single receipt modal
 
-    // Функции для генерации квитанций 
     async function generateQrCodeDataURLForReceipt(formData) {
         const REQUISITES = {
             Name: 'СНТ «Березка-2»',
@@ -710,7 +734,8 @@ document.addEventListener('DOMContentLoaded', function() {
             `|Purpose=${purposeString}`;
 
         try {
-            return await QRCode.toDataURL(paymentString, { width: 140, errorCorrectionLevel: 'H' });
+            // Increased width for larger QR code in print
+            return await QRCode.toDataURL(paymentString, { width: 450, errorCorrectionLevel: 'H', margin: 1 });
         } catch (error) {
             console.error('Error generating QR code:', error);
             return null;
