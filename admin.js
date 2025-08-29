@@ -12,8 +12,8 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    const MEMBERSHIP_TARIFF = 1400; // Define membership tariff for admin calculations
-    const ELECTRICITY_TARIFF = 3.5; // Define electricity tariff for admin calculations
+    let membershipTariff; // Tariff for membership fees
+    let electricityTariff; // Tariff for electricity
 
     let plotData = [];
 
@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const plotDataTable = document.getElementById('plotDataTable');
     const plotDataTableBody = plotDataTable.getElementsByTagName('tbody')[0];
     const changePasswordForm = document.getElementById('changePasswordForm');
+    const settingsForm = document.getElementById('settingsForm');
+    const electricityTariffInput = document.getElementById('electricityTariff');
+    const membershipTariffInput = document.getElementById('membershipTariff'); // New input element
 
     // Модальные окна
     const massReceiptModal = document.getElementById('massReceiptModal'); // Main mass receipt selection modal
@@ -33,6 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const singleReceiptModal = document.getElementById('singleReceiptModal'); // New modal for single receipt
 
     // Загрузка данных
+    loadSettings();
     loadPlotData();
 
     // Обработчики событий
@@ -42,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     importFileInput.addEventListener('change', importData);
     massReceiptBtn.addEventListener('click', openMassReceiptSelectionModal); // Change to open selection modal
     changePasswordForm.addEventListener('submit', changePassword);
+    settingsForm.addEventListener('submit', saveSettings);
 
     // Обработчики модальных окон
     document.querySelectorAll('.close-modal').forEach(btn => {
@@ -66,6 +71,46 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = 'login.html';
     }
 
+    function loadSettings() {
+        const savedElectricityTariff = localStorage.getItem('electricityTariff');
+        electricityTariff = savedElectricityTariff ? parseFloat(savedElectricityTariff) : 3.5;
+        if (electricityTariffInput) {
+            electricityTariffInput.value = electricityTariff.toFixed(2);
+        }
+        
+        const savedMembershipTariff = localStorage.getItem('membershipTariff');
+        membershipTariff = savedMembershipTariff ? parseFloat(savedMembershipTariff) : 1400;
+        if (membershipTariffInput) {
+            membershipTariffInput.value = membershipTariff.toFixed(2);
+        }
+    }
+
+    function saveSettings(e) {
+        e.preventDefault();
+        
+        // Save electricity tariff
+        const newElectricityTariff = parseFloat(electricityTariffInput.value);
+        if (!isNaN(newElectricityTariff) && newElectricityTariff >= 0) {
+            electricityTariff = newElectricityTariff;
+            localStorage.setItem('electricityTariff', newElectricityTariff.toString());
+        } else {
+            showNotification('Неверное значение тарифа на электроэнергию', 'error');
+            return;
+        }
+
+        // Save membership tariff
+        const newMembershipTariff = parseFloat(membershipTariffInput.value);
+        if (!isNaN(newMembershipTariff) && newMembershipTariff >= 0) {
+            membershipTariff = newMembershipTariff;
+            localStorage.setItem('membershipTariff', newMembershipTariff.toString());
+        } else {
+            showNotification('Неверное значение тарифа на членские взносы', 'error');
+            return;
+        }
+
+        showNotification('Настройки сохранены', 'success');
+    }
+
     async function loadPlotData() {
         try {
             const storedData = localStorage.getItem('plotData');
@@ -85,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Initialize membershipSum. Prefer existing, otherwise calculate from plotSotkas from data.json.
                         membershipSum: plot.membershipSum !== undefined && plot.membershipSum !== null
                                        ? parseFloat(plot.membershipSum)
-                                       : ((plot.plotSotkas !== undefined && plot.plotSotkas !== null) ? parseFloat(plot.plotSotkas) * MEMBERSHIP_TARIFF : 0),
+                                       : ((plot.plotSotkas !== undefined && plot.plotSotkas !== null) ? parseFloat(plot.plotSotkas) * membershipTariff : 0),
                         // Initialize comment fields
                         membershipComment: plot.membershipComment || '',
                         targetComment: plot.targetComment || '',
@@ -96,8 +141,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // After membershipSum is initialized, ensure plotSotkas is derived from it for consistency with UI.
             plotData.forEach(plot => {
-                if (plot.membershipSum !== undefined && plot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
-                    plot.plotSotkas = plot.membershipSum / MEMBERSHIP_TARIFF;
+                if (plot.membershipSum !== undefined && plot.membershipSum !== null && membershipTariff > 0) {
+                    plot.plotSotkas = plot.membershipSum / membershipTariff;
                 } else {
                     plot.plotSotkas = 0; // If membershipSum is 0 or invalid, plotSotkas is 0.
                 }
@@ -282,8 +327,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Specific logic for membershipSum and plotSotkas relationship
         // When membershipSum is updated by the user, plotSotkas is recalculated based on it.
-        if (plot.membershipSum !== undefined && plot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
-            const newPlotSotkas = plot.membershipSum / MEMBERSHIP_TARIFF;
+        if (plot.membershipSum !== undefined && plot.membershipSum !== null && membershipTariff > 0) {
+            const newPlotSotkas = plot.membershipSum / membershipTariff;
             // Only update if it actually changes (comparing fixed values for precision)
             if (parseFloat(plot.plotSotkas).toFixed(2) !== newPlotSotkas.toFixed(2)) {
                 plot.plotSotkas = newPlotSotkas;
@@ -429,13 +474,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (importedPlot.membershipSum === 0 && (row['Размер участка (соток)'] !== undefined || row['plotSotkas'] !== undefined)) {
                              const importedSotkas = parseFloat(row['Размер участка (соток)'] || row['plotSotkas'] || 0);
                              if (importedSotkas > 0) {
-                                 importedPlot.membershipSum = importedSotkas * MEMBERSHIP_TARIFF;
+                                 importedPlot.membershipSum = importedSotkas * membershipTariff;
                              }
                         }
 
                         // Now, ensure plotSotkas is derived from membershipSum for consistency within the data model
-                        if (importedPlot.membershipSum !== undefined && importedPlot.membershipSum !== null && MEMBERSHIP_TARIFF > 0) {
-                            importedPlot.plotSotkas = importedPlot.membershipSum / MEMBERSHIP_TARIFF;
+                        if (importedPlot.membershipSum !== undefined && importedPlot.membershipSum !== null && membershipTariff > 0) {
+                            importedPlot.plotSotkas = importedPlot.membershipSum / membershipTariff;
                         } else {
                             importedPlot.plotSotkas = 0;
                         }
@@ -627,7 +672,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.electricityComment = plot.electricityComment || '';
         } else if (formData.meterReadingCurr > formData.meterReadingPrev) {
             const usage = formData.meterReadingCurr - formData.meterReadingPrev;
-            formData.electricitySum = usage * ELECTRICITY_TARIFF;
+            formData.electricitySum = usage * electricityTariff;
             formData.paymentTypes.push('Электроэнергия');
             formData.totalAmount += formData.electricitySum;
             formData.electricityComment = plot.electricityComment || '';
@@ -714,8 +759,8 @@ document.addEventListener('DOMContentLoaded', function() {
             let kwhForPurpose = 0;
             if (formData.meterReadingCurr > formData.meterReadingPrev) {
                 kwhForPurpose = formData.meterReadingCurr - formData.meterReadingPrev;
-            } else if (ELECTRICITY_TARIFF > 0 && formData.electricitySum > 0) {
-                 kwhForPurpose = formData.electricitySum / ELECTRICITY_TARIFF;
+            } else if (electricityTariff > 0 && formData.electricitySum > 0) {
+                 kwhForPurpose = formData.electricitySum / electricityTariff;
             }
             purposeParts.push(`Электроэнергия: ${formData.electricitySum.toFixed(2)} руб. ${kwhForPurpose > 0 ? `(${Math.round(kwhForPurpose)} кВт)` : ''}${formData.electricityComment ? ` (${formData.electricityComment})` : ''}`);
         }
@@ -764,8 +809,8 @@ document.addEventListener('DOMContentLoaded', function() {
             let kwhForPurpose = 0;
             if (data.meterReadingCurr > data.meterReadingPrev) {
                 kwhForPurpose = data.meterReadingCurr - data.meterReadingPrev;
-            } else if (ELECTRICITY_TARIFF > 0 && data.electricitySum > 0) {
-                 kwhForPurpose = data.electricitySum / ELECTRICITY_TARIFF;
+            } else if (electricityTariff > 0 && data.electricitySum > 0) {
+                 kwhForPurpose = data.electricitySum / electricityTariff;
             }
             const electricityText = `Электроэнергия: ${data.electricitySum.toFixed(2)} руб. ${kwhForPurpose > 0 ? `(${Math.round(kwhForPurpose)} кВт)` : ''}${data.electricityComment ? ` (${data.electricityComment})` : ''}`;
             paymentDetails.push(electricityText);

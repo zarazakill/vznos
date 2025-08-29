@@ -1,6 +1,31 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const ELECTRICITY_TARIFF = 3.5; // 3.5 руб за кВт·ч
-    const MEMBERSHIP_TARIFF = 1400; // 1400 руб за сотку
+    let electricityTariff = 3.5; // Default value, will be updated from localStorage
+    let membershipTariff = 1400; // Default value, will be updated from localStorage
+
+    // Function to load settings from localStorage
+    function loadSettings() {
+        // Load and apply electricity tariff
+        const savedElectricityTariff = localStorage.getItem('electricityTariff');
+        if (savedElectricityTariff) {
+            electricityTariff = parseFloat(savedElectricityTariff);
+        }
+        const electricityLabelSpan = document.querySelector('#electricityFeeLabel span');
+        if (electricityLabelSpan) {
+            electricityLabelSpan.textContent = `Электроэнергия (${electricityTariff.toFixed(2)} руб/кВт·ч)`;
+        }
+
+        // Load and apply membership tariff
+        const savedMembershipTariff = localStorage.getItem('membershipTariff');
+        if (savedMembershipTariff) {
+            membershipTariff = parseFloat(savedMembershipTariff);
+        }
+        const membershipLabelSpan = document.querySelector('#membershipFeeLabel span');
+        if (membershipLabelSpan) {
+            membershipLabelSpan.textContent = `Членские взносы (${membershipTariff.toFixed(2)} руб/сотка)`;
+        }
+    }
+    
+    loadSettings();
 
     // Constants for element IDs (helps with readability and refactoring)
     const ELEM_PAYER_NAME = 'payerName';
@@ -99,8 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         const membershipSum = parseFloat(membershipSumInput.value) || 0;
-        if (MEMBERSHIP_TARIFF > 0) {
-            const sotkas = membershipSum / MEMBERSHIP_TARIFF;
+        if (membershipTariff > 0) {
+            const sotkas = membershipSum / membershipTariff;
             plotSotkasInput.value = sotkas.toFixed(2);
         } else {
             plotSotkasInput.value = '0.00';
@@ -188,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // User is actively typing in current reading
             if (isCurrValid && curr >= prev) {
                 kwh = curr - prev;
-                sum = kwh * ELECTRICITY_TARIFF;
+                sum = kwh * electricityTariff;
                 electricitySumInput.value = sum.toFixed(2);
                 electricitySumInput.readOnly = true; // Make sum readonly
             } else {
@@ -200,23 +225,23 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (document.activeElement === electricitySumInput && isSumValid) {
             // User is actively typing in manual sum
             sum = manualSum;
-            if (ELECTRICITY_TARIFF > 0) {
-                kwh = sum / ELECTRICITY_TARIFF;
+            if (electricityTariff > 0) {
+                kwh = sum / electricityTariff;
             }
             meterReadingCurrInput.value = Math.round(prev + kwh);
             meterReadingCurrInput.readOnly = true; // Make current reading readonly
         } else if (isCurrValid && curr >= prev) {
             // Current reading has a valid value (e.g., from autofill + subsequent entry, or just valid input)
             kwh = curr - prev;
-            sum = kwh * ELECTRICITY_TARIFF;
+            sum = kwh * electricityTariff;
             electricitySumInput.value = sum.toFixed(2);
             electricitySumInput.readOnly = true;
             meterReadingCurrInput.readOnly = false;
         } else if (isSumValid) {
             // Manual sum has a valid value
             sum = manualSum;
-            if (ELECTRICITY_TARIFF > 0) {
-                kwh = sum / ELECTRICITY_TARIFF;
+            if (electricityTariff > 0) {
+                kwh = sum / electricityTariff;
             }
             meterReadingCurrInput.value = Math.round(prev + kwh);
             meterReadingCurrInput.readOnly = true;
@@ -294,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Set membership sum and derive plot sotkas
             membershipSumInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null && foundPlot.plotSotkas > 0) 
-                                       ? (foundPlot.plotSotkas * MEMBERSHIP_TARIFF).toFixed(2) 
+                                       ? (foundPlot.plotSotkas * membershipTariff).toFixed(2) 
                                        : '';
             
             plotSotkasInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null) ? foundPlot.plotSotkas.toFixed(2) : '';

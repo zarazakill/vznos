@@ -38,9 +38,9 @@
                         <h2><span class="section-number">2</span> Тип платежа</h2>
                         <div class="payment-types">
                             <div class="payment-type-container">
-                                <label class="checkbox-label">
+                                <label class="checkbox-label" id="membershipFeeLabel">
                                     <input type="checkbox" name="paymentType[]" value="Членские взносы" id="membershipCheck" checked>
-                                    Членские взносы (1400 руб/сотка)
+                                    <span>Членские взносы (1400.00 руб/сотка)</span>
                                 </label>
                                 <div class="form-group payment-amount" id="membershipAmount">
                                     <div class="form-row">
@@ -80,9 +80,9 @@
                             </div>
 
                             <div class="payment-type-container">
-                                <label class="checkbox-label">
+                                <label class="checkbox-label" id="electricityFeeLabel">
                                     <input type="checkbox" name="paymentType[]" value="Электроэнергия" id="electricityCheck">
-                                    Электроэнергия (3.50 руб/кВт·ч)
+                                    <span>Электроэнергия (3.50 руб/кВт·ч)</span>
                                 </label>
                                 <div id="electricityInputs" style="display:none;">
                                     <div class="form-group">
