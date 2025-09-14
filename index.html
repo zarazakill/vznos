@@ -1,10 +1,11 @@
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Квитанция СНТ «Березка-2»</title>
+    <title>СНТ «Березка-2»</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- QR code library -->
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 </head>
@@ -12,201 +13,67 @@
     <div class="container">
         <header class="header">
             <div class="logo-container">
-                <img src="logo.png" alt="Квитанция Онлайн" class="logo-img">
-                <h1>Оплата взносов СНТ «Березка-2»</h1>
+                <img src="logo.png" alt="СНТ Березка-2" class="logo-img">
+                <h1>СНТ «Березка-2»</h1>
             </div>
+            <nav class="main-nav">
+                <a href="payment.html">Оплата взносов</a>
+                <a href="#budget">Смета</a>
+                <a href="#documents">Документы</a>
+                <a href="#plans">Развитие/планы</a>
+            </nav>
         </header>
 
-        <main class="main-content">
-            <div class="form-container">
-                <form id="paymentForm" class="payment-form">
-                    <section class="form-section">
-                        <h2><span class="section-number">1</span> Ваши данные</h2>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="plotNumber">№ участка*</label>
-                                <input type="text" id="plotNumber" name="plotNumber" placeholder="123А" required pattern="[0-9]+[А-Яа-я]?" class="highlight-input" autocomplete="off" title="Введите номер участка, например 75, 17А">
-                            </div>
-                            <div class="form-group">
-                                <label for="payerName">ФИО плательщика*</label>
-                                <input type="text" id="payerName" name="payerName" placeholder="Иванов Иван Иванович" required autocomplete="off">
-                            </div>
-                        </div>
-                    </section>
+        <main class="main-content-home">
+            <section class="hero-section">
+                <h2>Добро пожаловать на сайт СНТ «Березка-2»</h2>
+                <p>Здесь вы можете оплатить взносы и ознакомиться с важной информацией о жизни нашего товарищества.</p>
+                <a href="payment.html" class="action-btn-large">Перейти к оплате</a>
+            </section>
 
-                    <section class="form-section">
-                        <h2><span class="section-number">2</span> Тип платежа</h2>
-                        <div class="payment-types">
-                            <div class="payment-type-container">
-                                <label class="checkbox-label" id="membershipFeeLabel">
-                                    <input type="checkbox" name="paymentType[]" value="Членские взносы" id="membershipCheck" checked>
-                                    <span>Членские взносы (1400.00 руб/сотка)</span>
-                                </label>
-                                <div class="form-group payment-amount" id="membershipAmount">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="membershipSum">Сумма (руб.)</label>
-                                            <input type="number" id="membershipSum" name="membershipSum" step="0.01" min="0" placeholder="8400.00">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="plotSotkas">Размер участка (соток)</label>
-                                            <input type="number" id="plotSotkas" name="plotSotkas" step="0.01" min="0" readonly>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="membershipComment">Комментарий (необязательно)</label>
-                                        <input type="text" id="membershipComment" name="membershipComment" placeholder="Например: за 2024 год">
-                                    </div>
-                                </div>
-                            </div>
+            <section id="budget" class="info-section">
+                <h2>Смета</h2>
+                <p><a href="/Смета 2025.pdf" target="_blank">Смета на 2025 год</a></p>
+                <!-- Placeholder for budget documents -->
+            </section>
 
-                            <div class="payment-type-container">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="paymentType[]" value="Целевые взносы" id="targetCheck">
-                                    Целевые взносы
-                                </label>
-                                <div class="form-group payment-amount" id="targetAmount" style="display:none;">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="targetSum">Сумма (руб.)</label>
-                                            <input type="number" id="targetSum" name="targetSum" step="0.01" min="0" placeholder="1000.00">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="targetComment">Комментарий (необязательно)</label>
-                                            <input type="text" id="targetComment" name="targetComment" placeholder="Например: ремонт дороги">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+            <section id="documents" class="info-section">
+                <h2>Документы</h2>
+                <p><a href="https://disk.yandex.ru/d/gC6x-qrCci79aQ" target="_blank" rel="noopener noreferrer">Открыть папку с документами на Яндекс.Диске</a></p>
+                <!-- Placeholder for documents -->
+            </section>
 
-                            <div class="payment-type-container">
-                                <label class="checkbox-label" id="electricityFeeLabel">
-                                    <input type="checkbox" name="paymentType[]" value="Электроэнергия" id="electricityCheck">
-                                    <span>Электроэнергия (3.50 руб/кВт·ч)</span>
-                                </label>
-                                <div id="electricityInputs" style="display:none;">
-                                    <div class="form-group">
-                                        <label for="electricitySumInput">Сумма (руб.)</label>
-                                        <input type="number" id="electricitySumInput" name="electricitySumInput" step="0.01" min="0" placeholder="500.00">
-                                    </div>
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="meterReadingPrev">Предыдущие показания (кВт)</label>
-                                            <input type="number" id="meterReadingPrev" name="meterReadingPrev" min="0" readonly>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="meterReadingCurr">Текущие показания (кВт)</label>
-                                            <input type="number" id="meterReadingCurr" name="meterReadingCurr" placeholder="Например, 1650" min="0" step="1">
-                                        </div>
-                                    </div>
-                                    <div class="electricity-calc">
-                                        Расход: <span id="kwhUsed">0</span> кВт
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="electricityComment">Комментарий (необязательно)</label>
-                                        <input type="text" id="electricityComment" name="electricityComment" placeholder="Например: за декабрь 2024">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="payment-type-container">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="paymentType[]" value="Отработка" id="workCheck">
-                                    Отработка
-                                </label>
-                                <div class="form-group payment-amount" id="workAmount" style="display:none;">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="workSum">Сумма (руб.)</label>
-                                            <input type="number" id="workSum" name="workSum" step="0.01" min="0" placeholder="5000.00">
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="workYear">За какой год</label>
-                                            <input type="number" id="workYear" name="workYear" min="2020" max="2030" placeholder="2024">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="workComment">Комментарий (необязательно)</label>
-                                        <input type="text" id="workComment" name="workComment" placeholder="Например: уборка территории">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section class="form-section">
-                        <h2><span class="section-number">3</span> Итоговая сумма</h2>
-                        <div class="form-group total-amount">
-                            <label>Общая сумма к оплате:</label>
-                            <div id="totalAmount">0.00 руб.</div>
-                        </div>
-                        <div class="form-group purpose-char-counter">
-                            <label>Длина назначения платежа для QR-кода:</label>
-                            <div id="purposeCharCount">0 / 150 символов</div>
-                        </div>
-                    </section>
-
-                    <div class="form-footer">
-                        <button type="submit" class="submit-btn">
-                            <span class="btn-text">Сформировать квитанцию</span>
-                            <span class="btn-icon">→</span>
-                        </button>
-                        <p class="required-hint">* Поля, обязательные для заполнения</p>
-                        <div class="admin-link">
-                            <a href="login.html">Вход для администратора</a>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <div class="info-container">
-                <div class="info-card">
-                    <h3>Реквизиты для оплаты</h3>
-                    <div class="requisites">
-                        <p><strong id="requisitesRecipient">Получатель:</strong> СНТ «Березка-2»</p>
-                        <p><strong id="requisitesINN">ИНН:</strong> 5433118499</p>
-                        <p><strong id="requisitesKPP">КПП:</strong> 543301001</p>
-                        <p><strong id="requisitesBank">Банк:</strong> Сибирский Банк ПАО Сбербанк</p>
-                        <p><strong id="requisitesRS">Р/с:</strong> 40703810644050040322</p>
-                        <p><strong id="requisitesBIK">БИК:</strong> 045004641</p>
-                        <p><strong id="requisitesKS">Кор.счет:</strong> 30101810500000000641</p>
-                    </div>
-                </div>
-
-                <div class="info-card qr-card">
-                    <h3>QR-код для оплаты</h3>
-                    <canvas id="qrCanvas" class="qr-code-img"></canvas>
-                    <button id="downloadQrBtn" class="download-btn" disabled>Скачать QR-код</button>
-                    <p>Отсканируйте для быстрой оплаты</p>
-                </div>
-
-                <div class="info-card contacts">
-                    <h3>Контакты</h3>
-                    <p><strong>Председатель:</strong> Чернов Владимир Борисович</p>
-                    <p><strong>Телефон:</strong> +7 (913) 921-31-15</p>
-                    <p><strong>Email:</strong> info@snt-berezka2.ru</p>
-                </div>
-            </div>
+            <section id="plans" class="info-section">
+                <h2>Развитие и планы</h2>
+                <p>Информация о планах по развитию инфраструктуры и благоустройству СНТ.</p>
+                <!-- Placeholder for plans -->
+            </section>
         </main>
+        
+        <footer class="footer">
+             <div class="admin-link">
+                 <a href="login.html">Вход для администратора</a>
+             </div>
+        </footer>
+    </div>
 
-        <!-- Модальное окно для квитанции -->
-        <div id="receiptModal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <div id="receiptContentWrapper">
-                    <div id="receiptContent" class="receipt-container">
-                        <!-- Содержимое квитанции будет здесь -->
-                    </div>
+    <!-- Модальное окно для квитанции -->
+    <div id="receiptModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <div id="receiptContentWrapper">
+                <div id="receiptContent" class="receipt-container">
+                    <!-- Содержимое квитанции будет здесь -->
                 </div>
-                <div class="modal-actions">
-                    <button id="printBtn" class="action-btn">Печать</button>
-                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="printBtn" class="action-btn">Печать</button>
             </div>
         </div>
-
-        <!-- Подключаем библиотеки -->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
-        <script src="app.js"></script>
     </div>
+
+    <!-- Подключаем библиотеки -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

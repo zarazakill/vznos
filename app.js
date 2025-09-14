@@ -49,6 +49,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_RECEIPT_CONTENT = 'receiptContent';
     const ELEM_PRINT_BTN = 'printBtn';
 
+    // Elements for 2-step flow
+    const plotSelectionContainer = document.getElementById('plot-selection-container');
+    const mainContentWrapper = document.getElementById('main-content-wrapper');
+    const findPlotBtn = document.getElementById('findPlotBtn');
+    const plotNumberInputInitial = document.getElementById('plotNumberInput');
+
     // Elements for form
     const paymentForm = document.getElementById('paymentForm');
     const membershipCheck = document.getElementById(ELEM_MEMBERSHIP_CHECK);
@@ -77,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const meterReadingCurrInput = document.getElementById(ELEM_METER_CURR);
     const kwhUsedElement = document.getElementById(ELEM_KWH_USED);
     const electricitySumInput = document.getElementById(ELEM_ELECTRICITY_SUM_INPUT);
-    const plotNumberInput = document.getElementById(ELEM_PLOT_NUMBER);
+    const plotNumberInput = document.getElementById(ELEM_PLOT_NUMBER); // This is the readonly input in the main form
     const payerNameInput = document.getElementById(ELEM_PAYER_NAME);
 
     // Comment input fields
@@ -108,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
             definitions: {
                 'A': { validator: '[АAаa]', casing: 'upper' }
             }
-        }).mask(plotNumberInput);
+        }).mask(plotNumberInputInitial);
     }
 
     // Toggles visibility of an element based on checkbox state
@@ -359,12 +365,6 @@ document.addEventListener('DOMContentLoaded', function() {
             targetCommentInput.value = '';
             electricityCommentInput.value = '';
             workCommentInput.value = '';
-
-            // Do not uncheck checkboxes automatically, let user decide payment types
-            // membershipCheck.checked = false;
-            // targetCheck.checked = false;
-            // workCheck.checked = false;
-            // electricityCheck.checked = false;
         }
         initFormState(); // Re-initialize form state and calculations based on new values
     }
@@ -379,13 +379,32 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             plotData = data;
-            // No initial autofill needed on load, wait for user input
         })
         .catch(error => {
             console.error('Error loading plot data:', error);
             showNotification('Не удалось загрузить данные участков для автозаполнения. Пожалуйста, введите данные вручную.', 'error');
         });
     // --- End Autocomplete/Autofill Logic ---
+
+    // --- NEW: Event listener for the initial plot search ---
+    findPlotBtn.addEventListener('click', () => {
+        const plotNum = plotNumberInputInitial.value.trim();
+        if (!plotNumberInputInitial.checkValidity() || plotNum === '') {
+            showNotification('Пожалуйста, введите корректный номер участка.', 'error');
+            plotNumberInputInitial.focus();
+            return;
+        }
+
+        // Set the plot number in the main form (which is readonly)
+        plotNumberInput.value = plotNum.toUpperCase();
+        
+        // Autofill data based on the entered plot number
+        autofillPlotData(plotNum);
+
+        // Hide the initial selection and show the main form
+        plotSelectionContainer.style.display = 'none';
+        mainContentWrapper.style.display = 'block';
+    });
 
     // Download QR Code Handler
     downloadQrBtn.addEventListener('click', function() {
@@ -396,9 +415,7 @@ document.addEventListener('DOMContentLoaded', function() {
         link.click();
     });
 
-    initFormState(); // Call initial setup once after data is potentially loaded
-
-    // Event listeners
+    // Event listeners for the main form
     membershipCheck.addEventListener('change', initFormState);
     targetCheck.addEventListener('change', initFormState);
     workCheck.addEventListener('change', initFormState);
