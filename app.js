@@ -782,7 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     
                     <div class="receipt-amount-words">
-                        <strong>Sумма прописью:</strong> ${amountInWords}
+                        <strong>Сумма прописью:</strong> ${amountInWords}
                     </div>
                     
                     <div class="receipt-footer">
