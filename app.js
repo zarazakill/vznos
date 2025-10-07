@@ -32,11 +32,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const ELEM_PLOT_NUMBER = 'plotNumber';
     const ELEM_MEMBERSHIP_CHECK = 'membershipCheck';
     const ELEM_TARGET_CHECK = 'targetCheck';
+    const ELEM_ARREARS_CHECK = 'arrearsCheck'; // NEW
     const ELEM_ELECTRICITY_CHECK = 'electricityCheck';
     const ELEM_WORK_CHECK = 'workCheck';
     const ELEM_PLOT_SOTKAS = 'plotSotkas'; // Now readonly, derived from membershipSum
     const ELEM_MEMBERSHIP_SUM = 'membershipSum'; // Primary input for membership
     const ELEM_TARGET_SUM = 'targetSum';
+    const ELEM_ARREARS_SUM = 'arrearsSum'; // NEW
     const ELEM_WORK_SUM = 'workSum';
     const ELEM_WORK_YEAR = 'workYear';
     const ELEM_METER_PREV = 'meterReadingPrev'; // Now readonly, informational
@@ -51,6 +53,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Elements for 2-step flow
     const plotSelectionContainer = document.getElementById('plot-selection-container');
+    const ownerSelectionContainer = document.getElementById('owner-selection-container');
+    const ownerListDiv = document.getElementById('owner-list');
     const mainContentWrapper = document.getElementById('main-content-wrapper');
     const findPlotBtn = document.getElementById('findPlotBtn');
     const plotNumberInputInitial = document.getElementById('plotNumberInput');
@@ -59,10 +63,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const paymentForm = document.getElementById('paymentForm');
     const membershipCheck = document.getElementById(ELEM_MEMBERSHIP_CHECK);
     const targetCheck = document.getElementById(ELEM_TARGET_CHECK);
+    const arrearsCheck = document.getElementById(ELEM_ARREARS_CHECK); // NEW
     const electricityCheck = document.getElementById(ELEM_ELECTRICITY_CHECK);
     const workCheck = document.getElementById(ELEM_WORK_CHECK);
     const membershipAmountDiv = document.getElementById('membershipAmount'); // This is the div container for membership inputs
     const targetAmountDiv = document.getElementById('targetAmount'); // This is the div container for target sum input
+    const arrearsAmountDiv = document.getElementById('arrearsAmount'); // NEW
     const electricityInputsDiv = document.getElementById('electricityInputs'); // This is the div container for electricity inputs
     const workAmountDiv = document.getElementById('workAmount'); // This is the div container for work inputs
     const totalAmountElement = document.getElementById(ELEM_TOTAL_AMOUNT);
@@ -77,6 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const plotSotkasInput = document.getElementById(ELEM_PLOT_SOTKAS);
     const membershipSumInput = document.getElementById(ELEM_MEMBERSHIP_SUM);
     const targetSumInput = document.getElementById(ELEM_TARGET_SUM);
+    const arrearsSumInput = document.getElementById(ELEM_ARREARS_SUM); // NEW
     const workSumInput = document.getElementById(ELEM_WORK_SUM);
     const workYearInput = document.getElementById(ELEM_WORK_YEAR);
     const meterReadingPrevInput = document.getElementById(ELEM_METER_PREV);
@@ -89,6 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Comment input fields
     const membershipCommentInput = document.getElementById('membershipComment');
     const targetCommentInput = document.getElementById('targetComment');
+    const arrearsCommentInput = document.getElementById('arrearsComment'); // NEW
     const electricityCommentInput = document.getElementById('electricityComment');
     const workCommentInput = document.getElementById('workComment');
 
@@ -163,6 +171,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 purposeParts.push(`Целевые взносы: ${targetSum.toFixed(2)} руб.${targetComment ? ` (${targetComment})` : ''}`);
             }
         }
+        
+        // NEW ARREARS LOGIC
+        if (arrearsCheck.checked) {
+            const arrearsSum = parseFloat(arrearsSumInput.value) || 0;
+            const arrearsComment = arrearsCommentInput.value.trim();
+            if (arrearsSum > 0) {
+                purposeParts.push(`Задолженность прошлых лет: ${arrearsSum.toFixed(2)} руб.${arrearsComment ? ` (${arrearsComment})` : ''}`);
+            }
+        }
+        
         if (workCheck.checked) {
             const workSum = parseFloat(workSumInput.value) || 0;
             const workYear = workYearInput.value.trim();
@@ -272,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let total = 0;
         let membershipSum = 0;
         let targetSum = 0;
+        let arrearsSum = 0; // NEW
         let workSum = 0;
         let electricitySum = 0;
 
@@ -283,6 +302,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (targetCheck.checked) {
             targetSum = parseFloat(targetSumInput.value) || 0;
             total += targetSum;
+        }
+
+        if (arrearsCheck.checked) { // NEW
+            arrearsSum = parseFloat(arrearsSumInput.value) || 0;
+            total += arrearsSum;
         }
 
         if (workCheck.checked) {
@@ -303,6 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const initFormState = () => {
         toggleVisibility(membershipCheck, membershipAmountDiv);
         toggleVisibility(targetCheck, targetAmountDiv);
+        toggleVisibility(arrearsCheck, arrearsAmountDiv); // NEW
         toggleVisibility(workCheck, workAmountDiv);
         initElectricityInputs(); // Initialize electricity specific inputs/logic
         
@@ -316,74 +341,137 @@ document.addEventListener('DOMContentLoaded', function() {
         updateElectricityFields(); // Apply logic to set states correctly
     }
 
-    // --- Autocomplete/Autofill Logic for Plot Number ---
-    function autofillPlotData(plotNum) {
-        const foundPlot = plotData.find(p => p.plotNumber.toUpperCase() === plotNum.toUpperCase());
+    // --- NEW: Handle owner selection ---
+    ownerListDiv.addEventListener('click', function(e) {
+        if (e.target.classList.contains('owner-selection-btn')) {
+            const selectedIndex = parseInt(e.target.dataset.index);
+            const selectedPlot = plotData[selectedIndex];
 
+            // Set the plot number in the main form (which is readonly)
+            plotNumberInput.value = selectedPlot.plotNumber.toUpperCase();
+
+            // Autofill data based on the selected plot object
+            autofillWithPlotObject(selectedPlot);
+
+            // Hide the selection containers and show the main form
+            plotSelectionContainer.style.display = 'none';
+            ownerSelectionContainer.style.display = 'none';
+            mainContentWrapper.style.display = 'block';
+        }
+    });
+
+    // --- NEW: Function to autofill form with a specific plot object
+    function autofillWithPlotObject(foundPlot) {
         if (foundPlot) {
             payerNameInput.value = foundPlot.payerName || '';
             
             // Set membership sum and derive plot sotkas
-            membershipSumInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null && foundPlot.plotSotkas > 0) 
-                                       ? (foundPlot.plotSotkas * membershipTariff).toFixed(2) 
-                                       : '';
-            
+            const membershipValue = foundPlot.membershipSum !== undefined && foundPlot.membershipSum !== null
+                                    ? foundPlot.membershipSum
+                                    : ((foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null && foundPlot.plotSotkas > 0) 
+                                       ? (foundPlot.plotSotkas * membershipTariff) 
+                                       : 0);
+            membershipSumInput.value = membershipValue > 0 ? membershipValue.toFixed(2) : '';
+
             plotSotkasInput.value = (foundPlot.plotSotkas !== undefined && foundPlot.plotSotkas !== null) ? foundPlot.plotSotkas.toFixed(2) : '';
 
-            targetSumInput.value = (foundPlot.targetSum !== undefined && foundPlot.targetSum !== null) ? foundPlot.targetSum.toFixed(2) : '';
-            workSumInput.value = (foundPlot.workSum !== undefined && foundPlot.workSum !== null) ? foundPlot.workSum.toFixed(2) : '';
+            targetSumInput.value = (foundPlot.targetSum !== undefined && foundPlot.targetSum > 0) ? foundPlot.targetSum.toFixed(2) : '';
+            
+            // NEW ARREARS FIELD
+            arrearsSumInput.value = (foundPlot.arrearsSum !== undefined && foundPlot.arrearsSum > 0) ? parseFloat(foundPlot.arrearsSum).toFixed(2) : '';
+
+            workSumInput.value = (foundPlot.workSum !== undefined && foundPlot.workSum > 0) ? foundPlot.workSum.toFixed(2) : '';
             workYearInput.value = foundPlot.workYear || '';
             meterReadingPrevInput.value = (foundPlot.meterReadingPrev !== undefined && foundPlot.meterReadingPrev !== null) ? foundPlot.meterReadingPrev : '';
             meterReadingCurrInput.value = ''; // Always clear current reading for new input
-            electricitySumInput.value = ''; // Always clear manual electricity sum for new autofill
+            electricitySumInput.value = (foundPlot.electricitySum !== undefined && foundPlot.electricitySum > 0) ? foundPlot.electricitySum.toFixed(2) : '';
 
             // Set comment fields
             membershipCommentInput.value = foundPlot.membershipComment || '';
             targetCommentInput.value = foundPlot.targetComment || '';
+            arrearsCommentInput.value = foundPlot.arrearsComment || ''; // NEW
             electricityCommentInput.value = foundPlot.electricityComment || '';
             workCommentInput.value = foundPlot.workComment || '';
 
-            // Also check checkboxes if corresponding sums/data are present
-            membershipCheck.checked = (parseFloat(membershipSumInput.value) > 0);
+            // Set checkboxes based on whether there's a positive value
+            membershipCheck.checked = parseFloat(membershipSumInput.value) > 0;
             targetCheck.checked = parseFloat(targetSumInput.value) > 0;
+            arrearsCheck.checked = parseFloat(arrearsSumInput.value) > 0; // NEW
             workCheck.checked = parseFloat(workSumInput.value) > 0;
-            electricityCheck.checked = meterReadingPrevInput.value !== ''; // Check if there's a previous reading
+            electricityCheck.checked = (meterReadingPrevInput.value !== '' || parseFloat(electricitySumInput.value) > 0);
         } else {
-            // Clear fields if no matching plot is found
+            // Clear all fields if something went wrong
             payerNameInput.value = '';
             plotSotkasInput.value = '';
-            membershipSumInput.value = ''; // Also clear derived sum
+            membershipSumInput.value = '';
             targetSumInput.value = '';
+            arrearsSumInput.value = ''; // NEW
             workSumInput.value = '';
             workYearInput.value = '';
             meterReadingPrevInput.value = '';
             meterReadingCurrInput.value = '';
-            electricitySumInput.value = ''; // Also clear derived sum
-
-            // Clear comment fields
+            electricitySumInput.value = '';
             membershipCommentInput.value = '';
             targetCommentInput.value = '';
+            arrearsCommentInput.value = ''; // NEW
             electricityCommentInput.value = '';
             workCommentInput.value = '';
         }
-        initFormState(); // Re-initialize form state and calculations based on new values
+        initFormState(); // Re-initialize form state and calculations
     }
 
-    // Load plot data from JSON file
-    fetch('data.json')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            plotData = data;
-        })
-        .catch(error => {
-            console.error('Error loading plot data:', error);
-            showNotification('Не удалось загрузить данные участков для автозаполнения. Пожалуйста, введите данные вручную.', 'error');
-        });
+    // --- Autocomplete/Autofill Logic for Plot Number ---
+    function autofillPlotData(plotNum) {
+        const foundPlots = plotData.filter(p => p.plotNumber && p.plotNumber.toUpperCase() === plotNum.toUpperCase());
+
+        if (foundPlots.length === 1) {
+            // Only one match, proceed directly
+            autofillWithPlotObject(foundPlots[0]);
+            plotSelectionContainer.style.display = 'none';
+            mainContentWrapper.style.display = 'block';
+        } else if (foundPlots.length > 1) {
+            // Multiple matches, show selection screen
+            ownerListDiv.innerHTML = ''; // Clear previous list
+            foundPlots.forEach(plot => {
+                const originalIndex = plotData.findIndex(p => p === plot);
+                const button = document.createElement('button');
+                button.className = 'action-btn owner-selection-btn';
+                button.textContent = plot.payerName;
+                button.dataset.index = originalIndex;
+                ownerListDiv.appendChild(button);
+            });
+            plotSelectionContainer.style.display = 'none';
+            ownerSelectionContainer.style.display = 'block';
+        } else {
+            // No matches found, clear fields and show the form for manual entry
+            autofillWithPlotObject(null);
+            plotSelectionContainer.style.display = 'none';
+            mainContentWrapper.style.display = 'block';
+        }
+    }
+
+    // Load plot data from JSON file or localStorage
+    function loadPlotData() {
+        const storedData = localStorage.getItem('plotData');
+        if (storedData) {
+            plotData = JSON.parse(storedData);
+        } else {
+            fetch('data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    plotData = data;
+                })
+                .catch(error => {
+                    console.error('Error loading plot data:', error);
+                    showNotification('Не удалось загрузить данные участков. Введите данные вручную.', 'error');
+                });
+        }
+    }
+    
+    loadPlotData();
     // --- End Autocomplete/Autofill Logic ---
 
     // --- NEW: Event listener for the initial plot search ---
@@ -398,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Set the plot number in the main form (which is readonly)
         plotNumberInput.value = plotNum.toUpperCase();
         
-        // Autofill data based on the entered plot number
+        // Autofill data based on the entered plot number, which now handles multiple owners
         autofillPlotData(plotNum);
 
         // Hide the initial selection and show the main form
@@ -415,14 +503,18 @@ document.addEventListener('DOMContentLoaded', function() {
         link.click();
     });
 
-    // Event listeners for the main form
+    // --- NEW: Event listeners for the main form
     membershipCheck.addEventListener('change', initFormState);
     targetCheck.addEventListener('change', initFormState);
+    arrearsCheck.addEventListener('change', initFormState); // NEW
     workCheck.addEventListener('change', initFormState);
     electricityCheck.addEventListener('change', initElectricityInputs); // Direct call for more precise control
 
     // plotSotkasInput is now readonly, its value is derived from membershipSumInput
     membershipSumInput.addEventListener('input', updateSotkasFromMembershipSum);
+    
+    // NEW arrears input handler
+    arrearsSumInput.addEventListener('input', calculateTotal);
 
     // Electricity input handlers
     meterReadingCurrInput.addEventListener('input', updateElectricityFields);
@@ -441,6 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
         payerNameInput,
         membershipCommentInput,
         targetCommentInput,
+        arrearsCommentInput, // NEW
         workCommentInput,
         workYearInput,
         electricityCommentInput
@@ -475,11 +568,13 @@ document.addEventListener('DOMContentLoaded', function() {
             totalAmount: 0, // Will be calculated dynamically below
             membershipSum: 0,
             targetSum: 0,
+            arrearsSum: 0, // NEW
             workSum: 0,
             workYear: '',
             electricitySum: 0,
             membershipComment: '',
             targetComment: '',
+            arrearsComment: '', // NEW
             workComment: '',
             electricityComment: ''
         };
@@ -508,6 +603,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
             calculatedTotal += formData.targetSum;
+        }
+
+        // NEW ARREARS VALIDATION
+        if (arrearsCheck.checked) {
+            formData.paymentTypes.push('Задолженность прошлых лет');
+            formData.arrearsSum = parseFloat(arrearsSumInput.value) || 0;
+            formData.arrearsComment = arrearsCommentInput.value.trim();
+            if (formData.arrearsSum <= 0) {
+                showNotification('Сумма задолженности должна быть больше нуля.', 'error');
+                arrearsSumInput.focus();
+                return false;
+            }
+            calculatedTotal += formData.arrearsSum;
         }
         
         if (workCheck.checked) {
@@ -709,6 +817,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const targetText = `Целевые взносы: ${data.targetSum.toFixed(2)} руб.${data.targetComment ? ` (${data.targetComment})` : ''}`;
             paymentDetails.push(targetText);
         }
+        
+        // NEW ARREARS DETAIL
+        if (data.arrearsSum > 0) {
+            const arrearsText = `Задолженность прошлых лет: ${data.arrearsSum.toFixed(2)} руб.${data.arrearsComment ? ` (${data.arrearsComment})` : ''}`;
+            paymentDetails.push(arrearsText);
+        }
+
         if (data.workSum > 0) {
             const workText = `Отработка: ${data.workSum.toFixed(2)} руб. за ${data.workYear} год${data.workComment ? ` (${data.workComment})` : ''}`;
             paymentDetails.push(workText);
@@ -835,6 +950,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (formData.targetSum > 0) {
             purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.${formData.targetComment ? ` (${formData.targetComment})` : ''}`);
         }
+        
+        // NEW ARREARS LOGIC
+        if (formData.arrearsSum > 0) {
+            purposeParts.push(`Задолженность прошлых лет: ${formData.arrearsSum.toFixed(2)} руб.${formData.arrearsComment ? ` (${formData.arrearsComment})` : ''}`);
+        }
+        
         if (formData.workSum > 0) {
             purposeParts.push(`Отработка: ${formData.workSum.toFixed(2)} руб. за ${formData.workYear} год${formData.workComment ? ` (${formData.workComment})` : ''}`);
         }

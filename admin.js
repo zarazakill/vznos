@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const importDataBtn = document.getElementById('importDataBtn');
     const importFileInput = document.getElementById('importFileInput');
     const massReceiptBtn = document.getElementById('massReceiptBtn');
+    const addPlotBtn = document.getElementById('addPlotBtn');
     const plotDataTable = document.getElementById('plotDataTable');
     const plotDataTableBody = plotDataTable.getElementsByTagName('tbody')[0];
     const changePasswordForm = document.getElementById('changePasswordForm');
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     importDataBtn.addEventListener('click', () => importFileInput.click());
     importFileInput.addEventListener('change', importData);
     massReceiptBtn.addEventListener('click', openMassReceiptSelectionModal); // Change to open selection modal
+    addPlotBtn.addEventListener('click', addNewPlotRow);
     changePasswordForm.addEventListener('submit', changePassword);
     settingsForm.addEventListener('submit', saveSettings);
 
@@ -131,11 +133,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         membershipSum: plot.membershipSum !== undefined && plot.membershipSum !== null
                                        ? parseFloat(plot.membershipSum)
                                        : ((plot.plotSotkas !== undefined && plot.plotSotkas !== null) ? parseFloat(plot.plotSotkas) * membershipTariff : 0),
+                        // Initialize arrearsSum
+                        arrearsSum: plot.arrearsSum !== undefined && plot.arrearsSum !== null ? parseFloat(plot.arrearsSum) : 0,
                         // Initialize comment fields
                         membershipComment: plot.membershipComment || '',
                         targetComment: plot.targetComment || '',
                         workComment: plot.workComment || '',
-                        electricityComment: plot.electricityComment || ''
+                        electricityComment: plot.electricityComment || '',
+                        arrearsComment: plot.arrearsComment || '' // New comment field
                     }));
                 saveDataToLocalStorage(); // Save fetched data to local storage for persistence
             }
@@ -241,6 +246,10 @@ document.addEventListener('DOMContentLoaded', function() {
             createReadOnlyCell(plot.plotSotkas);
 
             createEditableCell('targetSum', 'number', '0.01', '0');
+            
+            // === NEW FIELD: Arrears Sum ===
+            createEditableCell('arrearsSum', 'number', '0.01', '0');
+
             createEditableCell('workSum', 'number', '0.01', '0');
             createEditableCell('workYear', 'number', '1', '2020');
             
@@ -253,6 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add comment fields
             createEditableCell('membershipComment', 'text');
             createEditableCell('targetComment', 'text');
+            createEditableCell('arrearsComment', 'text'); // NEW COMMENT FIELD
             createEditableCell('workComment', 'text');
             createEditableCell('electricityComment', 'text');
 
@@ -374,6 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Членские взносы (руб.)': plot.membershipSum || 0, // Export membershipSum directly
                 'Размер участка (соток)': plot.plotSotkas || 0, // Export plotSotkas (which is now derived)
                 'Целевые взносы (руб.)': plot.targetSum || 0,
+                'Задолженность прошлых лет (руб.)': plot.arrearsSum || 0, // NEW FIELD
                 'Отработка (руб.)': plot.workSum || 0,
                 'Год отработки': plot.workYear || '',
                 'Предыдущие показания (кВт)': plot.meterReadingPrev || 0,
@@ -381,6 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 'Сумма электроэнергии (руб.)': plot.electricitySum || 0,
                 'Комментарий к членским взносам': plot.membershipComment || '',
                 'Комментарий к целевым взносам': plot.targetComment || '',
+                'Комментарий к задолженности': plot.arrearsComment || '', // NEW FIELD
                 'Комментарий к отработке': plot.workComment || '',
                 'Комментарий к электроэнергии': plot.electricityComment || ''
             }));
@@ -398,6 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 { wch: 25 }, // Членские взносы (руб.)
                 { wch: 20 }, // Размер участка (соток)
                 { wch: 20 }, // Целевые взносы
+                { wch: 30 }, // Задолженность прошлых лет (руб.) NEW
                 { wch: 20 }, // Отработка (руб.)
                 { wch: 15 }, // Год отработки
                 { wch: 25 }, // Предыдущие показания
@@ -405,6 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 { wch: 25 }, // Сумма электроэнергии
                 { wch: 30 }, // Комментарий к членским взносам
                 { wch: 30 }, // Комментарий к целевым взносам
+                { wch: 30 }, // Комментарий к задолженности NEW
                 { wch: 30 }, // Комментарий к отработке
                 { wch: 30 }  // Комментарий к электроэнергии
             ];
@@ -459,6 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Prefer importing membershipSum if available from the new Excel structure
                             membershipSum: parseFloat(row['Членские взносы (руб.)'] || row['membershipSum'] || 0),
                             targetSum: parseFloat(row['Целевые взносы (руб.)'] || row['targetSum'] || 0),
+                            arrearsSum: parseFloat(row['Задолженность прошлых лет (руб.)'] || row['arrearsSum'] || 0), // NEW FIELD
                             workSum: parseFloat(row['Отработка (руб.)'] || row['workSum'] || 0),
                             workYear: String(row['Год отработки'] || row['workYear'] || '').trim(),
                             meterReadingPrev: parseFloat(row['Предыдущие показания (кВт)'] || row['meterReadingPrev'] || 0),
@@ -466,6 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             electricitySum: parseFloat(row['Сумма электроэнергии (руб.)'] || row['electricitySum'] || 0),
                             membershipComment: String(row['Комментарий к членским взносам'] || row['membershipComment'] || '').trim(),
                             targetComment: String(row['Комментарий к целевым взносам'] || row['targetComment'] || '').trim(),
+                            arrearsComment: String(row['Комментарий к задолженности'] || row['arrearsComment'] || '').trim(), // NEW FIELD
                             workComment: String(row['Комментарий к отработке'] || row['workComment'] || '').trim(),
                             electricityComment: String(row['Комментарий к электроэнергии'] || row['electricityComment'] || '').trim()
                         };
@@ -633,6 +649,7 @@ document.addEventListener('DOMContentLoaded', function() {
             totalAmount: 0,
             membershipSum: 0,
             targetSum: 0,
+            arrearsSum: 0, // NEW
             workSum: 0,
             workYear: plot.workYear || '',
             electricitySum: 0,
@@ -640,6 +657,7 @@ document.addEventListener('DOMContentLoaded', function() {
             meterReadingCurr: plot.meterReadingCurr || 0,
             membershipComment: plot.membershipComment || '',
             targetComment: plot.targetComment || '',
+            arrearsComment: plot.arrearsComment || '', // NEW
             workComment: plot.workComment || '',
             electricityComment: plot.electricityComment || ''
         };
@@ -656,6 +674,12 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.paymentTypes.push('Целевые взносы');
             formData.totalAmount += formData.targetSum;
             formData.targetComment = plot.targetComment || '';
+        }
+        if (plot.arrearsSum > 0) { // NEW LOGIC
+            formData.arrearsSum = plot.arrearsSum;
+            formData.paymentTypes.push('Задолженность прошлых лет');
+            formData.totalAmount += formData.arrearsSum;
+            formData.arrearsComment = plot.arrearsComment || '';
         }
         if (plot.workSum > 0) {
             formData.workSum = plot.workSum;
@@ -751,6 +775,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (formData.targetSum > 0) {
             purposeParts.push(`Целевые взносы: ${formData.targetSum.toFixed(2)} руб.${formData.targetComment ? ` (${formData.targetComment})` : ''}`);
         }
+        if (formData.arrearsSum > 0) { // NEW LOGIC
+            purposeParts.push(`Задолженность прошлых лет: ${formData.arrearsSum.toFixed(2)} руб.${formData.arrearsComment ? ` (${formData.arrearsComment})` : ''}`);
+        }
         if (formData.workSum > 0) {
             purposeParts.push(`Отработка: ${formData.workSum.toFixed(2)} руб. за ${formData.workYear} год${formData.workComment ? ` (${formData.workComment})` : ''}`);
         }
@@ -799,6 +826,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (data.targetSum > 0) {
             const targetText = `Целевые взносы: ${data.targetSum.toFixed(2)} руб.${data.targetComment ? ` (${data.targetComment})` : ''}`;
             paymentDetails.push(targetText);
+        }
+        if (data.arrearsSum > 0) { // NEW LOGIC
+            const arrearsText = `Задолженность прошлых лет: ${data.arrearsSum.toFixed(2)} руб.${data.arrearsComment ? ` (${data.arrearsComment})` : ''}`;
+            paymentDetails.push(arrearsText);
         }
         if (data.workSum > 0) {
             const workText = `Отработка: ${data.workSum.toFixed(2)} руб. за ${data.workYear} год${data.workComment ? ` (${data.workComment})` : ''}`;
@@ -1025,5 +1056,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 300);
         }, 5000);
+    }
+
+    function addNewPlotRow() {
+        const newPlot = {
+            plotNumber: '',
+            payerName: '',
+            plotSotkas: 0,
+            targetSum: 0,
+            arrearsSum: 0, // NEW
+            meterReadingPrev: 0,
+            meterReadingCurr: 0,
+            electricitySum: 0,
+            workSum: 0,
+            workYear: '',
+            membershipSum: 0,
+            membershipComment: '',
+            targetComment: '',
+            arrearsComment: '', // NEW
+            workComment: '',
+            electricityComment: ''
+        };
+
+        plotData.unshift(newPlot); // Add to the beginning of the array
+        renderTable(); // Re-render the table
+
+        // Focus on the first input of the new row
+        const firstInput = plotDataTableBody.rows[0].querySelector('input.editable-cell-input');
+        if (firstInput) {
+            firstInput.focus();
+        }
+
+        showNotification('Новая строка добавлена. Заполните данные и сохраните.', 'info');
     }
 });

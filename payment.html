@@ -29,6 +29,13 @@
             </div>
             <button type="button" id="findPlotBtn" class="action-btn">Найти и продолжить</button>
         </div>
+        
+        <!-- NEW: Container for selecting owner if multiple are found -->
+        <div id="owner-selection-container" style="display: none;">
+             <h2><span class="section-number">1</span> Выберите владельца</h2>
+             <p>Для участка с этим номером найдено несколько записей. Пожалуйста, выберите свою.</p>
+             <div id="owner-list" class="owner-list"></div>
+        </div>
 
         <div id="main-content-wrapper" style="display: none;">
             <main class="main-content">
@@ -92,6 +99,27 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- NEW: Arrears from previous years -->
+                                <div class="payment-type-container">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" name="paymentType[]" value="Задолженность прошлых лет" id="arrearsCheck">
+                                        Задолженность прошлых лет
+                                    </label>
+                                    <div class="form-group payment-amount" id="arrearsAmount" style="display:none;">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="arrearsSum">Сумма (руб.)</label>
+                                                <input type="number" id="arrearsSum" name="arrearsSum" step="0.01" min="0" placeholder="5000.00">
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="arrearsComment">Комментарий (необязательно)</label>
+                                                <input type="text" id="arrearsComment" name="arrearsComment" placeholder="Например: взносы за 2023 год">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- END NEW: Arrears from previous years -->
 
                                 <div class="payment-type-container">
                                     <label class="checkbox-label" id="electricityFeeLabel">
