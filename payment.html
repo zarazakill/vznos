@@ -25,19 +25,23 @@
             <h2><span class="section-number">1</span> Введите номер вашего участка</h2>
             <div class="form-group">
                 <label for="plotNumberInput" class="sr-only">№ участка*</label>
-                <input type="text" id="plotNumberInput" name="plotNumber" placeholder="123А" required pattern="[0-9]+[А-Яа-я]?" class="highlight-input" autocomplete="off" title="Введите номер участка, например 75, 17А">
+                <input type="text" id="plotNumberInput" name="plotNumber" placeholder="75, 17А, Магазин" required class="highlight-input" autocomplete="off" title="Введите номер участка">
             </div>
             <button type="button" id="findPlotBtn" class="action-btn">Найти и продолжить</button>
         </div>
-        
-        <!-- NEW: Container for selecting owner if multiple are found -->
+
+        <!-- Container for selecting owner if multiple are found -->
         <div id="owner-selection-container" style="display: none;">
              <h2><span class="section-number">1</span> Выберите владельца</h2>
              <p>Для участка с этим номером найдено несколько записей. Пожалуйста, выберите свою.</p>
              <div id="owner-list" class="owner-list"></div>
+             <button id="backToPlotFromOwnerBtn" class="action-btn back-btn" style="margin-top: 15px; background-color: #6c757d;">← Назад к выбору участка</button>
         </div>
 
         <div id="main-content-wrapper" style="display: none;">
+            <button id="backToPlotSelectionBtn" class="action-btn back-btn" style="margin-bottom: 15px; background-color: #6c757d;">
+                ← Выбрать другой участок
+            </button>
             <main class="main-content">
                 <div class="form-container">
                     <form id="paymentForm" class="payment-form">
@@ -60,10 +64,10 @@
                             <div class="payment-types">
                                 <div class="payment-type-container">
                                     <label class="checkbox-label" id="membershipFeeLabel">
-                                        <input type="checkbox" name="paymentType[]" value="Членские взносы" id="membershipCheck" checked>
+                                        <input type="checkbox" name="paymentType[]" value="Членские взносы" id="membershipCheck">
                                         <span>Членские взносы (1400.00 руб/сотка)</span>
                                     </label>
-                                    <div class="form-group payment-amount" id="membershipAmount">
+                                    <div class="form-group payment-amount" id="membershipAmount" style="display:none;">
                                         <div class="form-row">
                                             <div class="form-group">
                                                 <label for="membershipSum">Сумма (руб.)</label>
@@ -100,7 +104,7 @@
                                     </div>
                                 </div>
 
-                                <!-- NEW: Arrears from previous years -->
+                                <!-- Arrears from previous years -->
                                 <div class="payment-type-container">
                                     <label class="checkbox-label">
                                         <input type="checkbox" name="paymentType[]" value="Задолженность прошлых лет" id="arrearsCheck">
@@ -119,7 +123,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- END NEW: Arrears from previous years -->
 
                                 <div class="payment-type-container">
                                     <label class="checkbox-label" id="electricityFeeLabel">
@@ -202,13 +205,13 @@
                     <div class="info-card">
                         <h3>Реквизиты для оплаты</h3>
                         <div class="requisites">
-                            <p><strong id="requisitesRecipient">Получатель:</strong> СНТ «Березка-2»</p>
-                            <p><strong id="requisitesINN">ИНН:</strong> 5433118499</p>
-                            <p><strong id="requisitesKPP">КПП:</strong> 543301001</p>
-                            <p><strong id="requisitesBank">Банк:</strong> Сибирский Банк ПАО Сбербанк</p>
-                            <p><strong id="requisitesRS">Р/с:</strong> 40703810644050040322</p>
-                            <p><strong id="requisitesBIK">БИК:</strong> 045004641</p>
-                            <p><strong id="requisitesKS">Кор.счет:</strong> 30101810500000000641</p>
+                            <p><strong>Получатель:</strong> СНТ «Березка-2»</p>
+                            <p><strong>ИНН:</strong> 5433118499</p>
+                            <p><strong>КПП:</strong> 543301001</p>
+                            <p><strong>Банк:</strong> Сибирский Банк ПАО Сбербанк</p>
+                            <p><strong>Р/с:</strong> 40703810644050040322</p>
+                            <p><strong>БИК:</strong> 045004641</p>
+                            <p><strong>Кор.счет:</strong> 30101810500000000641</p>
                         </div>
                     </div>
 
@@ -246,6 +249,7 @@
 
         <!-- Подключаем библиотеки -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/inputmask.min.js"></script>
+        <script src="sync.js"></script>
         <script src="app.js"></script>
     </div>
 </body>
