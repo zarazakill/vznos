@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <title>СНТ Берёзка-2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --green-50: #F1F8E9;
+            --green-200: #AED581;
+            --green-400: #66BB6A;
+            --green-600: #388E3C;
+            --green-700: #2E7D32;
+            --green-800: #1B5E20;
+            --blue-400: #42A5F5;
+            --blue-600: #1565C0;
+            --red-50: #FFEBEE;
+            --red-400: #EF5350;
+            --red-600: #C62828;
+            --gray-300: #E0E0E0;
+            --gray-500: #9E9E9E;
+            --gray-600: #757575;
+            --gray-700: #616161;
+            --gray-800: #424242;
+            --bg-main: #F4F6F4;
+            --bg-card: #FFFFFF;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--gray-800);
+            padding-bottom: 30px;
+        }
+
+        .app-header {
+            background-color: var(--green-700);
+            padding: 20px 20px 24px 20px;
+            color: white;
+        }
+        .app-header h1 {
+            font-size: 24px;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .app-header p {
+            font-size: 13px;
+            color: #C8E6C9;
+            margin-top: 4px;
+        }
+
+        .search-card {
+            background-color: var(--bg-card);
+            margin: -16px 16px 20px 16px;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .search-label {
+            color: var(--gray-500);
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .search-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin: 5px 0 15px 0;
+        }
+        .search-input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 14px 16px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            border: 1.5px solid var(--gray-300);
+            border-radius: 50px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .search-input:focus {
+            border-color: var(--green-400);
+        }
+        .search-btn {
+            background-color: var(--green-700);
+            color: white;
+            border: none;
+            padding: 0 22px;
+            border-radius: 50px;
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .search-btn:active { background-color: var(--green-800); transform: scale(0.97); }
+
+        .card {
+            background-color: var(--bg-card);
+            margin: 0 16px 16px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            overflow: hidden;
+        }
+        .card-content {
+            padding: 20px;
+        }
+        .card-header {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hidden { display: none; }
+        .loading-state, .error-state {
+            padding: 30px;
+            text-align: center;
+            color: var(--gray-600);
+        }
+        .error-state { color: var(--red-600); background: var(--red-50); border-radius: 12px; margin: 0 16px; }
+        .plot-owner { font-size: 18px; font-weight: bold; margin: 5px 0 12px 0; }
+        .debt-total { font-size: 22px; font-weight: bold; margin-bottom: 16px; }
+        .debt-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--gray-300);
+        }
+        .amount-red { color: var(--red-600); font-weight: bold; }
+        .amount-green { color: var(--green-600); font-weight: bold; }
+
+        .reading-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            border: 1.5px solid var(--gray-300);
+            border-radius: 16px;
+            margin: 12px 0;
+            text-align: center;
+        }
+        .calculated-amount {
+            background: var(--green-50);
+            padding: 12px;
+            border-radius: 12px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .qr-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 14px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 8px 0;
+            background-color: var(--green-700);
+            color: white;
+        }
+        .qr-btn:active { transform: scale(0.98); opacity: 0.9; }
+        .qr-group {
+            display: flex;
+            gap: 10px;
+            margin: 8px 0;
+        }
+        .qr-group button {
+            flex: 1;
+            background-color: var(--blue-600);
+        }
+        .qr-group button:last-child { background-color: var(--gray-700); }
+
+        .qr-image {
+            width: 100%;
+            max-width: 280px;
+            margin: 16px auto;
+            display: block;
+            border-radius: 16px;
+        }
+
+        .not-found {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            margin: 16px;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-top: 30px;
+        }
+
+        button:disabled { opacity: 0.6; transform: none; cursor: default; }
+    </style>
+</head>
+<body>
+
+<div class="app-header">
+    <h1>🌿 СНТ «Берёзка-2»</h1>
+    <p>Взносы и задолженности</p>
+</div>
+
+<div class="search-card">
+    <div class="search-label">ПОИСК УЧАСТКА</div>
+    <div class="search-title">Введите номер вашего участка</div>
+    <div class="search-input-group">
+        <input type="text" id="plotInput" class="search-input" placeholder="Например: 5, 4а, 10а" autocomplete="off">
+        <button id="searchBtn" class="search-btn">Найти</button>
+    </div>
+</div>
+
+<div id="loadingIndicator" class="loading-state hidden">☁️ Загрузка данных...</div>
+<div id="errorMessage" class="error-state hidden"></div>
+
+<div id="debtCard" class="card hidden"></div>
+<div id="electricityCard" class="card hidden"></div>
+<div id="notFoundBlock" class="not-found hidden">🔍 Участок не найден в базе. Проверьте номер.</div>
+
+<div class="footer-note">⚡ Данные синхронизируются с сервера при каждом поиске</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+    // ==============================================================
+    // СНТ Берёзка-2 - Веб-версия
+    // ==============================================================
+
+    // ---------- КОНСТАНТЫ ----------
+    const ORGANIZATION = "СНТ «Берёзка-2»";
+    const INN = "5433118499";
+    const PERSONAL_ACC = "40703810644050040322";
+    const BANK_NAME = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
+    const BIC = "045004641";
+    const CORRESP_ACC = "30101810500000000641";
+    const TARIFF = 3.82;
+
+    const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
+    const EE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
+
+    let cachedDebtMap = new Map();
+    let cachedElectricityMap = new Map();
+
+    // ---------- ФОРМАТИРОВАНИЕ ----------
+    function formatMoney(amount) {
+        return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    }
+
+    function formatNumber(v) {
+        return v % 1 === 0 ? v.toString() : v.toFixed(2);
+    }
+
+    function numberToWords(amount) {
+        let rub = Math.floor(amount);
+        let kop = Math.round((amount - rub) * 100);
+        let rubWord = "";
+        if (rub % 100 >= 11 && rub % 100 <= 19) rubWord = "рублей";
+        else if (rub % 10 === 1) rubWord = "рубль";
+        else if (rub % 10 >= 2 && rub % 10 <= 4) rubWord = "рубля";
+        else rubWord = "рублей";
+        return `${rub} ${rubWord} ${kop.toString().padStart(2, '0')} копеек`;
+    }
+
+    // ---------- ЗАГРУЗКА И ПАРСИНГ ----------
+    async function fetchFile(url) {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.arrayBuffer();
+    }
+
+    async function parseOdsToTables(arrayBuffer) {
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        const contentXml = await zip.file("content.xml").async("string");
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(contentXml, "application/xml");
+        const rows = xmlDoc.getElementsByTagName("table:table-row");
+        const tables = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const cells = [];
+            const children = rows[i].childNodes;
+            for (let j = 0; j < children.length; j++) {
+                const node = children[j];
+                if (node.nodeName === "table:table-cell" || node.nodeName === "table:covered-table-cell") {
+                    let repeat = 1;
+                    if (node.hasAttribute("table:number-columns-repeated")) {
+                        repeat = parseInt(node.getAttribute("table:number-columns-repeated")) || 1;
+                    }
+                    let cellText = "";
+                    const pNodes = node.getElementsByTagName("text:p");
+                    if (pNodes.length > 0) cellText = pNodes[0].textContent || "";
+                    cellText = cellText.trim();
+                    for (let r = 0; r < Math.min(repeat, 30); r++) {
+                        cells.push(cellText);
+                    }
+                }
+            }
+            if (cells.length > 0) tables.push(cells);
+        }
+        return tables;
+    }
+
+    function parseDebitFromTables(tables) {
+        const debtMap = new Map();
+        let headerFound = false;
+        let colPlot = 0, colOwner = 1, colDebt = 7, colOverpay = 8;
+
+        for (let i = 0; i < tables.length; i++) {
+            const row = tables[i];
+            if (row.length === 0) continue;
+            const firstCell = (row[0] || "").toLowerCase();
+
+            if (!headerFound) {
+                const joined = row.join(" ").toLowerCase();
+                if (joined.includes("владельц") || joined.includes("номер")) {
+                    row.forEach((val, idx) => {
+                        const v = val.toLowerCase();
+                        if (v === "номер" || v === "№") colPlot = idx;
+                        if (v.includes("владельц")) colOwner = idx;
+                    });
+                    headerFound = true;
+                }
+                continue;
+            }
+
+            if (!firstCell.match(/^\d{1,3}[а-яёa-z]?$/i)) continue;
+            if (firstCell === "итого" || firstCell.startsWith("итог")) break;
+
+            const plotKey = firstCell.toLowerCase();
+            const owner = row[colOwner] || "";
+            const debtOnEnd = parseFloat((row[colDebt] || "0").replace(",", ".")) || 0;
+            const overpayEnd = parseFloat((row[colOverpay] || "0").replace(",", ".")) || 0;
+
+            debtMap.set(plotKey, {
+                plotNumber: plotKey,
+                owner: owner,
+                totalDebt: debtOnEnd,
+                overpayEnd: overpayEnd,
+                hasDebt: debtOnEnd > 0.01,
+                hasOverpayment: overpayEnd > 0.01
+            });
+        }
+        return debtMap;
+    }
+
+    function parseElectricityFromTables(tables) {
+        const eeMap = new Map();
+        let headerFound = false;
+
+        for (let i = 0; i < tables.length; i++) {
+            const row = tables[i];
+            if (row.length === 0) continue;
+            const firstCell = (row[0] || "").toLowerCase();
+
+            if (!headerFound) {
+                if (firstCell.includes("участок") || firstCell.includes("номер") || firstCell.match(/^\d/)) {
+                    headerFound = true;
+                    if (!firstCell.match(/^\d/)) continue;
+                } else continue;
+            }
+
+            if (!firstCell.match(/^\d{1,3}[а-яёa-z]?$/i)) continue;
+
+            const plotKey = firstCell.toLowerCase();
+            const owner = row[1] || "";
+            const readingDateStr = row[4] || "";
+            const currentReading = parseFloat((row[6] || "0").replace(",", ".")) || 0;
+
+            eeMap.set(plotKey, {
+                plotNumber: plotKey,
+                owner: owner,
+                currentReading: currentReading,
+                readingDateStr: readingDateStr,
+                tariff: TARIFF
+            });
+        }
+        return eeMap;
+    }
+
+    // ---------- QR-КОДЫ ----------
+    async function generateQR(text) {
+        return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(text)}`;
+    }
+
+    function buildPaymentQR(plotNumber, amount, purpose, isElectricity = false) {
+        const sumKop = Math.round(amount * 100);
+        const finalPurpose = isElectricity
+            ? `Оплата электроэнергии уч.${plotNumber}`
+            : purpose || `Оплата взносов уч.${plotNumber}`;
+        return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${finalPurpose}|Sum=${sumKop}`;
+    }
+
+    // ---------- ОСНОВНАЯ ЛОГИКА ----------
+    async function loadPlotData(plotNumber) {
+        const normalized = plotNumber.trim().toLowerCase();
+        const debtContainer = document.getElementById("debtCard");
+        const eeContainer = document.getElementById("electricityCard");
+        const notFoundDiv = document.getElementById("notFoundBlock");
+        const loadingDiv = document.getElementById("loadingIndicator");
+        const errorDiv = document.getElementById("errorMessage");
+
+        debtContainer.classList.add("hidden");
+        eeContainer.classList.add("hidden");
+        notFoundDiv.classList.add("hidden");
+        errorDiv.classList.add("hidden");
+        loadingDiv.classList.remove("hidden");
+
+        try {
+            if (cachedDebtMap.size === 0) {
+                loadingDiv.innerHTML = "☁️ Загрузка данных по долгам...";
+                const debtBuffer = await fetchFile(DEBIT_URL);
+                const debtTables = await parseOdsToTables(debtBuffer);
+                cachedDebtMap = parseDebitFromTables(debtTables);
+
+                loadingDiv.innerHTML = "⚡ Загрузка данных электроэнергии...";
+                const eeBuffer = await fetchFile(EE_URL);
+                const eeTables = await parseOdsToTables(eeBuffer);
+                cachedElectricityMap = parseElectricityFromTables(eeTables);
+            }
+
+            loadingDiv.classList.add("hidden");
+
+            const debtData = cachedDebtMap.get(normalized);
+            const eeData = cachedElectricityMap.get(normalized);
+
+            if (!debtData && !eeData) {
+                notFoundDiv.classList.remove("hidden");
+                return;
+            }
+
+            if (debtData) renderDebtCard(debtData);
+            else debtContainer.classList.add("hidden");
+
+            if (eeData) renderElectricityCard(eeData);
+            else eeContainer.classList.add("hidden");
+
+        } catch (err) {
+            loadingDiv.classList.add("hidden");
+            errorDiv.innerHTML = `❌ Ошибка: ${err.message}. Проверьте интернет.`;
+            errorDiv.classList.remove("hidden");
+            console.error(err);
+        }
+    }
+
+    // ---------- ОТРИСОВКА КАРТОЧЕК ----------
+    function renderDebtCard(debt) {
+        const container = document.getElementById("debtCard");
+        container.classList.remove("hidden");
+
+        let html = `
+            <div class="card-content">
+                <div class="card-header">💰 Задолженность</div>
+                <div style="font-size:13px; color:var(--gray-500);">Участок №${debt.plotNumber}</div>
+                <div class="plot-owner">${debt.owner || "Владелец не указан"}</div>
+        `;
+
+        if (debt.hasDebt) {
+            html += `<div class="debt-total amount-red">Задолженность: ${formatMoney(debt.totalDebt)} ₽</div>`;
+            html += `<div class="debt-line"><span>Итого к оплате:</span><span class="amount-red">${formatMoney(debt.totalDebt)} ₽</span></div>`;
+            html += `<div style="font-size:12px; margin:10px 0;">Прописью: ${numberToWords(debt.totalDebt)}</div>`;
+        } else if (debt.hasOverpayment) {
+            html += `<div class="debt-total amount-green">Переплата: ${formatMoney(debt.overpayEnd)} ₽</div>`;
+        } else {
+            html += `<div class="debt-total amount-green">✓ Задолженностей нет</div>`;
+        }
+
+        if (debt.hasDebt) {
+            const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, `Оплата взносов уч.${debt.plotNumber}`, false);
+            html += `
+                <button class="qr-btn" onclick="generateAndShowQR('debt', this, '${qrText.replace(/'/g, "\\'")}')">📱 Сгенерировать QR для оплаты</button>
+                <div id="debtQrContainer" style="text-align:center;"></div>
+                <div id="debtQrButtons" style="display:none;" class="qr-group">
+                    <button onclick="shareQR('debtQrImg')">↗ Поделиться</button>
+                    <button onclick="saveQR('debtQrImg')">💾 Сохранить</button>
+                </div>
+            `;
+        }
+
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+
+    function renderElectricityCard(ee) {
+        const container = document.getElementById("electricityCard");
+        container.classList.remove("hidden");
+
+        let html = `
+            <div class="card-content">
+                <div class="card-header">⚡ Электроэнергия</div>
+                <div style="font-size:13px;">Участок №${ee.plotNumber}</div>
+                <div class="plot-owner">${ee.owner || "Владелец не указан"}</div>
+                <div style="display:flex; justify-content:space-between; margin:8px 0;">
+                    <span>Текущие показания:</span>
+                    <strong>${formatNumber(ee.currentReading)} кВт·ч</strong>
+                </div>
+                <div style="font-size:12px; color:gray;">Дата: ${ee.readingDateStr || "не указана"}</div>
+                <div style="font-size:12px; margin:4px 0 12px;">💰 Тариф: ${TARIFF.toFixed(2)} ₽/кВт·ч</div>
+
+                <input type="number" id="newReadingInput" class="reading-input" placeholder="Введите новые показания" step="any">
+                <div id="calcAmountBlock" class="calculated-amount hidden"></div>
+                <button id="genEeQrBtn" class="qr-btn" disabled style="background:var(--blue-600);">📱 Сгенерировать QR для оплаты э/э</button>
+                <div id="eeQrContainer" style="text-align:center;"></div>
+                <div id="eeQrButtons" style="display:none;" class="qr-group">
+                    <button onclick="shareQR('eeQrImg')">↗ Поделиться</button>
+                    <button onclick="saveQR('eeQrImg')">💾 Сохранить</button>
+                </div>
+            </div>
+        `;
+        container.innerHTML = html;
+
+        const input = document.getElementById("newReadingInput");
+        const calcBlock = document.getElementById("calcAmountBlock");
+        const genBtn = document.getElementById("genEeQrBtn");
+
+        input.addEventListener("input", function() {
+            const newVal = parseFloat(this.value);
+            if (isNaN(newVal) || newVal <= ee.currentReading) {
+                calcBlock.classList.add("hidden");
+                genBtn.disabled = true;
+                return;
+            }
+            const amount = (newVal - ee.currentReading) * TARIFF;
+            calcBlock.innerHTML = `📊 Сумма к оплате: ${formatMoney(amount)} ₽`;
+            calcBlock.classList.remove("hidden");
+            genBtn.disabled = false;
+
+            genBtn.onclick = async () => {
+                const qrText = buildPaymentQR(ee.plotNumber, amount, `Электроэнергия уч.${ee.plotNumber} (${newVal} кВт·ч)`, true);
+                generateAndShowQR('ee', genBtn, qrText);
+            };
+        });
+    }
+
+    // ---------- ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ QR ----------
+    window.generateAndShowQR = async function(type, btn, qrText) {
+        const containerId = type === 'debt' ? 'debtQrContainer' : 'eeQrContainer';
+        const btnGroupId = type === 'debt' ? 'debtQrButtons' : 'eeQrButtons';
+        const container = document.getElementById(containerId);
+        const oldImg = document.getElementById(`${type}QrImg`);
+        if (oldImg) oldImg.remove();
+
+        btn.innerText = "⏳ Генерация...";
+        btn.disabled = true;
+
+        try {
+            const qrUrl = await generateQR(qrText);
+            const img = document.createElement('img');
+            img.id = `${type}QrImg`;
+            img.src = qrUrl;
+            img.className = "qr-image";
+            container.appendChild(img);
+            document.getElementById(btnGroupId).style.display = "flex";
+        } catch(e) { alert("Ошибка QR: " + e.message); }
+        finally { btn.innerText = type === 'debt' ? "Обновить QR" : "Сгенерировать QR"; btn.disabled = false; }
+    };
+
+    window.shareQR = function(imgId) {
+        const img = document.getElementById(imgId);
+        if (!img) return;
+        fetch(img.src)
+            .then(res => res.blob())
+            .then(blob => {
+                const file = new File([blob], "qr.png", { type: "image/png" });
+                if (navigator.share) navigator.share({ files: [file], title: "QR-код оплаты" });
+                else alert("Поделиться можно через копирование изображения");
+            });
+    };
+
+    window.saveQR = function(imgId) {
+        const img = document.getElementById(imgId);
+        if (!img) return;
+        const link = document.createElement('a');
+        link.download = "qr_payment.png";
+        link.href = img.src;
+        link.click();
+    };
+
+    // ---------- ЗАПУСК ПОИСКА ----------
+    document.getElementById("searchBtn").addEventListener("click", () => {
+        const val = document.getElementById("plotInput").value;
+        if (val.trim()) loadPlotData(val);
+        else alert("Введите номер участка");
+    });
+    document.getElementById("plotInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") document.getElementById("searchBtn").click();
+    });
+</script>
+</body>
+</html>
