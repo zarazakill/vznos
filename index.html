@@ -26,6 +26,9 @@
     --red-50: #FFEBEE;
     --red-400: #EF5350;
     --red-600: #C62828;
+    --orange-50: #FFF3E0;
+    --orange-400: #FFA726;
+    --orange-600: #E65100;
     --gray-300: #E0E0E0;
     --gray-500: #9E9E9E;
     --gray-600: #757575;
@@ -212,10 +215,188 @@ body {
 }
 
 button:disabled { opacity: 0.6; transform: none; cursor: default; }
+
+/* ========== Стили для экрана согласия (ConsentActivity) ========== */
+.consent-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+.consent-modal {
+    background: white;
+    border-radius: 24px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+.consent-header {
+    background: var(--green-700);
+    padding: 20px;
+    color: white;
+    text-align: center;
+}
+.consent-header h2 {
+    font-size: 20px;
+    margin-top: 8px;
+}
+.consent-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+.consent-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--gray-200);
+    background: white;
+}
+.consent-section {
+    background: var(--green-50);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.consent-section-title {
+    font-weight: bold;
+    font-size: 15px;
+    color: var(--green-700);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.consent-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 14px;
+    padding: 12px;
+    background: white;
+    border-radius: 12px;
+}
+.consent-check-row input {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--green-600);
+    flex-shrink: 0;
+}
+.consent-check-row label {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--gray-700);
+}
+.consent-link {
+    color: var(--blue-600);
+    text-decoration: none;
+    font-size: 13px;
+    margin-top: 8px;
+    display: inline-block;
+}
+.consent-link:active { opacity: 0.7; }
+.btn-consent-accept {
+    width: 100%;
+    padding: 14px;
+    background: var(--green-600);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    margin-bottom: 10px;
+}
+.btn-consent-accept:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.btn-consent-decline {
+    width: 100%;
+    padding: 12px;
+    background: none;
+    color: var(--gray-600);
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+}
+.data-list {
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    margin: 12px 0;
+    font-size: 13px;
+}
+.data-list li {
+    margin-left: 20px;
+    padding: 4px 0;
+}
+
+/* ========== Стили для кнопки отзыва согласия ========== */
+.settings-section {
+    margin-top: 16px;
+}
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+.setting-label {
+    flex: 1;
+}
+.setting-label p {
+    font-size: 14px;
+    font-weight: 500;
+}
+.setting-label small {
+    font-size: 11px;
+    color: var(--gray-500);
+}
+.btn-revoke {
+    background: var(--orange-600);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.btn-revoke:active { opacity: 0.8; }
+.consent-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: bold;
+}
+.consent-status.accepted {
+    background: var(--green-50);
+    color: var(--green-600);
+}
+.consent-status.revoked {
+    background: var(--red-50);
+    color: var(--red-600);
+}
 </style>
 </head>
 <body>
 
+<!-- ОСНОВНОЙ КОНТЕНТ (изначально скрыт, пока не дано согласие) -->
+<div id="mainApp" style="display: none;">
 <div class="app-header">
     <h1>🌿 СНТ «Берёзка-2»</h1>
     <p>Взносы и задолженности</p>
@@ -238,14 +419,263 @@ button:disabled { opacity: 0.6; transform: none; cursor: default; }
 <div id="notFoundBlock" class="not-found hidden">🔍 Участок не найден в базе. Проверьте номер.</div>
 
 <div class="footer-note">⚡ Данные синхронизируются с сервера при каждом поиске</div>
+</div>
 
 <script>
 // ==============================================================
-// СНТ Берёзка-2 - Веб-версия
-// Точное соответствие Android-приложению
+// ЮРИДИЧЕСКИЙ БЛОК: СОГЛАСИЕ НА ОБРАБОТКУ ПЕРСОНАЛЬНЫХ ДАННЫХ
+// ПОЛНОСТЬЮ СООТВЕТСТВУЕТ ConsentActivity.kt И ФЗ-152
 // ==============================================================
 
-// ---------- КОНСТАНТЫ ----------
+const CONSENT_VERSION = "1.0";
+const CONSENT_STORAGE_KEY = "snt_consent_accepted";
+const CONSENT_VERSION_KEY = "snt_consent_version";
+
+// Проверка, принято ли согласие
+function isConsentAccepted() {
+    const accepted = localStorage.getItem(CONSENT_STORAGE_KEY) === "true";
+    const version = localStorage.getItem(CONSENT_VERSION_KEY);
+    return accepted && version === CONSENT_VERSION;
+}
+
+// Сохранение согласия
+function saveConsent() {
+    localStorage.setItem(CONSENT_STORAGE_KEY, "true");
+    localStorage.setItem(CONSENT_VERSION_KEY, CONSENT_VERSION);
+    localStorage.setItem("snt_consent_timestamp", Date.now().toString());
+}
+
+// Отзыв согласия (очистка данных)
+function revokeConsent() {
+    localStorage.removeItem(CONSENT_STORAGE_KEY);
+    localStorage.removeItem(CONSENT_VERSION_KEY);
+    localStorage.removeItem("snt_consent_timestamp");
+
+    // Очистка кеша данных
+    cachedDebtMap.clear();
+    cachedElectricityMap.clear();
+
+    // Перезагрузка страницы для показа экрана согласия
+    location.reload();
+}
+
+// ========== ПОЛНЫЙ ТЕКСТ ПОЛИТИКИ (из ConsentActivity.kt) ==========
+const FULL_POLICY_TEXT = `ПОЛИТИКА ОБРАБОТКИ ПЕРСОНАЛЬНЫХ ДАННЫХ
+СНТ «Берёзка-2»
+
+Версия 1.0 от 01.01.2026
+
+1. ОПЕРАТОР ПЕРСОНАЛЬНЫХ ДАННЫХ
+
+Оператором персональных данных является:
+Садоводческое некоммерческое товарищество «Берёзка-2»
+ИНН: 5433118499
+Расчётный счёт: 40703810644050040322
+Банк: Сибирский Банк ПАО Сбербанк г. Новосибирск
+
+2. СОСТАВ ОБРАБАТЫВАЕМЫХ ДАННЫХ
+
+Приложение обрабатывает следующие данные:
+• Номер земельного участка в СНТ «Берёзка-2»
+• Фамилия, имя, отчество члена СНТ
+• Адрес земельного участка
+• Сведения о задолженностях по взносам
+• Сведения о потреблении электроэнергии
+• Дата последней синхронизации данных
+
+3. ЦЕЛИ ОБРАБОТКИ
+
+Данные обрабатываются исключительно для:
+• Отображения информации о задолженностях члена СНТ
+• Формирования QR-кодов для оплаты взносов
+• Учёта показаний электроэнергии
+• Информирования о сметах и бюджете СНТ
+
+4. ПРАВОВЫЕ ОСНОВАНИЯ
+
+Обработка осуществляется на основании:
+• Федерального закона № 152-ФЗ «О персональных данных»
+• Устава СНТ «Берёзка-2»
+• Согласия субъекта персональных данных (настоящее соглашение)
+
+5. ХРАНЕНИЕ И ЗАЩИТА ДАННЫХ
+
+• Данные хранятся на устройстве пользователя в зашифрованном виде
+• Данные загружаются из защищённого облачного хранилища СНТ
+• Передача данных третьим лицам не осуществляется
+• Данные не используются в коммерческих целях
+• Доступ к данным ограничен участниками СНТ «Берёзка-2»
+
+6. ПРАВА СУБЪЕКТА ДАННЫХ
+
+Вы вправе:
+• Отозвать согласие в любой момент (через «Настройки» → «Отозвать согласие»)
+• Потребовать уточнения, блокировки или уничтожения данных
+• Обратиться с жалобой в Роскомнадзор (rkn.gov.ru)
+
+7. СРОКИ ХРАНЕНИЯ
+
+Данные хранятся в течение срока членства в СНТ и в течение 3 лет после прекращения членства в соответствии с требованиями бухгалтерского учёта.
+
+8. КОНТАКТЫ ОПЕРАТОРА
+
+По вопросам обработки персональных данных обращайтесь к Председателю правления СНТ «Берёзка-2».
+
+---
+
+Принимая настоящее соглашение, вы подтверждаете, что ознакомились с данной Политикой и даёте согласие на обработку персональных данных в указанных целях.`;
+
+// ========== ПОКАЗ ЭКРАНА СОГЛАСИЯ ==========
+function showConsentScreen() {
+    const existingOverlay = document.getElementById('consentOverlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'consent-overlay';
+    overlay.id = 'consentOverlay';
+
+    overlay.innerHTML = `
+        <div class="consent-modal">
+            <div class="consent-header">
+                <div style="font-size: 32px;">🌿</div>
+                <h2>СНТ «Берёзка-2»</h2>
+                <p style="font-size: 13px; opacity: 0.9;">Согласие с условиями использования</p>
+            </div>
+            <div class="consent-body">
+                <div style="margin-bottom: 16px; font-size: 14px; color: var(--gray-700); line-height: 1.4;">
+                    Садоводческое некоммерческое товарищество «Берёзка-2» (ИНН 5433118499)
+                    является оператором персональных данных.
+                </div>
+
+                <!-- Секция 1: Персональные данные -->
+                <div class="consent-section">
+                    <div class="consent-section-title">🔐 Персональные данные</div>
+                    <div style="font-size: 13px; color: var(--gray-700);">
+                        Приложение обрабатывает следующие данные членов СНТ:
+                    </div>
+                    <ul class="data-list">
+                        <li>Номер земельного участка</li>
+                        <li>Фамилия, имя, отчество члена СНТ</li>
+                        <li>Сведения о задолженностях по членским взносам</li>
+                        <li>Показания и история потребления электроэнергии</li>
+                    </ul>
+                    <div style="font-size: 12px; color: var(--gray-600); margin-top: 8px;">
+                        Данные используются исключительно для информирования членов СНТ о состоянии расчётов и формирования платёжных QR-кодов. Передача данных третьим лицам не осуществляется.
+                    </div>
+                    <div class="consent-check-row">
+                        <input type="checkbox" id="consentCheckPersonal">
+                        <label for="consentCheckPersonal">Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152 «О персональных данных»</label>
+                    </div>
+                </div>
+
+                <!-- Секция 2: Пользовательское соглашение -->
+                <div class="consent-section">
+                    <div class="consent-section-title">📋 Пользовательское соглашение</div>
+                    <div style="font-size: 13px; color: var(--gray-700);">
+                        Используя данное приложение, Вы соглашаетесь с тем, что:
+                    </div>
+                    <ul class="data-list">
+                        <li>Приложение предоставляется «как есть» для членов СНТ «Берёзка-2»</li>
+                        <li>Данные о задолженностях носят информационный характер</li>
+                        <li>Для точных сведений обращайтесь к бухгалтеру СНТ</li>
+                        <li>Запрещено передавать доступ к приложению третьим лицам</li>
+                        <li>QR-коды сформированы на основе данных бухгалтерии СНТ</li>
+                    </ul>
+                    <a href="#" class="consent-link" id="showFullPolicyLink">📄 Прочитать полную Политику обработки персональных данных</a>
+                    <div class="consent-check-row" style="margin-top: 12px;">
+                        <input type="checkbox" id="consentCheckTerms">
+                        <label for="consentCheckTerms">Я ознакомился(ась) с Пользовательским соглашением и Политикой конфиденциальности и принимаю их условия</label>
+                    </div>
+                </div>
+
+                <!-- Секция 3: Возраст -->
+                <div class="consent-section">
+                    <div class="consent-section-title">👤 Подтверждение</div>
+                    <div class="consent-check-row">
+                        <input type="checkbox" id="consentCheckAge">
+                        <label for="consentCheckAge">Мне исполнилось 18 лет, и я являюсь членом СНТ «Берёзка-2» или его уполномоченным представителем</label>
+                    </div>
+                </div>
+
+                <div style="font-size: 11px; color: var(--gray-400); text-align: center; margin-top: 12px;">
+                    Настоящее согласие выдаётся в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных». Дата принятия фиксируется автоматически.
+                </div>
+            </div>
+            <div class="consent-footer">
+                <button class="btn-consent-accept" id="consentAcceptBtn" disabled>✓ Принять и продолжить</button>
+                <button class="btn-consent-decline" id="consentDeclineBtn">Отказаться и закрыть</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    // Модальное окно с полным текстом политики
+    function showFullPolicy() {
+        const modal = document.createElement('div');
+        modal.className = 'consent-overlay';
+        modal.style.zIndex = '1001';
+        modal.innerHTML = `
+            <div class="consent-modal" style="max-width: 550px;">
+                <div class="consent-header" style="background: var(--gray-800);">
+                    <h2>📄 Политика обработки персональных данных</h2>
+                    <button style="position: absolute; right: 16px; top: 16px; background: none; border: none; color: white; font-size: 24px; cursor: pointer;" id="closePolicyModal">×</button>
+                </div>
+                <div class="consent-body" style="max-height: 70vh;">
+                    <pre style="white-space: pre-wrap; font-family: inherit; font-size: 13px; line-height: 1.5;">${FULL_POLICY_TEXT}</pre>
+                </div>
+                <div class="consent-footer">
+                    <button class="btn-consent-accept" id="closePolicyBtn" style="background: var(--gray-600);">Закрыть</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('#closePolicyModal').onclick = closeModal;
+        modal.querySelector('#closePolicyBtn').onclick = closeModal;
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+    }
+
+    const check1 = document.getElementById('consentCheckPersonal');
+    const check2 = document.getElementById('consentCheckTerms');
+    const check3 = document.getElementById('consentCheckAge');
+    const acceptBtn = document.getElementById('consentAcceptBtn');
+
+    function updateAcceptButton() {
+        acceptBtn.disabled = !(check1.checked && check2.checked && check3.checked);
+    }
+
+    check1.onchange = updateAcceptButton;
+    check2.onchange = updateAcceptButton;
+    check3.onchange = updateAcceptButton;
+
+    document.getElementById('showFullPolicyLink').onclick = (e) => {
+        e.preventDefault();
+        showFullPolicy();
+    };
+
+    document.getElementById('consentAcceptBtn').onclick = () => {
+        if (check1.checked && check2.checked && check3.checked) {
+            saveConsent();
+            overlay.remove();
+            document.getElementById('mainApp').style.display = '';
+            initMainApp();
+        }
+    };
+
+    document.getElementById('consentDeclineBtn').onclick = () => {
+        if (confirm('Без согласия на обработку персональных данных использование приложения невозможно. Приложение будет закрыто.')) {
+            window.close();
+        }
+    };
+}
+
+// ========== ОСНОВНОЙ КОД ПРИЛОЖЕНИЯ (запускается после согласия) ==========
+
+let cachedDebtMap = new Map();
+let cachedElectricityMap = new Map();
+
 const ORGANIZATION = "СНТ «Берёзка-2»";
 const INN = "5433118499";
 const PERSONAL_ACC = "40703810644050040322";
@@ -254,15 +684,9 @@ const BIC = "045004641";
 const CORRESP_ACC = "30101810500000000641";
 const TARIFF = 3.82;
 
-// Базовые URL для загрузки файлов
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.xlsx";
 const EE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.xlsx";
 
-// Кеширование данных
-let cachedDebtMap = new Map();
-let cachedElectricityMap = new Map();
-
-// ---------- ФОРМАТИРОВАНИЕ ----------
 function formatMoney(amount) {
     return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
@@ -282,14 +706,27 @@ function numberToWords(amount) {
     return `${rub} ${rubWord} ${kop.toString().padStart(2, '0')} копеек`;
 }
 
-// ---------- ЗАГРУЗКА ФАЙЛОВ ----------
 async function fetchFile(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.arrayBuffer();
 }
 
-// ---------- ПАРСИНГ DEBIT.XLSX (ПО АНАЛОГУ С ANDROID) ----------
+function isPlotNumber(s) {
+    return s.trim().match(/^\d{1,3}[а-яёa-z]?$/i) !== null;
+}
+
+function parseNumber(val) {
+    if (val === undefined || val === null) return 0;
+    const s = val.toString().replace(",", ".").replace(/[^\d.-]/g, '');
+    if (s === "") return 0;
+    const num = parseFloat(s);
+    return isNaN(num) ? 0 : num;
+}
+
+// ==============================================================
+// ПАРСИНГ DEBIT.XLSX (ПО АНАЛОГУ С ANDROID)
+// ==============================================================
 async function parseDebitFile(arrayBuffer) {
     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false, defval: '' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -297,7 +734,6 @@ async function parseDebitFile(arrayBuffer) {
 
     const debtMap = new Map();
 
-    // Индексы колонок (по Android коду: col0=Номер, col1=Владелец, col7=Долг, col8=Переплата)
     let colPlot = 0;
     let colOwner = 1;
     let colDebt = 7;
@@ -419,7 +855,9 @@ async function parseDebitFile(arrayBuffer) {
     return debtMap;
 }
 
-// ---------- ПАРСИНГ EE.XLSX (ЭЛЕКТРОЭНЕРГИЯ) ----------
+// ==============================================================
+// ПАРСИНГ EE.XLSX (ЭЛЕКТРОЭНЕРГИЯ)
+// ==============================================================
 async function parseElectricityFile(arrayBuffer) {
     const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: false, defval: '' });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -466,20 +904,9 @@ async function parseElectricityFile(arrayBuffer) {
     return eeMap;
 }
 
-// Вспомогательные функции
-function isPlotNumber(s) {
-    return s.trim().match(/^\d{1,3}[а-яёa-z]?$/i) !== null;
-}
-
-function parseNumber(val) {
-    if (val === undefined || val === null) return 0;
-    const s = val.toString().replace(",", ".").replace(/[^\d.-]/g, '');
-    if (s === "") return 0;
-    const num = parseFloat(s);
-    return isNaN(num) ? 0 : num;
-}
-
-// ---------- QR-КОДЫ (СТАНДАРТ СБП) ----------
+// ==============================================================
+// QR-КОДЫ (СТАНДАРТ СБП)
+// ==============================================================
 async function generateQR(text) {
     return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
@@ -492,7 +919,9 @@ function buildPaymentQR(plotNumber, amount, purpose, isElectricity = false) {
     return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${finalPurpose}|Sum=${sumKop}`;
 }
 
-// ---------- ОСНОВНАЯ ЛОГИКА ЗАГРУЗКИ ----------
+// ==============================================================
+// ОСНОВНАЯ ЛОГИКА ЗАГРУЗКИ ДАННЫХ
+// ==============================================================
 async function loadPlotData(plotNumber) {
     const normalized = plotNumber.trim().toLowerCase();
     const debtContainer = document.getElementById("debtCard");
@@ -542,7 +971,9 @@ async function loadPlotData(plotNumber) {
     }
 }
 
-// ---------- ОТРИСОВКА КАРТОЧКИ ДОЛГА ----------
+// ==============================================================
+// ОТРИСОВКА КАРТОЧКИ ДОЛГА
+// ==============================================================
 function renderDebtCard(debt) {
     const container = document.getElementById("debtCard");
     container.classList.remove("hidden");
@@ -597,7 +1028,9 @@ function renderDebtCard(debt) {
     container.innerHTML = html;
 }
 
-// ---------- ОТРИСОВКА КАРТОЧКИ ЭЛЕКТРОЭНЕРГИИ ----------
+// ==============================================================
+// ОТРИСОВКА КАРТОЧКИ ЭЛЕКТРОЭНЕРГИИ
+// ==============================================================
 function renderElectricityCard(ee) {
     const container = document.getElementById("electricityCard");
     container.classList.remove("hidden");
@@ -649,7 +1082,9 @@ function renderElectricityCard(ee) {
     });
 }
 
-// ---------- ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ QR ----------
+// ==============================================================
+// ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ QR
+// ==============================================================
 window.generateAndShowQR = async function(type, btn, qrText) {
     const containerId = type === 'debt' ? 'debtQrContainer' : 'eeQrContainer';
     const btnGroupId = type === 'debt' ? 'debtQrButtons' : 'eeQrButtons';
@@ -698,15 +1133,129 @@ window.saveQR = function(imgId) {
     link.click();
 };
 
-// ---------- ЗАПУСК ПОИСКА ----------
-document.getElementById("searchBtn").addEventListener("click", () => {
-    const val = document.getElementById("plotInput").value;
-    if (val.trim()) loadPlotData(val);
-    else alert("Введите номер участка");
-});
-document.getElementById("plotInput").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") document.getElementById("searchBtn").click();
-});
+// ==============================================================
+// ДОБАВЛЕНИЕ КНОПКИ НАСТРОЕК И ОТЗЫВА СОГЛАСИЯ
+// ==============================================================
+function addSettingsButton() {
+    const header = document.querySelector('.app-header');
+    if (!header) return;
+
+    const settingsBtn = document.createElement('button');
+    settingsBtn.innerHTML = '⚙️';
+    settingsBtn.style.cssText = `
+        position: absolute;
+        right: 16px;
+        top: 16px;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 30px;
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+        cursor: pointer;
+        color: white;
+    `;
+    settingsBtn.onclick = showSettingsModal;
+    header.style.position = 'relative';
+    header.appendChild(settingsBtn);
+}
+
+function showSettingsModal() {
+    const modal = document.createElement('div');
+    modal.className = 'consent-overlay';
+    modal.style.zIndex = '1000';
+    modal.innerHTML = `
+        <div class="consent-modal" style="max-width: 450px;">
+            <div class="consent-header" style="background: var(--gray-800);">
+                <h2>⚙️ Настройки</h2>
+                <button style="position: absolute; right: 16px; top: 16px; background: none; border: none; color: white; font-size: 24px; cursor: pointer;" id="closeSettingsModal">×</button>
+            </div>
+            <div class="consent-body">
+                <div class="settings-section">
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <p>Статус согласия</p>
+                            <small>ФЗ-152 «О персональных данных»</small>
+                        </div>
+                        <div>
+                            <span class="consent-status accepted">✓ Согласие принято</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <p>Отозвать согласие</p>
+                            <small>После отзыва приложение запросит повторное согласие</small>
+                        </div>
+                        <button class="btn-revoke" id="revokeConsentBtn">Отозвать</button>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <p>Очистить кэш данных</p>
+                            <small>Удаляет загруженные данные об участках</small>
+                        </div>
+                        <button class="btn-revoke" id="clearCacheBtn" style="background: var(--red-600);">Очистить</button>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: var(--gray-500); text-align: center; margin-top: 16px;">
+                    Версия 2.0 | СНТ «Берёзка-2»
+                </div>
+            </div>
+            <div class="consent-footer">
+                <button class="btn-consent-accept" id="closeSettingsBtn" style="background: var(--gray-600);">Закрыть</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeModal = () => modal.remove();
+    modal.querySelector('#closeSettingsModal').onclick = closeModal;
+    modal.querySelector('#closeSettingsBtn').onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+    modal.querySelector('#revokeConsentBtn').onclick = () => {
+        if (confirm('Вы уверены, что хотите отозвать согласие на обработку персональных данных?\n\nПосле этого приложение очистит все данные и потребует повторного согласия.')) {
+            revokeConsent();
+        }
+    };
+
+    modal.querySelector('#clearCacheBtn').onclick = () => {
+        if (confirm('Очистить кэш загруженных данных? При следующем поиске данные будут загружены заново.')) {
+            cachedDebtMap.clear();
+            cachedElectricityMap.clear();
+            alert('Кэш данных очищен.');
+        }
+    };
+}
+
+// ==============================================================
+// ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+// ==============================================================
+function initMainApp() {
+    addSettingsButton();
+
+    document.getElementById("searchBtn").addEventListener("click", () => {
+        const val = document.getElementById("plotInput").value;
+        if (val.trim()) loadPlotData(val);
+        else alert("Введите номер участка");
+    });
+
+    document.getElementById("plotInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") document.getElementById("searchBtn").click();
+    });
+
+    // Автоматическая загрузка данных при первом открытии
+    loadPlotData("");
+}
+
+// ==============================================================
+// СТАРТ: ПРОВЕРКА СОГЛАСИЯ
+// ==============================================================
+if (isConsentAccepted()) {
+    document.getElementById('mainApp').style.display = '';
+    initMainApp();
+} else {
+    showConsentScreen();
+}
 </script>
 </body>
 </html>
