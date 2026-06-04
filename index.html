@@ -3,6 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+<!-- PWA Meta Tags -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="favicon-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="favicon-512x512.png">
+<link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Берёзка-2">
+<meta name="theme-color" content="#2E7D32">
+<meta name="description" content="СНТ Берёзка-2 — управление взносами и задолженностями">
 <title>СНТ Берёзка-2 — Взносы и задолженности</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -911,14 +924,6 @@ async function generateQR(text) {
     return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
 
-function buildPaymentQR(plotNumber, amount, purpose, isElectricity = false) {
-    const sumKop = Math.round(amount * 100);
-    const finalPurpose = isElectricity
-        ? `Оплата электроэнергии уч.${plotNumber}`
-        : purpose || `Оплата взносов уч.${plotNumber}`;
-    return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${finalPurpose}|Sum=${sumKop}`;
-}
-
 // ==============================================================
 // ОСНОВНАЯ ЛОГИКА ЗАГРУЗКИ ДАННЫХ
 // ==============================================================
@@ -972,7 +977,166 @@ async function loadPlotData(plotNumber) {
 }
 
 // ==============================================================
-// ОТРИСОВКА КАРТОЧКИ ДОЛГА
+// ПОСТРОЕНИЕ ДЕТАЛИЗИРОВАННОГО НАЗНАЧЕНИЯ ПЛАТЕЖА (КАК В ANDROID)
+// ==============================================================
+function buildDetailedPurpose(debt) {
+    const parts = [];
+    const year = new Date().getFullYear().toString();
+
+    // Добавляем каждую категорию с суммой
+    if (debt.membershipDebt > 0.01) {
+        parts.push(`Членские взносы ${year}: ${formatAmountShort(debt.membershipDebt)}р`);
+    }
+    if (debt.targetDebt > 0.01) {
+        parts.push(`Целевые взносы ${year}: ${formatAmountShort(debt.targetDebt)}р`);
+    }
+    if (debt.arrearsDebt > 0.01) {
+        parts.push(`Задолженность прошлых лет: ${formatAmountShort(debt.arrearsDebt)}р`);
+    }
+    if (debt.workDebt > 0.01) {
+        parts.push(`Отработка: ${formatAmountShort(debt.workDebt)}р`);
+    }
+    if (debt.electricityDebt > 0.01) {
+        parts.push(`Электроэнергия: ${formatAmountShort(debt.electricityDebt)}р`);
+    }
+
+    // Если нет детализации, но есть долг
+    if (parts.length === 0 && debt.totalDebt > 0.01) {
+        parts.push(`Взносы ${year}: ${formatAmountShort(debt.totalDebt)}р`);
+    }
+
+    // Сокращаем ФИО владельца (если слишком длинное)
+    let ownerShort = debt.owner || "";
+    if (ownerShort.length > 20) {
+        ownerShort = ownerShort.substring(0, 17) + "…";
+    }
+
+    const suffix = ownerShort ? ` уч.${debt.plotNumber} ${ownerShort}` : ` уч.${debt.plotNumber}`;
+
+    let result = parts.join(", ") + suffix;
+
+    // Если строка слишком длинная (более 210 символов), сокращаем
+    const MAX_LENGTH = 210;
+    if (result.length > MAX_LENGTH) {
+        // Убираем копейки (оставляем только целые рубли)
+        const shortParts = parts.map(part => {
+            return part.replace(/:\s*\d+,\d{2}р/, (match) => {
+                const num = parseFloat(match.replace(/[^\d,]/g, '').replace(',', '.'));
+                return num ? `: ${Math.floor(num)}р` : match;
+            });
+        });
+        result = shortParts.join(", ") + suffix;
+    }
+
+    // Если всё ещё слишком длинно — максимальное сокращение
+    if (result.length > MAX_LENGTH) {
+        result = `Оплата взносов уч.${debt.plotNumber}`;
+    }
+
+    return result;
+}
+
+function formatAmountShort(amount) {
+    if (amount === Math.floor(amount)) {
+        return Math.floor(amount).toString();
+    }
+    // Форматируем с 2 знаками, заменяем точку на запятую, убираем лишние нули
+    let str = amount.toFixed(2).replace('.', ',');
+    str = str.replace(/0+$/, '').replace(/,$/, '');
+    return str;
+}
+
+// ==============================================================
+// ПОСТРОЕНИЕ QR-СТРОКИ (СТАНДАРТ СБП)
+// ==============================================================
+async function generateQR(text) {
+    return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
+}
+
+// ==============================================================
+// ПОСТРОЕНИЕ QR-СТРОКИ (СТАНДАРТ СБП) — БЕЗ СПЕЦСИМВОЛОВ
+// ==============================================================
+function sanitizePurpose(text) {
+    // Удаляем символы, которые банки могут воспринимать как разделители
+    return text
+        .replace(/[|;,\n\r\t]/g, ' ')  // заменяем разделители на пробелы
+        .replace(/\s+/g, ' ')           //多个 пробелов в один
+        .trim();
+}
+
+function buildPaymentQR(plotNumber, amount, debtData, isElectricity = false) {
+    const sumKop = Math.round(amount * 100);
+
+    let finalPurpose;
+    if (isElectricity) {
+        finalPurpose = `Оплата электроэнергии уч.${plotNumber}`;
+    } else if (debtData) {
+        // Детализированное назначение (сокращённое)
+        finalPurpose = buildShortPurpose(debtData);
+    } else {
+        finalPurpose = `Оплата взносов уч.${plotNumber}`;
+    }
+
+    // Очищаем от спецсимволов
+    const cleanPurpose = sanitizePurpose(finalPurpose);
+
+    return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${cleanPurpose}|Sum=${sumKop}`;
+}
+
+// ==============================================================
+// КОРОТКОЕ ПОНЯТНОЕ НАЗНАЧЕНИЕ (БЕЗ ЗАПЯТЫХ)
+// ==============================================================
+function buildShortPurpose(debt) {
+    const year = new Date().getFullYear();
+    const parts = [];
+
+    if (debt.membershipDebt > 0.01) {
+        parts.push(`чл.взн.${formatAmountShort(debt.membershipDebt)}р`);
+    }
+    if (debt.targetDebt > 0.01) {
+        parts.push(`цел.взн.${formatAmountShort(debt.targetDebt)}р`);
+    }
+    if (debt.arrearsDebt > 0.01) {
+        parts.push(`долг.пр.л.${formatAmountShort(debt.arrearsDebt)}р`);
+    }
+    if (debt.workDebt > 0.01) {
+        parts.push(`отраб.${formatAmountShort(debt.workDebt)}р`);
+    }
+    if (debt.electricityDebt > 0.01) {
+        parts.push(`э/э${formatAmountShort(debt.electricityDebt)}р`);
+    }
+
+    // Если нет детализации
+    if (parts.length === 0 && debt.totalDebt > 0.01) {
+        parts.push(`взносы${formatAmountShort(debt.totalDebt)}р`);
+    }
+
+    // Сокращаем ФИО
+    let ownerShort = debt.owner || "";
+    if (ownerShort.length > 15) {
+        ownerShort = ownerShort.substring(0, 12) + "..";
+    }
+
+    let result = parts.join(' ') + ` уч.${debt.plotNumber}`;
+    if (ownerShort) result += ` ${ownerShort}`;
+
+    // Добавляем год в конец (опционально, банки любят год)
+    result += ` ${year}`;
+
+    // Ограничиваем длину (большинство банков принимают до 140 символов)
+    if (result.length > 120) {
+        result = `Взносы уч.${debt.plotNumber} ${formatAmountShort(debt.totalDebt)}р ${year}`;
+    }
+
+    if (result.length > 120) {
+        result = `Оплата уч.${debt.plotNumber}`;
+    }
+
+    return result;
+}
+
+// ==============================================================
+// ОТРИСОВКА КАРТОЧКИ ДОЛГА (обновлённая)
 // ==============================================================
 function renderDebtCard(debt) {
     const container = document.getElementById("debtCard");
@@ -1009,7 +1173,8 @@ function renderDebtCard(debt) {
 
         html += `<div style="font-size:12px; margin:10px 0;">Прописью: ${numberToWords(debt.totalDebt)}</div>`;
 
-        const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, `Оплата взносов уч.${debt.plotNumber}`, false);
+        // Используем обновлённую функцию buildPaymentQR с передачей debtData
+        const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
         html += `
             <button class="qr-btn" onclick="generateAndShowQR('debt', this, '${qrText.replace(/'/g, "\\'")}')">📱 Сгенерировать QR для оплаты</button>
             <div id="debtQrContainer" style="text-align:center;"></div>
@@ -1255,6 +1420,16 @@ if (isConsentAccepted()) {
     initMainApp();
 } else {
     showConsentScreen();
+}
+</script>
+<script>
+// Регистрация Service Worker для PWA
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW registered:', reg))
+            .catch(err => console.log('SW error:', err));
+    });
 }
 </script>
 </body>
