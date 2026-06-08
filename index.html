@@ -2,107 +2,57 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Берёзка-2">
-    <meta name="theme-color" content="#2E7D32">
-    <title>СНТ Берёзка-2 — Взносы и задолженности</title>
-
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="manifest" href="manifest.json">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>СНТ Берёзка-2</title>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
-
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        :root {
-            --green-50: #F1F8E9; --green-200: #AED581; --green-400: #66BB6A;
-            --green-600: #388E3C; --green-700: #2E7D32; --green-800: #1B5E20;
-            --blue-400: #42A5F5; --blue-600: #1565C0;
-            --red-50: #FFEBEE; --red-400: #EF5350; --red-600: #C62828;
-            --orange-600: #E65100;
-            --gray-300: #E0E0E0; --gray-500: #9E9E9E; --gray-600: #757575;
-            --gray-700: #616161; --gray-800: #424242;
-            --bg-main: #F4F6F4; --bg-card: #FFFFFF;
-        }
-        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg-main); padding-bottom: env(safe-area-inset-bottom, 20px); }
-        .app-header { background: var(--green-700); padding: 20px 20px 24px; padding-top: max(20px, env(safe-area-inset-top)); color: white; position: relative; }
-        .app-header h1 { font-size: 24px; letter-spacing: -0.5px; }
-        .app-header p { font-size: 13px; color: #C8E6C9; margin-top: 4px; }
-        .settings-btn { position: absolute; right: 16px; top: max(16px, env(safe-area-inset-top)); background: rgba(255,255,255,0.2); border: none; border-radius: 30px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
-        .settings-btn:active { background: rgba(255,255,255,0.3); transform: scale(0.96); }
-        .search-card { background: var(--bg-card); margin: -16px 16px 20px; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .search-label { color: var(--gray-500); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+        /* все стили из предыдущей версии */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #F4F6F4; padding-bottom: 20px; }
+        .app-header { background: #2E7D32; padding: 20px; color: white; position: relative; }
+        .app-header h1 { font-size: 24px; }
+        .settings-btn { position: absolute; right: 16px; top: 16px; background: rgba(255,255,255,0.2); border: none; border-radius: 30px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; color: white; }
+        .search-card { background: white; margin: -16px 16px 20px; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .search-label { color: #9E9E9E; font-size: 11px; text-transform: uppercase; }
         .search-title { font-weight: bold; font-size: 16px; margin: 5px 0 15px; }
         .search-input-group { display: flex; gap: 12px; flex-wrap: wrap; }
-        .search-input { flex: 1; padding: 14px 16px; font-size: 18px; font-weight: bold; text-align: center; border: 1.5px solid var(--gray-300); border-radius: 50px; background: white; }
-        .search-input:focus { border-color: var(--green-400); outline: none; }
-        .search-btn { background: var(--green-700); color: white; border: none; padding: 0 22px; border-radius: 50px; font-weight: bold; font-size: 15px; cursor: pointer; min-height: 50px; }
-        .search-btn:active { background: var(--green-800); transform: scale(0.97); }
-        .card { background: var(--bg-card); margin: 0 16px 16px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
+        .search-input { flex: 1; padding: 14px 16px; font-size: 18px; font-weight: bold; text-align: center; border: 1.5px solid #E0E0E0; border-radius: 50px; background: white; }
+        .search-btn { background: #2E7D32; color: white; border: none; padding: 0 22px; border-radius: 50px; font-weight: bold; font-size: 15px; cursor: pointer; min-height: 50px; }
+        .card { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
         .card-content { padding: 20px; }
-        .card-header { font-weight: bold; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .card-header { font-weight: bold; font-size: 16px; margin-bottom: 12px; }
         .hidden { display: none; }
-        .loading-state, .error-state { padding: 30px; text-align: center; color: var(--gray-600); }
-        .error-state { color: var(--red-600); background: var(--red-50); border-radius: 12px; margin: 0 16px; }
-        .plot-owner { font-size: 18px; font-weight: bold; margin: 5px 0 12px; word-break: break-word; }
+        .loading-state, .error-state { padding: 30px; text-align: center; color: #757575; }
+        .error-state { color: #C62828; background: #FFEBEE; border-radius: 12px; margin: 0 16px; }
+        .plot-owner { font-size: 18px; font-weight: bold; margin: 5px 0 12px; }
         .debt-total { font-size: 22px; font-weight: bold; margin-bottom: 16px; }
-        .debt-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray-300); flex-wrap: wrap; gap: 8px; }
-        .amount-red { color: var(--red-600); font-weight: bold; }
-        .amount-green { color: var(--green-600); font-weight: bold; }
-        .reading-input { width: 100%; padding: 14px; font-size: 18px; border: 1.5px solid var(--gray-300); border-radius: 16px; margin: 12px 0; text-align: center; }
-        .calculated-amount { background: var(--green-50); padding: 12px; border-radius: 12px; margin: 10px 0; text-align: center; font-weight: bold; }
-        .qr-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; font-weight: bold; font-size: 14px; cursor: pointer; margin: 8px 0; background: var(--green-700); color: white; }
-        .qr-btn:active { transform: scale(0.98); opacity: 0.9; }
-        .qr-group { display: flex; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
-        .qr-group button { flex: 1; background: var(--blue-600); padding: 12px; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-        .qr-group button:last-child { background: var(--gray-700); }
-        .qr-group button:active { opacity: 0.8; transform: scale(0.98); }
+        .debt-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E0E0E0; }
+        .amount-red { color: #C62828; font-weight: bold; }
+        .amount-green { color: #388E3C; font-weight: bold; }
+        .reading-input { width: 100%; padding: 14px; font-size: 18px; border: 1.5px solid #E0E0E0; border-radius: 16px; margin: 12px 0; text-align: center; }
+        .calculated-amount { background: #F1F8E9; padding: 12px; border-radius: 12px; margin: 10px 0; text-align: center; font-weight: bold; }
+        .qr-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; font-weight: bold; font-size: 14px; cursor: pointer; margin: 8px 0; background: #2E7D32; color: white; }
+        .qr-group { display: flex; gap: 10px; margin: 8px 0; }
+        .qr-group button { flex: 1; background: #1565C0; padding: 12px; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
         .qr-image { width: 100%; max-width: 280px; margin: 16px auto; display: block; border-radius: 16px; }
-        .not-found { text-align: center; padding: 40px 20px; background: var(--bg-card); border-radius: 20px; margin: 16px; }
-        .footer-note { text-align: center; font-size: 11px; color: var(--gray-500); margin-top: 30px; }
-        button:disabled { opacity: 0.6; transform: none; cursor: default; }
+        .not-found { text-align: center; padding: 40px 20px; background: white; border-radius: 20px; margin: 16px; }
+        .footer-note { text-align: center; font-size: 11px; color: #9E9E9E; margin-top: 30px; }
 
         /* Фото */
-        .meter-photo-card { margin-top: 16px; }
         .photo-preview { width: 100%; max-height: 250px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; display: none; }
-        .upload-progress { display: none; text-align: center; padding: 20px; background: var(--green-50); border-radius: 12px; margin-bottom: 12px; }
-        .upload-success { display: none; background: var(--green-50); padding: 12px; border-radius: 12px; margin-bottom: 12px; color: var(--green-600); }
-        .upload-error { display: none; background: var(--red-50); padding: 12px; border-radius: 12px; margin-bottom: 12px; color: var(--red-600); font-size: 13px; }
-        .yd-status { font-size: 14px; margin-top: 8px; color: var(--gray-500); }
+        .upload-progress { display: none; text-align: center; padding: 20px; background: #F1F8E9; border-radius: 12px; margin-bottom: 12px; }
+        .upload-success { display: none; background: #F1F8E9; padding: 12px; border-radius: 12px; margin-bottom: 12px; color: #388E3C; }
+        .upload-error { display: none; background: #FFEBEE; padding: 12px; border-radius: 12px; margin-bottom: 12px; color: #C62828; font-size: 13px; }
+        .yd-status { font-size: 14px; margin-top: 8px; color: #757575; }
         .photo-actions { display: flex; gap: 10px; margin-top: 12px; }
-        .btn-upload { flex: 1; background: var(--blue-600); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
-        .btn-retake { flex: 1; background: var(--gray-300); color: var(--gray-800); border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-upload { flex: 1; background: #1565C0; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-retake { flex: 1; background: #E0E0E0; color: #424242; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
         @media (max-width: 480px) {
             .search-input-group { flex-direction: column; }
-            .search-btn { padding: 12px; }
-            .card-content { padding: 16px; }
             .debt-total { font-size: 18px; }
         }
-
-        /* Consent modal */
-        .consent-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .consent-modal { background: white; border-radius: 24px; width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
-        .consent-header { background: var(--green-700); padding: 20px; color: white; text-align: center; }
-        .consent-header h2 { font-size: 20px; margin-top: 8px; }
-        .consent-body { flex: 1; overflow-y: auto; padding: 20px; }
-        .consent-footer { padding: 16px 20px; border-top: 1px solid var(--gray-300); background: white; }
-        .consent-section { background: var(--green-50); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-        .consent-section-title { font-weight: bold; font-size: 15px; color: var(--green-700); margin-bottom: 12px; }
-        .consent-check-row { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding: 12px; background: white; border-radius: 12px; }
-        .consent-check-row input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--green-600); }
-        .consent-check-row label { flex: 1; font-size: 13px; line-height: 1.4; }
-        .data-list { background: white; padding: 12px; border-radius: 12px; margin: 12px 0; }
-        .data-list li { margin-left: 20px; padding: 4px 0; }
-        .btn-consent-accept { width: 100%; padding: 14px; background: var(--green-600); color: white; border: none; border-radius: 50px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
-        .btn-consent-accept:disabled { opacity: 0.45; cursor: default; }
-        .btn-consent-decline { width: 100%; padding: 12px; background: none; color: var(--gray-600); border: none; font-size: 14px; cursor: pointer; }
-        .setting-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-300); flex-wrap: wrap; gap: 12px; }
-        .btn-revoke { background: var(--orange-600); color: white; border: none; padding: 8px 16px; border-radius: 50px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .consent-status { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; background: var(--green-50); color: var(--green-600); }
     </style>
 </head>
 <body>
@@ -118,7 +68,7 @@
         <div class="search-label">ПОИСК УЧАСТКА</div>
         <div class="search-title">Введите номер вашего участка</div>
         <div class="search-input-group">
-            <input type="text" id="plotInput" class="search-input" placeholder="Например: 5, 4а, 10а" autocomplete="off" inputmode="text">
+            <input type="text" id="plotInput" class="search-input" placeholder="Например: 5, 4а, 10а" autocomplete="off">
             <button id="searchBtn" class="search-btn">Найти</button>
         </div>
     </div>
@@ -135,7 +85,7 @@
 // ==============================================================
 // КОНСТАНТЫ
 // ==============================================================
-const API_BASE_URL = "http://wwcat.duckdns.org:12580";  // Ваш сервер
+const API_BASE_URL = "http://wwcat.duckdns.org:12580";
 const CONSENT_VERSION = "1.0";
 const CONSENT_STORAGE_KEY = "snt_consent_accepted";
 const CONSENT_VERSION_KEY = "snt_consent_version";
@@ -292,7 +242,7 @@ function parseDebitOds(xmlString) {
             current = {
                 plotNumber: plotKey, owner: owner, totalDebt: debtEnd, overpayEnd: overpayEnd,
                 hasDebt: debtEnd > 0.01, hasOverpayment: overpayEnd > 0.01,
-                membershipDebt: 0, targetDebt: 0, arrearsDebt: 0, workDebt: 0, electricityDebt: 0, details: []
+                membershipDebt: 0, targetDebt: 0, arrearsDebt: 0, workDebt: 0, electricityDebt: 0
             };
         } else if (current && col0 !== "") {
             const amount = parseNumber(cells[colDebt]);
@@ -385,7 +335,7 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity = false) {
 }
 
 async function generateQR(text) {
-    return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
+    return await QRCode.toDataURL(text, { width:280, margin:1, errorCorrectionLevel:'H' });
 }
 
 async function generateAndShowQR(type, btn, qrText) {
@@ -416,19 +366,19 @@ window.shareQR = async function(imgId) {
     if (!img) return;
     try {
         const blob = await fetch(img.src).then(r => r.blob());
-        const file = new File([blob], "qr_payment.png", { type: "image/png" });
-        if (navigator.share) await navigator.share({ files: [file], title: "QR-код оплаты" });
-        else { const link = document.createElement('a'); link.download = "qr_payment.png"; link.href = img.src; link.click(); }
-    } catch(e) { console.error("Share failed:", e); }
+        const file = new File([blob], "qr_payment.png", { type:"image/png" });
+        if (navigator.share) await navigator.share({ files:[file], title:"QR-код оплаты" });
+        else { const a = document.createElement('a'); a.download="qr_payment.png"; a.href=img.src; a.click(); }
+    } catch(e) { console.error(e); }
 };
 
 window.saveQR = function(imgId) {
     const img = document.getElementById(imgId);
     if (!img) return;
-    const link = document.createElement('a');
-    link.download = "qr_payment.png";
-    link.href = img.src;
-    link.click();
+    const a = document.createElement('a');
+    a.download = "qr_payment.png";
+    a.href = img.src;
+    a.click();
 };
 
 // ==============================================================
@@ -437,48 +387,45 @@ window.saveQR = function(imgId) {
 async function loadPlotData(plotNumber) {
     const normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
-    const debtContainer = document.getElementById("debtCard");
-    const eeContainer = document.getElementById("electricityCard");
-    const notFoundDiv = document.getElementById("notFoundBlock");
-    const loadingDiv = document.getElementById("loadingIndicator");
+    const debtDiv = document.getElementById("debtCard");
+    const eeDiv = document.getElementById("electricityCard");
+    const notFound = document.getElementById("notFoundBlock");
+    const loading = document.getElementById("loadingIndicator");
     const errorDiv = document.getElementById("errorMessage");
 
-    debtContainer.classList.add("hidden");
-    eeContainer.classList.add("hidden");
-    notFoundDiv.classList.add("hidden");
+    debtDiv.classList.add("hidden");
+    eeDiv.classList.add("hidden");
+    notFound.classList.add("hidden");
     errorDiv.classList.add("hidden");
-    loadingDiv.classList.remove("hidden");
+    loading.classList.remove("hidden");
 
     try {
         if (cachedDebtMap.size === 0) {
-            loadingDiv.innerHTML = "☁️ Загрузка данных по долгам...";
+            loading.innerHTML = "☁️ Загрузка долгов...";
             cachedDebtMap = await fetchAndParseOds(DEBIT_URL, parseDebitOds);
-            loadingDiv.innerHTML = "⚡ Загрузка данных электроэнергии...";
+            loading.innerHTML = "⚡ Загрузка э/э...";
             cachedElectricityMap = await fetchAndParseOds(EE_URL, parseElectricityOds);
         }
-        loadingDiv.classList.add("hidden");
+        loading.classList.add("hidden");
 
-        const debtData = cachedDebtMap.get(normalized);
-        const eeData = cachedElectricityMap.get(normalized);
+        const debt = cachedDebtMap.get(normalized);
+        const ee = cachedElectricityMap.get(normalized);
 
-        if (!debtData && !eeData) {
-            notFoundDiv.classList.remove("hidden");
+        if (!debt && !ee) {
+            notFound.classList.remove("hidden");
             return;
         }
-        if (debtData) renderDebtCard(debtData);
-        else debtContainer.classList.add("hidden");
-        if (eeData) renderElectricityCard(eeData);
-        else eeContainer.classList.add("hidden");
+        if (debt) renderDebtCard(debt);
+        if (ee) renderElectricityCard(ee);
     } catch (err) {
-        loadingDiv.classList.add("hidden");
-        errorDiv.innerHTML = `❌ Ошибка загрузки: ${err.message}. Проверьте интернет.`;
+        loading.classList.add("hidden");
+        errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
         errorDiv.classList.remove("hidden");
-        console.error(err);
     }
 }
 
 // ==============================================================
-// ФУНКЦИЯ ЗАГРУЗКИ ФОТО НА СЕРВЕР
+// ФУНКЦИИ ДЛЯ ФОТО
 // ==============================================================
 async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
     const formData = new FormData();
@@ -493,13 +440,9 @@ async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
 
     if (!response.ok) {
         let errorMsg = `HTTP ${response.status}`;
-        try {
-            const error = await response.json();
-            errorMsg = error.error || errorMsg;
-        } catch(e) {}
+        try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch(e) {}
         throw new Error(errorMsg);
     }
-
     return await response.json();
 }
 
@@ -517,46 +460,36 @@ function takePhoto() {
 
         // Превью
         const reader = new FileReader();
-        reader.onload = (event) => {
+        reader.onload = (ev) => {
             const preview = document.getElementById("photoPreview");
-            if (preview) {
-                preview.src = event.target.result;
-                preview.style.display = "block";
-            }
+            if (preview) { preview.src = ev.target.result; preview.style.display = "block"; }
         };
         reader.readAsDataURL(file);
 
         // UI
         const takeBtn = document.getElementById("takePhotoBtn");
-        const progressDiv = document.getElementById("photoUploadProgress");
-        const successDiv = document.getElementById("photoUploadSuccess");
+        const progress = document.getElementById("photoUploadProgress");
+        const success = document.getElementById("photoUploadSuccess");
         const errorDiv = document.getElementById("photoUploadError");
         const ydStatus = document.getElementById("ydStatus");
-        const photoActions = document.getElementById("photoActions");
+        const actions = document.getElementById("photoActions");
 
         if (takeBtn) takeBtn.style.display = "none";
-        if (progressDiv) progressDiv.style.display = "block";
-        if (successDiv) successDiv.style.display = "none";
+        if (progress) progress.style.display = "block";
+        if (success) success.style.display = "none";
         if (errorDiv) errorDiv.style.display = "none";
         if (ydStatus) ydStatus.innerHTML = "☁ Загрузка...";
 
         try {
-            const result = await uploadPhotoToServer(currentPlotNumber, readingValue, file);
-            if (progressDiv) progressDiv.style.display = "none";
-            if (successDiv) successDiv.style.display = "block";
-            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено на Яндекс.Диске";
-            if (takeBtn) {
-                takeBtn.style.display = "block";
-                takeBtn.innerHTML = "📷 Сфотографировать ещё раз";
-            }
-            if (photoActions) photoActions.style.display = "none";
+            await uploadPhotoToServer(currentPlotNumber, readingValue, file);
+            if (progress) progress.style.display = "none";
+            if (success) success.style.display = "block";
+            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено";
+            if (takeBtn) { takeBtn.style.display = "block"; takeBtn.innerHTML = "📷 Сфотографировать ещё раз"; }
+            if (actions) actions.style.display = "none";
         } catch (err) {
-            console.error("Upload error:", err);
-            if (progressDiv) progressDiv.style.display = "none";
-            if (errorDiv) {
-                errorDiv.style.display = "block";
-                errorDiv.innerHTML = `⚠️ ${err.message}`;
-            }
+            if (progress) progress.style.display = "none";
+            if (errorDiv) { errorDiv.style.display = "block"; errorDiv.innerHTML = `⚠️ ${err.message}`; }
             if (ydStatus) ydStatus.innerHTML = "☁ Ошибка загрузки";
             if (takeBtn) takeBtn.style.display = "block";
         }
@@ -571,11 +504,11 @@ function renderDebtCard(debt) {
     const container = document.getElementById("debtCard");
     container.classList.remove("hidden");
     let html = `<div class="card-content"><div class="card-header">💰 Задолженность</div>
-        <div style="font-size:13px; color:var(--gray-500);">Участок №${debt.plotNumber}</div>
+        <div style="font-size:13px;">Участок №${debt.plotNumber}</div>
         <div class="plot-owner">${escapeHtml(debt.owner || "Владелец не указан")}</div>`;
     if (debt.hasDebt) {
         html += `<div class="debt-total amount-red">Задолженность: ${formatMoney(debt.totalDebt)} ₽</div>
-            <div style="margin-top: 8px;">`;
+            <div style="margin-top:8px;">`;
         if (debt.membershipDebt > 0.01) html += `<div class="debt-line"><span>Членские взносы:</span><span class="amount-red">${formatMoney(debt.membershipDebt)} ₽</span></div>`;
         if (debt.targetDebt > 0.01) html += `<div class="debt-line"><span>Целевые взносы:</span><span class="amount-red">${formatMoney(debt.targetDebt)} ₽</span></div>`;
         if (debt.arrearsDebt > 0.01) html += `<div class="debt-line"><span>Задолженность прошлых лет:</span><span class="amount-red">${formatMoney(debt.arrearsDebt)} ₽</span></div>`;
@@ -583,11 +516,11 @@ function renderDebtCard(debt) {
         if (debt.electricityDebt > 0.01) html += `<div class="debt-line"><span>Электроэнергия:</span><span class="amount-red">${formatMoney(debt.electricityDebt)} ₽</span></div>`;
         html += `</div><div style="font-size:12px; margin:10px 0;">Прописью: ${numberToWords(debt.totalDebt)}</div>`;
         const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
-        html += `<button class="qr-btn" data-qr-text="${qrText.replace(/'/g, "\\'")}" data-type="debt">📱 Сгенерировать QR для оплаты</button>
-            <div id="debtQrContainer" style="text-align:center;"></div>
+        html += `<button class="qr-btn" data-qr-text="${qrText.replace(/'/g, "\\'")}">📱 QR для оплаты</button>
+            <div id="debtQrContainer"></div>
             <div id="debtQrButtons" style="display:none;" class="qr-group">
-                <button onclick="window.shareQR('debtQrImg')">↗ Поделиться</button>
-                <button onclick="window.saveQR('debtQrImg')">💾 Сохранить</button>
+                <button onclick="shareQR('debtQrImg')">↗ Поделиться</button>
+                <button onclick="saveQR('debtQrImg')">💾 Сохранить</button>
             </div>`;
     } else if (debt.hasOverpayment) {
         html += `<div class="debt-total amount-green">Переплата: ${formatMoney(debt.overpayEnd)} ₽</div>`;
@@ -598,10 +531,7 @@ function renderDebtCard(debt) {
     container.innerHTML = html;
 
     const btn = container.querySelector('.qr-btn');
-    if (btn) {
-        const qrText = btn.dataset.qrText;
-        btn.addEventListener('click', (e) => generateAndShowQR('debt', btn, qrText));
-    }
+    if (btn) btn.onclick = () => generateAndShowQR('debt', btn, btn.dataset.qrText);
 }
 
 function renderElectricityCard(ee) {
@@ -610,7 +540,7 @@ function renderElectricityCard(ee) {
     let html = `<div class="card-content"><div class="card-header">⚡ Электроэнергия</div>
         <div style="font-size:13px;">Участок №${ee.plotNumber}</div>
         <div class="plot-owner">${escapeHtml(ee.owner || "Владелец не указан")}</div>
-        <div style="display:flex; justify-content:space-between; margin:8px 0; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; justify-content:space-between; margin:8px 0;">
             <span>Текущие показания:</span><strong>${formatNumber(ee.currentReading)} кВт·ч</strong>
         </div>
         <div style="font-size:12px; color:gray;">Дата: ${ee.readingDateStr || "не указана"}</div>
@@ -618,19 +548,19 @@ function renderElectricityCard(ee) {
         <input type="number" id="newReadingInput" class="reading-input" placeholder="Введите новые показания" step="any">
         <div id="calcAmountBlock" class="calculated-amount hidden"></div>
         <button id="genEeQrBtn" class="qr-btn" disabled>📱 QR для оплаты э/э</button>
-        <div id="eeQrContainer" style="text-align:center;"></div>
+        <div id="eeQrContainer"></div>
         <div id="eeQrButtons" style="display:none;" class="qr-group">
-            <button onclick="window.shareQR('eeQrImg')">↗ Поделиться</button>
-            <button onclick="window.saveQR('eeQrImg')">💾 Сохранить</button>
+            <button onclick="shareQR('eeQrImg')">↗ Поделиться</button>
+            <button onclick="saveQR('eeQrImg')">💾 Сохранить</button>
         </div>
     </div>
-    <div class="card-content meter-photo-card">
+    <div class="card-content">
         <div class="card-header">📸 Фото показаний счётчика</div>
         <img id="photoPreview" class="photo-preview">
         <div id="photoUploadProgress" class="upload-progress">⏳ Загрузка на Яндекс.Диск...</div>
-        <div id="photoUploadSuccess" class="upload-success">✓ Фото сохранено на Яндекс.Диске</div>
+        <div id="photoUploadSuccess" class="upload-success">✓ Фото сохранено</div>
         <div id="photoUploadError" class="upload-error"></div>
-        <button id="takePhotoBtn" class="qr-btn" style="background:var(--blue-600);">📷 Сфотографировать счётчик</button>
+        <button id="takePhotoBtn" class="qr-btn" style="background:#1565C0;">📷 Сфотографировать счётчик</button>
         <div id="photoActions" class="photo-actions" style="display:none;">
             <button id="uploadPhotoBtn" class="btn-upload">☁ Загрузить</button>
             <button id="retakePhotoBtn" class="btn-retake">↺ Переснять</button>
@@ -640,20 +570,20 @@ function renderElectricityCard(ee) {
     container.innerHTML = html;
 
     const input = document.getElementById("newReadingInput");
-    const calcBlock = document.getElementById("calcAmountBlock");
+    const calc = document.getElementById("calcAmountBlock");
     const genBtn = document.getElementById("genEeQrBtn");
 
     if (input) {
         input.addEventListener("input", function() {
             const newVal = parseFloat(this.value);
             if (isNaN(newVal) || newVal <= ee.currentReading) {
-                calcBlock.classList.add("hidden");
+                calc.classList.add("hidden");
                 genBtn.disabled = true;
                 return;
             }
             const amount = (newVal - ee.currentReading) * TARIFF;
-            calcBlock.innerHTML = `📊 Сумма к оплате: ${formatMoney(amount)} ₽`;
-            calcBlock.classList.remove("hidden");
+            calc.innerHTML = `📊 Сумма к оплате: ${formatMoney(amount)} ₽`;
+            calc.classList.remove("hidden");
             genBtn.disabled = false;
             genBtn.onclick = async () => {
                 const qrText = buildPaymentQR(ee.plotNumber, amount, null, true);
@@ -662,8 +592,7 @@ function renderElectricityCard(ee) {
         });
     }
 
-    const takeBtn = document.getElementById("takePhotoBtn");
-    if (takeBtn) takeBtn.onclick = takePhoto;
+    document.getElementById("takePhotoBtn").onclick = takePhoto;
 }
 
 // ==============================================================
@@ -689,51 +618,54 @@ function revokeConsent() {
 function showConsentScreen() {
     const overlay = document.createElement('div');
     overlay.className = 'consent-overlay';
-    overlay.innerHTML = `<div class="consent-modal"><div class="consent-header"><div style="font-size:32px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p>Согласие с условиями использования</p></div>
-        <div class="consent-body"><div class="consent-section"><div class="consent-section-title">🔐 Персональные данные</div>
-        <ul class="data-list"><li>Номер земельного участка</li><li>Фамилия, имя, отчество члена СНТ</li><li>Сведения о задолженностях</li><li>Показания электроэнергии</li></ul>
-        <div class="consent-check-row"><input type="checkbox" id="consentCheckPersonal"><label>Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152</label></div></div>
-        <div class="consent-section"><div class="consent-section-title">📋 Пользовательское соглашение</div>
-        <ul class="data-list"><li>Приложение предоставляется «как есть»</li><li>Данные носят информационный характер</li><li>Запрещена передача доступа третьим лицам</li></ul>
-        <div class="consent-check-row"><input type="checkbox" id="consentCheckTerms"><label>Я принимаю условия Пользовательского соглашения</label></div></div>
-        <div class="consent-section"><div class="consent-section-title">👤 Подтверждение</div>
-        <div class="consent-check-row"><input type="checkbox" id="consentCheckAge"><label>Мне исполнилось 18 лет, я являюсь членом СНТ или его представителем</label></div></div></div>
-        <div class="consent-footer"><button class="btn-consent-accept" id="consentAcceptBtn" disabled>✓ Принять и продолжить</button>
-        <button class="btn-consent-decline" id="consentDeclineBtn">Отказаться и закрыть</button></div></div>`;
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `<div style="background:white;border-radius:24px;width:90%;max-width:500px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+        <div style="background:#2E7D32;padding:20px;color:white;text-align:center;"><div style="font-size:32px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p>Согласие с условиями</p></div>
+        <div style="flex:1;overflow-y:auto;padding:20px;">
+            <div style="margin-bottom:16px;">Оператор: СНТ «Берёзка-2» (ИНН 5433118499)</div>
+            <div style="background:#F1F8E9;border-radius:16px;padding:16px;margin-bottom:16px;">
+                <div style="font-weight:bold;margin-bottom:12px;">🔐 Персональные данные</div>
+                <div class="consent-check-row"><input type="checkbox" id="c1"><label>Я согласен(а) на обработку ПД в соответствии с ФЗ-152</label></div>
+            </div>
+            <div style="background:#F1F8E9;border-radius:16px;padding:16px;margin-bottom:16px;">
+                <div style="font-weight:bold;margin-bottom:12px;">📋 Пользовательское соглашение</div>
+                <div class="consent-check-row"><input type="checkbox" id="c2"><label>Я принимаю условия Пользовательского соглашения</label></div>
+            </div>
+            <div style="background:#F1F8E9;border-radius:16px;padding:16px;">
+                <div style="font-weight:bold;margin-bottom:12px;">👤 Подтверждение</div>
+                <div class="consent-check-row"><input type="checkbox" id="c3"><label>Мне исполнилось 18 лет, я член СНТ или его представитель</label></div>
+            </div>
+        </div>
+        <div style="padding:16px 20px;border-top:1px solid #E0E0E0;"><button id="acceptBtn" style="width:100%;padding:14px;background:#2E7D32;color:white;border:none;border-radius:50px;font-weight:bold;cursor:pointer;" disabled>✓ Принять</button>
+        <button id="declineBtn" style="width:100%;padding:12px;background:none;color:#757575;border:none;font-size:14px;cursor:pointer;margin-top:8px;">Отказаться</button></div></div>`;
     document.body.appendChild(overlay);
-    const c1 = document.getElementById('consentCheckPersonal'), c2 = document.getElementById('consentCheckTerms'), c3 = document.getElementById('consentCheckAge');
-    const acceptBtn = document.getElementById('consentAcceptBtn');
-    function update() { acceptBtn.disabled = !(c1 && c1.checked && c2 && c2.checked && c3 && c3.checked); }
-    if (c1) c1.onchange = update;
-    if (c2) c2.onchange = update;
-    if (c3) c3.onchange = update;
-    acceptBtn.onclick = () => { saveConsent(); overlay.remove(); document.getElementById('mainApp').style.display = ''; initMainApp(); };
-    document.getElementById('consentDeclineBtn').onclick = () => { if (confirm('Без согласия использование невозможно. Закрыть?')) window.close(); };
+    const c1=document.getElementById('c1'), c2=document.getElementById('c2'), c3=document.getElementById('c3');
+    const accept=document.getElementById('acceptBtn');
+    function update(){ accept.disabled = !(c1.checked && c2.checked && c3.checked); }
+    c1.onchange=c2.onchange=c3.onchange=update;
+    accept.onclick = () => { saveConsent(); overlay.remove(); document.getElementById('mainApp').style.display=''; initMainApp(); };
+    document.getElementById('declineBtn').onclick = () => { if(confirm('Без согласия использование невозможно. Закрыть?')) window.close(); };
 }
 
 function showSettingsModal() {
     const modal = document.createElement('div');
     modal.className = 'consent-overlay';
-    modal.innerHTML = `<div class="consent-modal"><div class="consent-header" style="background:var(--gray-800);"><h2>⚙️ Настройки</h2><button style="position:absolute;right:16px;top:16px;background:none;border:none;color:white;font-size:24px;cursor:pointer;" id="closeSettingsModal">×</button></div>
-        <div class="consent-body"><div class="setting-row"><div><p>Статус согласия</p><small>ФЗ-152</small></div><div><span class="consent-status">✓ Согласие принято</span></div></div>
-        <div class="setting-row"><div><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button class="btn-revoke" id="revokeConsentBtn">Отозвать</button></div>
-        <div class="setting-row"><div><p>Очистить кэш данных</p><small>Удаляет загруженные данные об участках</small></div><button class="btn-revoke" id="clearCacheBtn" style="background:var(--red-600);">Очистить</button></div></div>
-        <div class="consent-footer"><button class="btn-consent-accept" id="closeSettingsBtn" style="background:var(--gray-600);">Закрыть</button></div></div>`;
+    modal.innerHTML = `<div style="background:white;border-radius:24px;width:90%;max-width:450px;"><div style="background:#424242;padding:20px;color:white;text-align:center;"><h2>⚙️ Настройки</h2></div>
+        <div style="padding:20px;"><div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Статус согласия</p><small>ФЗ-152</small></div><div><span style="background:#F1F8E9;color:#388E3C;padding:4px 12px;border-radius:50px;">✓ Принято</span></div></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button id="revokeBtn" style="background:#E65100;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Отозвать</button></div>
+        <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Очистить кэш данных</p></div><button id="clearBtn" style="background:#C62828;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Очистить</button></div></div>
+        <div style="padding:16px;border-top:1px solid #E0E0E0;"><button id="closeBtn" style="width:100%;padding:14px;background:#757575;color:white;border:none;border-radius:50px;cursor:pointer;">Закрыть</button></div></div>`;
     document.body.appendChild(modal);
-    const close = () => modal.remove();
-    modal.querySelector('#closeSettingsModal').onclick = close;
-    modal.querySelector('#closeSettingsBtn').onclick = close;
-    modal.querySelector('#revokeConsentBtn').onclick = () => { if (confirm('Отозвать согласие?')) revokeConsent(); };
-    modal.querySelector('#clearCacheBtn').onclick = () => { cachedDebtMap.clear(); cachedElectricityMap.clear(); alert('Кэш очищен'); close(); };
+    const close=()=>modal.remove();
+    modal.querySelector('#closeBtn').onclick=close;
+    modal.querySelector('#revokeBtn').onclick=()=>{if(confirm('Отозвать согласие?')) revokeConsent();};
+    modal.querySelector('#clearBtn').onclick=()=>{cachedDebtMap.clear(); cachedElectricityMap.clear(); alert('Кэш очищен'); close();};
 }
 
 function initMainApp() {
-    const searchBtn = document.getElementById("searchBtn");
-    const plotInput = document.getElementById("plotInput");
-    const settingsBtn = document.getElementById("settingsBtn");
-    if (searchBtn) searchBtn.addEventListener("click", () => { const v = plotInput ? plotInput.value : ""; if (v.trim()) loadPlotData(v); else alert("Введите номер участка"); });
-    if (plotInput) plotInput.addEventListener("keypress", (e) => { if (e.key === "Enter") { const v = plotInput.value; if (v.trim()) loadPlotData(v); else alert("Введите номер участка"); } });
-    if (settingsBtn) settingsBtn.addEventListener("click", showSettingsModal);
+    document.getElementById("searchBtn").onclick = () => { const v = document.getElementById("plotInput").value; if(v.trim()) loadPlotData(v); else alert("Введите номер участка"); };
+    document.getElementById("plotInput").onkeypress = (e) => { if(e.key === "Enter") document.getElementById("searchBtn").click(); };
+    document.getElementById("settingsBtn").onclick = showSettingsModal;
 }
 
 if (isConsentAccepted()) {
@@ -741,12 +673,6 @@ if (isConsentAccepted()) {
     initMainApp();
 } else {
     showConsentScreen();
-}
-
-if ('serviceWorker' in navigator && !location.href.includes('chrome-extension')) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW:', e));
-    });
 }
 </script>
 </body>
