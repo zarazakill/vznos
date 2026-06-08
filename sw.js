@@ -1,5 +1,5 @@
 // sw.js - Service Worker для кеширования и офлайн-доступа
-const CACHE_NAME = 'berezka2-v1';
+const CACHE_NAME = 'berezka2-v2';
 const urlsToCache = [
     './',
 './index.html',
@@ -10,7 +10,7 @@ const urlsToCache = [
 './favicon-192x192.png',
 './favicon-512x512.png',
 './apple-touch-icon.png',
-'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js'
 ];
 
@@ -38,20 +38,26 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Стратегия: сначала сеть, при ошибке — кеш
+// Стратегия: сначала сеть, при ошибке — кеш (только для GET запросов)
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        fetch(event.request)
-        .then(response => {
-            // Кешируем успешные ответы
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then(cache => {
-                cache.put(event.request, responseClone);
-            });
-            return response;
-        })
-        .catch(() => {
-            return caches.match(event.request);
-        })
-    );
+    // Пропускаем запросы к расширениям Chrome и POST-запросы
+    if (event.request.url.startsWith('chrome-extension://') ||
+        event.request.method !== 'GET') {
+        return;
+        }
+
+        event.respondWith(
+            fetch(event.request)
+            .then(response => {
+                // Кешируем успешные GET-ответы
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, responseClone);
+                });
+                return response;
+            })
+            .catch(() => {
+                return caches.match(event.request);
+            })
+        );
 });
