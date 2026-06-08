@@ -7,215 +7,74 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Берёзка-2">
     <meta name="theme-color" content="#2E7D32">
-    <meta name="description" content="СНТ Берёзка-2 — управление взносами и задолженностями">
     <title>СНТ Берёзка-2 — Взносы и задолженности</title>
 
-    <!-- PWA Icons -->
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="favicon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="favicon-512x512.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
     <link rel="manifest" href="manifest.json">
 
-    <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root {
-            --green-50: #F1F8E9;
-            --green-200: #AED581;
-            --green-400: #66BB6A;
-            --green-600: #388E3C;
-            --green-700: #2E7D32;
-            --green-800: #1B5E20;
-            --blue-400: #42A5F5;
-            --blue-600: #1565C0;
-            --red-50: #FFEBEE;
-            --red-400: #EF5350;
-            --red-600: #C62828;
+            --green-50: #F1F8E9; --green-200: #AED581; --green-400: #66BB6A;
+            --green-600: #388E3C; --green-700: #2E7D32; --green-800: #1B5E20;
+            --blue-400: #42A5F5; --blue-600: #1565C0;
+            --red-50: #FFEBEE; --red-400: #EF5350; --red-600: #C62828;
             --orange-600: #E65100;
-            --gray-200: #EEEEEE;
-            --gray-300: #E0E0E0;
-            --gray-500: #9E9E9E;
-            --gray-600: #757575;
-            --gray-700: #616161;
-            --gray-800: #424242;
-            --bg-main: #F4F6F4;
-            --bg-card: #FFFFFF;
+            --gray-300: #E0E0E0; --gray-500: #9E9E9E; --gray-600: #757575;
+            --gray-700: #616161; --gray-800: #424242;
+            --bg-main: #F4F6F4; --bg-card: #FFFFFF;
         }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-main);
-            color: var(--gray-800);
-            padding-bottom: env(safe-area-inset-bottom, 20px);
-        }
-
-        .app-header {
-            background-color: var(--green-700);
-            padding: 20px 20px 24px 20px;
-            padding-top: max(20px, env(safe-area-inset-top));
-            color: white;
-            position: relative;
-        }
-        .app-header h1 { font-size: 24px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg-main); padding-bottom: env(safe-area-inset-bottom, 20px); }
+        .app-header { background: var(--green-700); padding: 20px 20px 24px; padding-top: max(20px, env(safe-area-inset-top)); color: white; position: relative; }
+        .app-header h1 { font-size: 24px; letter-spacing: -0.5px; }
         .app-header p { font-size: 13px; color: #C8E6C9; margin-top: 4px; }
-        .settings-btn {
-            position: absolute;
-            right: 16px;
-            top: max(16px, env(safe-area-inset-top));
-            background: rgba(255,255,255,0.2);
-            border: none;
-            border-radius: 30px;
-            width: 40px;
-            height: 40px;
-            font-size: 20px;
-            cursor: pointer;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .settings-btn { position: absolute; right: 16px; top: max(16px, env(safe-area-inset-top)); background: rgba(255,255,255,0.2); border: none; border-radius: 30px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
         .settings-btn:active { background: rgba(255,255,255,0.3); transform: scale(0.96); }
-
-        .search-card {
-            background-color: var(--bg-card);
-            margin: -16px 16px 20px 16px;
-            padding: 20px;
-            border-radius: 20px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
+        .search-card { background: var(--bg-card); margin: -16px 16px 20px; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .search-label { color: var(--gray-500); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
-        .search-title { font-weight: bold; font-size: 16px; margin: 5px 0 15px 0; }
-        .search-input-group { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
-        .search-input {
-            flex: 1;
-            padding: 14px 16px;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
-            border: 1.5px solid var(--gray-300);
-            border-radius: 50px;
-            outline: none;
-            transition: 0.2s;
-            background: white;
-            min-width: 120px;
-        }
-        .search-input:focus { border-color: var(--green-400); }
-        .search-btn {
-            background-color: var(--green-700);
-            color: white;
-            border: none;
-            padding: 0 22px;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            min-height: 50px;
-        }
-        .search-btn:active { background-color: var(--green-800); transform: scale(0.97); }
-
-        .card {
-            background-color: var(--bg-card);
-            margin: 0 16px 16px 16px;
-            border-radius: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            overflow: hidden;
-        }
+        .search-title { font-weight: bold; font-size: 16px; margin: 5px 0 15px; }
+        .search-input-group { display: flex; gap: 12px; flex-wrap: wrap; }
+        .search-input { flex: 1; padding: 14px 16px; font-size: 18px; font-weight: bold; text-align: center; border: 1.5px solid var(--gray-300); border-radius: 50px; background: white; }
+        .search-input:focus { border-color: var(--green-400); outline: none; }
+        .search-btn { background: var(--green-700); color: white; border: none; padding: 0 22px; border-radius: 50px; font-weight: bold; font-size: 15px; cursor: pointer; min-height: 50px; }
+        .search-btn:active { background: var(--green-800); transform: scale(0.97); }
+        .card { background: var(--bg-card); margin: 0 16px 16px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); overflow: hidden; }
         .card-content { padding: 20px; }
         .card-header { font-weight: bold; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .hidden { display: none; }
         .loading-state, .error-state { padding: 30px; text-align: center; color: var(--gray-600); }
         .error-state { color: var(--red-600); background: var(--red-50); border-radius: 12px; margin: 0 16px; }
-        .plot-owner { font-size: 18px; font-weight: bold; margin: 5px 0 12px 0; word-break: break-word; }
+        .plot-owner { font-size: 18px; font-weight: bold; margin: 5px 0 12px; word-break: break-word; }
         .debt-total { font-size: 22px; font-weight: bold; margin-bottom: 16px; }
         .debt-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--gray-300); flex-wrap: wrap; gap: 8px; }
         .amount-red { color: var(--red-600); font-weight: bold; }
         .amount-green { color: var(--green-600); font-weight: bold; }
-
-        .reading-input {
-            width: 100%;
-            padding: 14px;
-            font-size: 18px;
-            border: 1.5px solid var(--gray-300);
-            border-radius: 16px;
-            margin: 12px 0;
-            text-align: center;
-        }
-        .calculated-amount {
-            background: var(--green-50);
-            padding: 12px;
-            border-radius: 12px;
-            margin: 10px 0;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        .qr-btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            border-radius: 14px;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            margin: 8px 0;
-            background-color: var(--green-700);
-            color: white;
-        }
+        .reading-input { width: 100%; padding: 14px; font-size: 18px; border: 1.5px solid var(--gray-300); border-radius: 16px; margin: 12px 0; text-align: center; }
+        .calculated-amount { background: var(--green-50); padding: 12px; border-radius: 12px; margin: 10px 0; text-align: center; font-weight: bold; }
+        .qr-btn { width: 100%; padding: 14px; border: none; border-radius: 14px; font-weight: bold; font-size: 14px; cursor: pointer; margin: 8px 0; background: var(--green-700); color: white; }
         .qr-btn:active { transform: scale(0.98); opacity: 0.9; }
         .qr-group { display: flex; gap: 10px; margin: 8px 0; flex-wrap: wrap; }
-        .qr-group button { flex: 1; background-color: var(--blue-600); padding: 12px; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-        .qr-group button:last-child { background-color: var(--gray-700); }
+        .qr-group button { flex: 1; background: var(--blue-600); padding: 12px; border: none; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
+        .qr-group button:last-child { background: var(--gray-700); }
         .qr-group button:active { opacity: 0.8; transform: scale(0.98); }
         .qr-image { width: 100%; max-width: 280px; margin: 16px auto; display: block; border-radius: 16px; }
-
         .not-found { text-align: center; padding: 40px 20px; background: var(--bg-card); border-radius: 20px; margin: 16px; }
         .footer-note { text-align: center; font-size: 11px; color: var(--gray-500); margin-top: 30px; }
         button:disabled { opacity: 0.6; transform: none; cursor: default; }
 
-        /* Consent Modal */
-        .consent-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.75); z-index: 1000;
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(4px);
-        }
-        .consent-modal {
-            background: white; border-radius: 24px; width: 90%; max-width: 500px;
-            max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-        }
-        .consent-header { background: var(--green-700); padding: 20px; color: white; text-align: center; }
-        .consent-header h2 { font-size: 20px; margin-top: 8px; }
-        .consent-body { flex: 1; overflow-y: auto; padding: 20px; }
-        .consent-footer { padding: 16px 20px; border-top: 1px solid var(--gray-200); background: white; }
-        .consent-section { background: var(--green-50); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
-        .consent-section-title { font-weight: bold; font-size: 15px; color: var(--green-700); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .consent-check-row { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding: 12px; background: white; border-radius: 12px; }
-        .consent-check-row input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--green-600); flex-shrink: 0; }
-        .consent-check-row label { flex: 1; font-size: 13px; line-height: 1.4; color: var(--gray-700); }
-        .consent-link { color: var(--blue-600); text-decoration: none; font-size: 13px; margin-top: 8px; display: inline-block; }
-        .btn-consent-accept { width: 100%; padding: 14px; background: var(--green-600); color: white; border: none; border-radius: 50px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
-        .btn-consent-accept:disabled { opacity: 0.45; cursor: default; }
-        .btn-consent-decline { width: 100%; padding: 12px; background: none; color: var(--gray-600); border: none; font-size: 14px; cursor: pointer; }
-        .data-list { background: white; padding: 12px; border-radius: 12px; margin: 12px 0; font-size: 13px; }
-        .data-list li { margin-left: 20px; padding: 4px 0; }
-        .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-200); flex-wrap: wrap; gap: 12px; }
-        .setting-label p { font-size: 14px; font-weight: 500; }
-        .setting-label small { font-size: 11px; color: var(--gray-500); }
-        .btn-revoke { background: var(--orange-600); color: white; border: none; padding: 8px 16px; border-radius: 50px; font-size: 12px; font-weight: bold; cursor: pointer; }
-        .btn-revoke:active { opacity: 0.8; }
-        .consent-status { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; }
-        .consent-status.accepted { background: var(--green-50); color: var(--green-600); }
+        /* Фото */
+        .meter-photo-card { margin-top: 16px; }
+        .photo-preview { width: 100%; max-height: 250px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; display: none; }
+        .upload-progress { display: none; text-align: center; padding: 20px; background: var(--green-50); border-radius: 12px; margin-bottom: 12px; }
+        .upload-success { display: none; background: var(--green-50); padding: 12px; border-radius: 12px; margin-bottom: 12px; color: var(--green-600); }
+        .upload-error { display: none; background: var(--red-50); padding: 12px; border-radius: 12px; margin-bottom: 12px; color: var(--red-600); font-size: 13px; }
+        .yd-status { font-size: 14px; margin-top: 8px; color: var(--gray-500); }
+        .photo-actions { display: flex; gap: 10px; margin-top: 12px; }
+        .btn-upload { flex: 1; background: var(--blue-600); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-retake { flex: 1; background: var(--gray-300); color: var(--gray-800); border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
         @media (max-width: 480px) {
             .search-input-group { flex-direction: column; }
@@ -223,6 +82,27 @@
             .card-content { padding: 16px; }
             .debt-total { font-size: 18px; }
         }
+
+        /* Consent modal */
+        .consent-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .consent-modal { background: white; border-radius: 24px; width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+        .consent-header { background: var(--green-700); padding: 20px; color: white; text-align: center; }
+        .consent-header h2 { font-size: 20px; margin-top: 8px; }
+        .consent-body { flex: 1; overflow-y: auto; padding: 20px; }
+        .consent-footer { padding: 16px 20px; border-top: 1px solid var(--gray-300); background: white; }
+        .consent-section { background: var(--green-50); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+        .consent-section-title { font-weight: bold; font-size: 15px; color: var(--green-700); margin-bottom: 12px; }
+        .consent-check-row { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; padding: 12px; background: white; border-radius: 12px; }
+        .consent-check-row input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--green-600); }
+        .consent-check-row label { flex: 1; font-size: 13px; line-height: 1.4; }
+        .data-list { background: white; padding: 12px; border-radius: 12px; margin: 12px 0; }
+        .data-list li { margin-left: 20px; padding: 4px 0; }
+        .btn-consent-accept { width: 100%; padding: 14px; background: var(--green-600); color: white; border: none; border-radius: 50px; font-weight: bold; font-size: 15px; cursor: pointer; margin-bottom: 10px; }
+        .btn-consent-accept:disabled { opacity: 0.45; cursor: default; }
+        .btn-consent-decline { width: 100%; padding: 12px; background: none; color: var(--gray-600); border: none; font-size: 14px; cursor: pointer; }
+        .setting-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--gray-300); flex-wrap: wrap; gap: 12px; }
+        .btn-revoke { background: var(--orange-600); color: white; border: none; padding: 8px 16px; border-radius: 50px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .consent-status { display: inline-block; padding: 4px 12px; border-radius: 50px; font-size: 12px; font-weight: bold; background: var(--green-50); color: var(--green-600); }
     </style>
 </head>
 <body>
@@ -253,8 +133,9 @@
 
 <script>
 // ==============================================================
-// 1. КОНСТАНТЫ
+// КОНСТАНТЫ
 // ==============================================================
+const API_BASE_URL = "http://wwcat.duckdns.org:12580";  // Ваш сервер
 const CONSENT_VERSION = "1.0";
 const CONSENT_STORAGE_KEY = "snt_consent_accepted";
 const CONSENT_VERSION_KEY = "snt_consent_version";
@@ -271,9 +152,10 @@ const EE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
 
 let cachedDebtMap = new Map();
 let cachedElectricityMap = new Map();
+let currentPlotNumber = "";
 
 // ==============================================================
-// 2. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ==============================================================
 function formatMoney(amount) {
     return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
@@ -307,8 +189,18 @@ function parseNumber(val) {
     return isNaN(num) ? 0 : num;
 }
 
+function escapeHtml(str) {
+    if (!str) return "";
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
 // ==============================================================
-// 3. ПАРСИНГ .ods ФАЙЛОВ (БЕЗ ПРОБЛЕМНЫХ CSS-СЕЛЕКТОРОВ)
+// ПАРСИНГ .ods
 // ==============================================================
 async function fetchAndParseOds(url, parserFn) {
     const response = await fetch(url);
@@ -320,26 +212,19 @@ async function fetchAndParseOds(url, parserFn) {
 }
 
 function getAllTableRows(xmlDoc) {
-    // Универсальный поиск всех element с localName "table-row"
     const allElements = xmlDoc.getElementsByTagName("*");
     const rows = [];
     for (let i = 0; i < allElements.length; i++) {
-        const el = allElements[i];
-        if (el.localName === "table-row") {
-            rows.push(el);
-        }
+        if (allElements[i].localName === "table-row") rows.push(allElements[i]);
     }
     return rows;
 }
 
 function getCellText(cellElement) {
-    // Ищем text:p внутри ячейки
-    const children = cellElement.childNodes;
     let text = "";
-    for (let i = 0; i < children.length; i++) {
-        const child = children[i];
-        if (child.localName === "p") {
-            text += child.textContent || "";
+    for (let i = 0; i < cellElement.childNodes.length; i++) {
+        if (cellElement.childNodes[i].localName === "p") {
+            text += cellElement.childNodes[i].textContent || "";
         }
     }
     return text.trim();
@@ -347,22 +232,15 @@ function getCellText(cellElement) {
 
 function expandRowCells(rowElement) {
     const cells = [];
-    const children = rowElement.childNodes;
-
-    for (let i = 0; i < children.length; i++) {
-        const cell = children[i];
+    for (let i = 0; i < rowElement.childNodes.length; i++) {
+        const cell = rowElement.childNodes[i];
         if (cell.localName !== "table-cell" && cell.localName !== "covered-table-cell") continue;
-
         let repeat = 1;
         if (cell.hasAttribute("table:number-columns-repeated")) {
-            const repeatVal = cell.getAttribute("table:number-columns-repeated");
-            if (repeatVal) repeat = parseInt(repeatVal) || 1;
+            repeat = parseInt(cell.getAttribute("table:number-columns-repeated")) || 1;
         }
-
         const text = getCellText(cell);
-        for (let r = 0; r < Math.min(repeat, 30); r++) {
-            cells.push(text);
-        }
+        for (let r = 0; r < Math.min(repeat, 30); r++) cells.push(text);
     }
     return cells;
 }
@@ -371,7 +249,6 @@ function parseDebitOds(xmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, "application/xml");
     const rows = getAllTableRows(doc);
-
     const result = new Map();
     let colPlot = 0, colOwner = 1, colDebt = 7, colOverpay = 8;
     let headerFound = false, dataStarted = false;
@@ -408,46 +285,23 @@ function parseDebitOds(xmlString) {
 
         if (isPlotRow) {
             if (current && current.totalDebt > 0.01) result.set(current.plotNumber, current);
-
             const plotKey = col0.toLowerCase();
             const owner = (cells[colOwner] || "").trim();
             const debtEnd = parseNumber(cells[colDebt]);
             const overpayEnd = parseNumber(cells[colOverpay]);
-
             current = {
-                plotNumber: plotKey,
-                owner: owner,
-                totalDebt: debtEnd,
-                overpayEnd: overpayEnd,
-                hasDebt: debtEnd > 0.01,
-                hasOverpayment: overpayEnd > 0.01,
-                membershipDebt: 0,
-                targetDebt: 0,
-                arrearsDebt: 0,
-                workDebt: 0,
-                electricityDebt: 0,
-                details: []
+                plotNumber: plotKey, owner: owner, totalDebt: debtEnd, overpayEnd: overpayEnd,
+                hasDebt: debtEnd > 0.01, hasOverpayment: overpayEnd > 0.01,
+                membershipDebt: 0, targetDebt: 0, arrearsDebt: 0, workDebt: 0, electricityDebt: 0, details: []
             };
         } else if (current && col0 !== "") {
-            const categoryName = col0;
             const amount = parseNumber(cells[colDebt]);
             if (amount > 0.01) {
-                if (categoryName.includes("Членские взносы")) {
-                    current.membershipDebt += amount;
-                    current.details.push({ label: categoryName, amount: amount, cat: "membership" });
-                } else if (categoryName.includes("Целевые")) {
-                    current.targetDebt += amount;
-                    current.details.push({ label: categoryName, amount: amount, cat: "target" });
-                } else if (categoryName.includes("Задолженность прошлых лет") && !categoryName.includes("Отработка") && !categoryName.includes("Целевые")) {
-                    current.arrearsDebt += amount;
-                    current.details.push({ label: categoryName, amount: amount, cat: "arrears" });
-                } else if (categoryName.includes("Отработка")) {
-                    current.workDebt += amount;
-                    current.details.push({ label: categoryName, amount: amount, cat: "work" });
-                } else if (categoryName.includes("Электроэнергия")) {
-                    current.electricityDebt += amount;
-                    current.details.push({ label: categoryName, amount: amount, cat: "electricity" });
-                }
+                if (col0.includes("Членские взносы")) current.membershipDebt += amount;
+                else if (col0.includes("Целевые")) current.targetDebt += amount;
+                else if (col0.includes("Задолженность прошлых лет") && !col0.includes("Отработка")) current.arrearsDebt += amount;
+                else if (col0.includes("Отработка")) current.workDebt += amount;
+                else if (col0.includes("Электроэнергия")) current.electricityDebt += amount;
             }
         }
     }
@@ -483,11 +337,8 @@ function parseElectricityOds(xmlString) {
         const currentReading = parseNumber(cells[6]);
 
         result.set(plotKey, {
-            plotNumber: plotKey,
-            owner: owner,
-            currentReading: currentReading,
-            readingDateStr: readingDateStr,
-            tariff: TARIFF
+            plotNumber: plotKey, owner: owner, currentReading: currentReading,
+            readingDateStr: readingDateStr, tariff: TARIFF
         });
     }
     console.log(`Electricity loaded: ${result.size} записей`);
@@ -495,7 +346,7 @@ function parseElectricityOds(xmlString) {
 }
 
 // ==============================================================
-// 4. QR-ГЕНЕРАЦИЯ
+// QR-ГЕНЕРАЦИЯ
 // ==============================================================
 function sanitizePurpose(text) {
     return text.replace(/[|;,\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -515,7 +366,6 @@ function buildDetailedPurpose(debt) {
     if (debt.arrearsDebt > 0.01) parts.push(`Задолженность прошлых лет: ${formatAmountShort(debt.arrearsDebt)}р`);
     if (debt.workDebt > 0.01) parts.push(`Отработка: ${formatAmountShort(debt.workDebt)}р`);
     if (debt.electricityDebt > 0.01) parts.push(`Электроэнергия: ${formatAmountShort(debt.electricityDebt)}р`);
-
     let ownerShort = debt.owner || "";
     if (ownerShort.length > 20) ownerShort = ownerShort.substring(0, 17) + "…";
     const suffix = ownerShort ? ` уч.${debt.plotNumber} ${ownerShort}` : ` уч.${debt.plotNumber}`;
@@ -530,7 +380,6 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity = false) {
     if (isElectricity) finalPurpose = `Электроэнергия ${formatAmountShort(amount)}р уч.${plotNumber}`;
     else if (debtData) finalPurpose = buildDetailedPurpose(debtData);
     else finalPurpose = `Оплата взносов уч.${plotNumber}`;
-
     const cleanPurpose = sanitizePurpose(finalPurpose);
     return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${cleanPurpose}|Sum=${sumKop}`;
 }
@@ -539,11 +388,55 @@ async function generateQR(text) {
     return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
 
+async function generateAndShowQR(type, btn, qrText) {
+    const containerId = type === 'debt' ? 'debtQrContainer' : 'eeQrContainer';
+    const btnGroupId = type === 'debt' ? 'debtQrButtons' : 'eeQrButtons';
+    const container = document.getElementById(containerId);
+    const oldImg = document.getElementById(`${type}QrImg`);
+    if (oldImg) oldImg.remove();
+
+    const originalText = btn.innerText;
+    btn.innerText = "⏳ Генерация...";
+    btn.disabled = true;
+    try {
+        const qrDataUrl = await generateQR(qrText);
+        const img = document.createElement('img');
+        img.id = `${type}QrImg`;
+        img.src = qrDataUrl;
+        img.className = "qr-image";
+        container.appendChild(img);
+        const btnGroup = document.getElementById(btnGroupId);
+        if (btnGroup) btnGroup.style.display = "flex";
+    } catch(e) { alert("Ошибка QR: " + e.message); }
+    finally { btn.innerText = originalText; btn.disabled = false; }
+}
+
+window.shareQR = async function(imgId) {
+    const img = document.getElementById(imgId);
+    if (!img) return;
+    try {
+        const blob = await fetch(img.src).then(r => r.blob());
+        const file = new File([blob], "qr_payment.png", { type: "image/png" });
+        if (navigator.share) await navigator.share({ files: [file], title: "QR-код оплаты" });
+        else { const link = document.createElement('a'); link.download = "qr_payment.png"; link.href = img.src; link.click(); }
+    } catch(e) { console.error("Share failed:", e); }
+};
+
+window.saveQR = function(imgId) {
+    const img = document.getElementById(imgId);
+    if (!img) return;
+    const link = document.createElement('a');
+    link.download = "qr_payment.png";
+    link.href = img.src;
+    link.click();
+};
+
 // ==============================================================
-// 5. ЗАГРУЗКА И ОТРИСОВКА ДАННЫХ
+// ЗАГРУЗКА ДАННЫХ
 // ==============================================================
 async function loadPlotData(plotNumber) {
     const normalized = plotNumber.trim().toLowerCase();
+    currentPlotNumber = normalized;
     const debtContainer = document.getElementById("debtCard");
     const eeContainer = document.getElementById("electricityCard");
     const notFoundDiv = document.getElementById("notFoundBlock");
@@ -584,6 +477,96 @@ async function loadPlotData(plotNumber) {
     }
 }
 
+// ==============================================================
+// ФУНКЦИЯ ЗАГРУЗКИ ФОТО НА СЕРВЕР
+// ==============================================================
+async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
+    const formData = new FormData();
+    formData.append('plot_number', plotNumber);
+    formData.append('reading_value', readingValue);
+    formData.append('photo', photoFile);
+
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        let errorMsg = `HTTP ${response.status}`;
+        try {
+            const error = await response.json();
+            errorMsg = error.error || errorMsg;
+        } catch(e) {}
+        throw new Error(errorMsg);
+    }
+
+    return await response.json();
+}
+
+function takePhoto() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment";
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const readingInput = document.getElementById("newReadingInput");
+        const readingValue = readingInput ? readingInput.value : "";
+
+        // Превью
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const preview = document.getElementById("photoPreview");
+            if (preview) {
+                preview.src = event.target.result;
+                preview.style.display = "block";
+            }
+        };
+        reader.readAsDataURL(file);
+
+        // UI
+        const takeBtn = document.getElementById("takePhotoBtn");
+        const progressDiv = document.getElementById("photoUploadProgress");
+        const successDiv = document.getElementById("photoUploadSuccess");
+        const errorDiv = document.getElementById("photoUploadError");
+        const ydStatus = document.getElementById("ydStatus");
+        const photoActions = document.getElementById("photoActions");
+
+        if (takeBtn) takeBtn.style.display = "none";
+        if (progressDiv) progressDiv.style.display = "block";
+        if (successDiv) successDiv.style.display = "none";
+        if (errorDiv) errorDiv.style.display = "none";
+        if (ydStatus) ydStatus.innerHTML = "☁ Загрузка...";
+
+        try {
+            const result = await uploadPhotoToServer(currentPlotNumber, readingValue, file);
+            if (progressDiv) progressDiv.style.display = "none";
+            if (successDiv) successDiv.style.display = "block";
+            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено на Яндекс.Диске";
+            if (takeBtn) {
+                takeBtn.style.display = "block";
+                takeBtn.innerHTML = "📷 Сфотографировать ещё раз";
+            }
+            if (photoActions) photoActions.style.display = "none";
+        } catch (err) {
+            console.error("Upload error:", err);
+            if (progressDiv) progressDiv.style.display = "none";
+            if (errorDiv) {
+                errorDiv.style.display = "block";
+                errorDiv.innerHTML = `⚠️ ${err.message}`;
+            }
+            if (ydStatus) ydStatus.innerHTML = "☁ Ошибка загрузки";
+            if (takeBtn) takeBtn.style.display = "block";
+        }
+    };
+    input.click();
+}
+
+// ==============================================================
+// ОТРИСОВКА КАРТОЧЕК
+// ==============================================================
 function renderDebtCard(debt) {
     const container = document.getElementById("debtCard");
     container.classList.remove("hidden");
@@ -640,6 +623,19 @@ function renderElectricityCard(ee) {
             <button onclick="window.shareQR('eeQrImg')">↗ Поделиться</button>
             <button onclick="window.saveQR('eeQrImg')">💾 Сохранить</button>
         </div>
+    </div>
+    <div class="card-content meter-photo-card">
+        <div class="card-header">📸 Фото показаний счётчика</div>
+        <img id="photoPreview" class="photo-preview">
+        <div id="photoUploadProgress" class="upload-progress">⏳ Загрузка на Яндекс.Диск...</div>
+        <div id="photoUploadSuccess" class="upload-success">✓ Фото сохранено на Яндекс.Диске</div>
+        <div id="photoUploadError" class="upload-error"></div>
+        <button id="takePhotoBtn" class="qr-btn" style="background:var(--blue-600);">📷 Сфотографировать счётчик</button>
+        <div id="photoActions" class="photo-actions" style="display:none;">
+            <button id="uploadPhotoBtn" class="btn-upload">☁ Загрузить</button>
+            <button id="retakePhotoBtn" class="btn-retake">↺ Переснять</button>
+        </div>
+        <div id="ydStatus" class="yd-status">☁ Яндекс.Диск</div>
     </div>`;
     container.innerHTML = html;
 
@@ -665,74 +661,13 @@ function renderElectricityCard(ee) {
             };
         });
     }
-}
 
-async function generateAndShowQR(type, btn, qrText) {
-    const containerId = type === 'debt' ? 'debtQrContainer' : 'eeQrContainer';
-    const btnGroupId = type === 'debt' ? 'debtQrButtons' : 'eeQrButtons';
-    const container = document.getElementById(containerId);
-    const oldImg = document.getElementById(`${type}QrImg`);
-    if (oldImg) oldImg.remove();
-
-    const originalText = btn.innerText;
-    btn.innerText = "⏳ Генерация...";
-    btn.disabled = true;
-    try {
-        const qrDataUrl = await generateQR(qrText);
-        const img = document.createElement('img');
-        img.id = `${type}QrImg`;
-        img.src = qrDataUrl;
-        img.className = "qr-image";
-        img.alt = "QR-код для оплаты";
-        container.appendChild(img);
-        const btnGroup = document.getElementById(btnGroupId);
-        if (btnGroup) btnGroup.style.display = "flex";
-    } catch(e) {
-        alert("Ошибка QR: " + e.message);
-    } finally {
-        btn.innerText = originalText;
-        btn.disabled = false;
-    }
-}
-
-window.shareQR = async function(imgId) {
-    const img = document.getElementById(imgId);
-    if (!img) return;
-    try {
-        const blob = await fetch(img.src).then(r => r.blob());
-        const file = new File([blob], "qr_payment.png", { type: "image/png" });
-        if (navigator.share) {
-            await navigator.share({ files: [file], title: "QR-код оплаты" });
-        } else {
-            const link = document.createElement('a');
-            link.download = "qr_payment.png";
-            link.href = img.src;
-            link.click();
-        }
-    } catch(e) { console.error("Share failed:", e); }
-};
-
-window.saveQR = function(imgId) {
-    const img = document.getElementById(imgId);
-    if (!img) return;
-    const link = document.createElement('a');
-    link.download = "qr_payment.png";
-    link.href = img.src;
-    link.click();
-};
-
-function escapeHtml(str) {
-    if (!str) return "";
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+    const takeBtn = document.getElementById("takePhotoBtn");
+    if (takeBtn) takeBtn.onclick = takePhoto;
 }
 
 // ==============================================================
-// 6. СОГЛАСИЕ НА ОБРАБОТКУ ПД (ФЗ-152)
+// СОГЛАСИЕ И НАСТРОЙКИ
 // ==============================================================
 function isConsentAccepted() {
     return localStorage.getItem(CONSENT_STORAGE_KEY) === "true" && localStorage.getItem(CONSENT_VERSION_KEY) === CONSENT_VERSION;
@@ -754,136 +689,53 @@ function revokeConsent() {
 function showConsentScreen() {
     const overlay = document.createElement('div');
     overlay.className = 'consent-overlay';
-    overlay.innerHTML = `
-        <div class="consent-modal">
-            <div class="consent-header"><div style="font-size:32px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p style="font-size:13px; opacity:0.9;">Согласие с условиями использования</p></div>
-            <div class="consent-body">
-                <div style="margin-bottom:16px; font-size:14px;">Садоводческое некоммерческое товарищество «Берёзка-2» (ИНН 5433118499) является оператором персональных данных.</div>
-                <div class="consent-section"><div class="consent-section-title">🔐 Персональные данные</div>
-                    <div style="font-size:13px;">Приложение обрабатывает следующие данные членов СНТ:</div>
-                    <ul class="data-list"><li>Номер земельного участка</li><li>Фамилия, имя, отчество члена СНТ</li><li>Сведения о задолженностях по взносам</li><li>Показания и история потребления электроэнергии</li></ul>
-                    <div class="consent-check-row"><input type="checkbox" id="consentCheckPersonal"><label>Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152 «О персональных данных»</label></div>
-                </div>
-                <div class="consent-section"><div class="consent-section-title">📋 Пользовательское соглашение</div>
-                    <div style="font-size:13px;">Используя данное приложение, Вы соглашаетесь с тем, что:</div>
-                    <ul class="data-list"><li>Приложение предоставляется «как есть» для членов СНТ «Берёзка-2»</li><li>Данные о задолженностях носят информационный характер</li><li>Для точных сведений обращайтесь к бухгалтеру СНТ</li><li>Запрещено передавать доступ к приложению третьим лицам</li><li>QR-коды сформированы на основе данных бухгалтерии СНТ</li></ul>
-                    <div class="consent-check-row"><input type="checkbox" id="consentCheckTerms"><label>Я ознакомился(ась) с Пользовательским соглашением и принимаю его условия</label></div>
-                </div>
-                <div class="consent-section"><div class="consent-section-title">👤 Подтверждение</div>
-                    <div class="consent-check-row"><input type="checkbox" id="consentCheckAge"><label>Мне исполнилось 18 лет, и я являюсь членом СНТ «Берёзка-2» или его уполномоченным представителем</label></div>
-                </div>
-                <div style="font-size:11px; color:var(--gray-400); text-align:center; margin-top:12px;">Настоящее согласие выдаётся в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ «О персональных данных».</div>
-            </div>
-            <div class="consent-footer">
-                <button class="btn-consent-accept" id="consentAcceptBtn" disabled>✓ Принять и продолжить</button>
-                <button class="btn-consent-decline" id="consentDeclineBtn">Отказаться и закрыть</button>
-            </div>
-        </div>`;
+    overlay.innerHTML = `<div class="consent-modal"><div class="consent-header"><div style="font-size:32px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p>Согласие с условиями использования</p></div>
+        <div class="consent-body"><div class="consent-section"><div class="consent-section-title">🔐 Персональные данные</div>
+        <ul class="data-list"><li>Номер земельного участка</li><li>Фамилия, имя, отчество члена СНТ</li><li>Сведения о задолженностях</li><li>Показания электроэнергии</li></ul>
+        <div class="consent-check-row"><input type="checkbox" id="consentCheckPersonal"><label>Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152</label></div></div>
+        <div class="consent-section"><div class="consent-section-title">📋 Пользовательское соглашение</div>
+        <ul class="data-list"><li>Приложение предоставляется «как есть»</li><li>Данные носят информационный характер</li><li>Запрещена передача доступа третьим лицам</li></ul>
+        <div class="consent-check-row"><input type="checkbox" id="consentCheckTerms"><label>Я принимаю условия Пользовательского соглашения</label></div></div>
+        <div class="consent-section"><div class="consent-section-title">👤 Подтверждение</div>
+        <div class="consent-check-row"><input type="checkbox" id="consentCheckAge"><label>Мне исполнилось 18 лет, я являюсь членом СНТ или его представителем</label></div></div></div>
+        <div class="consent-footer"><button class="btn-consent-accept" id="consentAcceptBtn" disabled>✓ Принять и продолжить</button>
+        <button class="btn-consent-decline" id="consentDeclineBtn">Отказаться и закрыть</button></div></div>`;
     document.body.appendChild(overlay);
-
-    const c1 = document.getElementById('consentCheckPersonal');
-    const c2 = document.getElementById('consentCheckTerms');
-    const c3 = document.getElementById('consentCheckAge');
+    const c1 = document.getElementById('consentCheckPersonal'), c2 = document.getElementById('consentCheckTerms'), c3 = document.getElementById('consentCheckAge');
     const acceptBtn = document.getElementById('consentAcceptBtn');
-
-    function updateAcceptButton() {
-        acceptBtn.disabled = !(c1 && c1.checked && c2 && c2.checked && c3 && c3.checked);
-    }
-    if (c1) c1.onchange = updateAcceptButton;
-    if (c2) c2.onchange = updateAcceptButton;
-    if (c3) c3.onchange = updateAcceptButton;
-
-    const acceptBtnEl = document.getElementById('consentAcceptBtn');
-    if (acceptBtnEl) {
-        acceptBtnEl.onclick = () => {
-            if (c1 && c1.checked && c2 && c2.checked && c3 && c3.checked) {
-                saveConsent();
-                overlay.remove();
-                document.getElementById('mainApp').style.display = '';
-                initMainApp();
-            }
-        };
-    }
-
-    const declineBtn = document.getElementById('consentDeclineBtn');
-    if (declineBtn) {
-        declineBtn.onclick = () => {
-            if (confirm('Без согласия на обработку персональных данных использование приложения невозможно. Приложение будет закрыто.')) {
-                window.close();
-            }
-        };
-    }
+    function update() { acceptBtn.disabled = !(c1 && c1.checked && c2 && c2.checked && c3 && c3.checked); }
+    if (c1) c1.onchange = update;
+    if (c2) c2.onchange = update;
+    if (c3) c3.onchange = update;
+    acceptBtn.onclick = () => { saveConsent(); overlay.remove(); document.getElementById('mainApp').style.display = ''; initMainApp(); };
+    document.getElementById('consentDeclineBtn').onclick = () => { if (confirm('Без согласия использование невозможно. Закрыть?')) window.close(); };
 }
 
 function showSettingsModal() {
     const modal = document.createElement('div');
     modal.className = 'consent-overlay';
     modal.innerHTML = `<div class="consent-modal"><div class="consent-header" style="background:var(--gray-800);"><h2>⚙️ Настройки</h2><button style="position:absolute;right:16px;top:16px;background:none;border:none;color:white;font-size:24px;cursor:pointer;" id="closeSettingsModal">×</button></div>
-        <div class="consent-body"><div class="setting-row"><div class="setting-label"><p>Статус согласия</p><small>ФЗ-152 «О персональных данных»</small></div><div><span class="consent-status accepted">✓ Согласие принято</span></div></div>
-        <div class="setting-row"><div class="setting-label"><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button class="btn-revoke" id="revokeConsentBtn">Отозвать</button></div>
-        <div class="setting-row"><div class="setting-label"><p>Очистить кэш данных</p><small>Удаляет загруженные данные об участках</small></div><button class="btn-revoke" id="clearCacheBtn" style="background:var(--red-600);">Очистить</button></div>
-        <div style="font-size:12px; color:var(--gray-500); text-align:center; margin-top:16px;">Версия 2.0 | СНТ «Берёзка-2»</div></div>
+        <div class="consent-body"><div class="setting-row"><div><p>Статус согласия</p><small>ФЗ-152</small></div><div><span class="consent-status">✓ Согласие принято</span></div></div>
+        <div class="setting-row"><div><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button class="btn-revoke" id="revokeConsentBtn">Отозвать</button></div>
+        <div class="setting-row"><div><p>Очистить кэш данных</p><small>Удаляет загруженные данные об участках</small></div><button class="btn-revoke" id="clearCacheBtn" style="background:var(--red-600);">Очистить</button></div></div>
         <div class="consent-footer"><button class="btn-consent-accept" id="closeSettingsBtn" style="background:var(--gray-600);">Закрыть</button></div></div>`;
     document.body.appendChild(modal);
-
-    const closeModal = () => modal.remove();
-    const closeBtn = modal.querySelector('#closeSettingsModal');
-    if (closeBtn) closeBtn.onclick = closeModal;
-    const closeSettingsBtn = modal.querySelector('#closeSettingsBtn');
-    if (closeSettingsBtn) closeSettingsBtn.onclick = closeModal;
-    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
-
-    const revokeBtn = modal.querySelector('#revokeConsentBtn');
-    if (revokeBtn) {
-        revokeBtn.onclick = () => {
-            if (confirm('Вы уверены, что хотите отозвать согласие на обработку персональных данных?\n\nПосле этого приложение очистит все данные и потребует повторного согласия.')) {
-                revokeConsent();
-            }
-        };
-    }
-
-    const clearCacheBtn = modal.querySelector('#clearCacheBtn');
-    if (clearCacheBtn) {
-        clearCacheBtn.onclick = () => {
-            if (confirm('Очистить кэш загруженных данных? При следующем поиске данные будут загружены заново.')) {
-                cachedDebtMap.clear();
-                cachedElectricityMap.clear();
-                alert('Кэш данных очищен.');
-                closeModal();
-            }
-        };
-    }
+    const close = () => modal.remove();
+    modal.querySelector('#closeSettingsModal').onclick = close;
+    modal.querySelector('#closeSettingsBtn').onclick = close;
+    modal.querySelector('#revokeConsentBtn').onclick = () => { if (confirm('Отозвать согласие?')) revokeConsent(); };
+    modal.querySelector('#clearCacheBtn').onclick = () => { cachedDebtMap.clear(); cachedElectricityMap.clear(); alert('Кэш очищен'); close(); };
 }
 
 function initMainApp() {
     const searchBtn = document.getElementById("searchBtn");
     const plotInput = document.getElementById("plotInput");
     const settingsBtn = document.getElementById("settingsBtn");
-
-    if (searchBtn) {
-        searchBtn.addEventListener("click", () => {
-            const v = plotInput ? plotInput.value : "";
-            if (v.trim()) loadPlotData(v);
-            else alert("Введите номер участка");
-        });
-    }
-
-    if (plotInput) {
-        plotInput.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                const v = plotInput.value;
-                if (v.trim()) loadPlotData(v);
-                else alert("Введите номер участка");
-            }
-        });
-    }
-
+    if (searchBtn) searchBtn.addEventListener("click", () => { const v = plotInput ? plotInput.value : ""; if (v.trim()) loadPlotData(v); else alert("Введите номер участка"); });
+    if (plotInput) plotInput.addEventListener("keypress", (e) => { if (e.key === "Enter") { const v = plotInput.value; if (v.trim()) loadPlotData(v); else alert("Введите номер участка"); } });
     if (settingsBtn) settingsBtn.addEventListener("click", showSettingsModal);
 }
 
-// ==============================================================
-// 7. ЗАПУСК
-// ==============================================================
 if (isConsentAccepted()) {
     document.getElementById('mainApp').style.display = '';
     initMainApp();
@@ -891,10 +743,9 @@ if (isConsentAccepted()) {
     showConsentScreen();
 }
 
-// Service Worker Registration (с защитой от ошибок)
-if ('serviceWorker' in navigator && !window.location.href.includes('chrome-extension')) {
+if ('serviceWorker' in navigator && !location.href.includes('chrome-extension')) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW registration skipped:', e));
+        navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW:', e));
     });
 }
 </script>
