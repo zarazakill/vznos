@@ -7,7 +7,6 @@
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
-        /* все стили из предыдущей версии */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #F4F6F4; padding-bottom: 20px; }
         .app-header { background: #2E7D32; padding: 20px; color: white; position: relative; }
@@ -49,6 +48,13 @@
         .btn-upload { flex: 1; background: #1565C0; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
         .btn-retake { flex: 1; background: #E0E0E0; color: #424242; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
+        /* Manual payment card */
+        .manual-card { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
+        .manual-card .card-content { padding: 20px; }
+        .manual-card .card-header { color: #2E7D32; }
+        .manual-input { width: 100%; padding: 14px 16px; font-size: 16px; border: 1.5px solid #E0E0E0; border-radius: 16px; margin: 12px 0; }
+        .manual-actions { display: flex; gap: 10px; margin: 8px 0; }
+
         @media (max-width: 480px) {
             .search-input-group { flex-direction: column; }
             .debt-total { font-size: 18px; }
@@ -77,6 +83,7 @@
     <div id="errorMessage" class="error-state hidden"></div>
     <div id="debtCard" class="card hidden"></div>
     <div id="electricityCard" class="card hidden"></div>
+    <div id="manualPaymentCard" class="manual-card hidden"></div>
     <div id="notFoundBlock" class="not-found hidden">🔍 Участок не найден в базе. Проверьте номер.</div>
     <div class="footer-note">⚡ Данные синхронизируются при каждом поиске</div>
 </div>
@@ -99,10 +106,13 @@ const CORRESP_ACC = "30101810500000000641";
 
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
 const EE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
+const BASE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
 
 let cachedDebtMap = new Map();
 let cachedElectricityMap = new Map();
+let cachedBaseMap = new Map();  // Мастер-справочник участков
 let currentPlotNumber = "";
+let currentMemberRecord = null;  // Данные из base.ods для текущего участка
 
 // ==============================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -195,6 +205,47 @@ function expandRowCells(rowElement) {
     return cells;
 }
 
+/**
+ * Парсинг base.ods — мастер-справочник участков
+ * Структура: col10 = номер участка, col1 = владелец, col2 = членство, col3 = телефон, col4 = email, col11 = адрес, col12 = площадь
+ */
+function parseBaseOds(xmlString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlString, "application/xml");
+    const rows = getAllTableRows(doc);
+    const result = new Map();
+
+    for (let i = 8; i < rows.length; i++) {  // Пропускаем первые 8 строк (заголовки)
+        const cells = expandRowCells(rows[i]);
+        if (cells.length === 0) continue;
+
+        const plotRaw = (cells[10] || "").trim();  // col10 = номер участка
+        if (plotRaw === "") continue;
+        if (plotRaw.toLowerCase() === "итого") break;
+
+        const plotKey = plotRaw.toLowerCase();
+        const owner = (cells[1] || "").trim();
+        const membership = (cells[2] || "").trim();
+        const phone = (cells[3] || "").trim();
+        const email = (cells[4] || "").trim();
+        const plotAddress = (cells[11] || "").trim();
+        const area = (cells[12] || "").trim();
+
+        result.set(plotKey, {
+            plotNumber: plotKey,
+            owner: owner,
+            membership: membership,
+            phone: phone,
+            email: email,
+            plotAddress: plotAddress,
+            area: area,
+            isMember: membership && !membership.toLowerCase().includes("не является")
+        });
+    }
+    console.log(`Base loaded: ${result.size} участков`);
+    return result;
+}
+
 function parseDebitOds(xmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, "application/xml");
@@ -247,11 +298,12 @@ function parseDebitOds(xmlString) {
         } else if (current && col0 !== "") {
             const amount = parseNumber(cells[colDebt]);
             if (amount > 0.01) {
-                if (col0.includes("Членские взносы")) current.membershipDebt += amount;
-                else if (col0.includes("Целевые")) current.targetDebt += amount;
-                else if (col0.includes("Задолженность прошлых лет") && !col0.includes("Отработка")) current.arrearsDebt += amount;
-                else if (col0.includes("Отработка")) current.workDebt += amount;
-                else if (col0.includes("Электроэнергия")) current.electricityDebt += amount;
+                const category = col0.toLowerCase();
+                if (category.includes("членские взносы")) current.membershipDebt += amount;
+                else if (category.includes("целевые")) current.targetDebt += amount;
+                else if (category.includes("задолженность прошлых лет") && !category.includes("отработка")) current.arrearsDebt += amount;
+                else if (category.includes("отработка")) current.workDebt += amount;
+                else if (category.includes("электроэнергия")) current.electricityDebt += amount;
             }
         }
     }
@@ -284,11 +336,14 @@ function parseElectricityOds(xmlString) {
         const plotKey = col0.toLowerCase();
         const owner = (cells[1] || "").trim();
         const readingDateStr = (cells[4] || "").trim();
+        const previousReading = parseNumber(cells[5]);
         const currentReading = parseNumber(cells[6]);
+        const consumption = parseNumber(cells[7]);
 
         result.set(plotKey, {
-            plotNumber: plotKey, owner: owner, currentReading: currentReading,
-            readingDateStr: readingDateStr, tariff: TARIFF
+            plotNumber: plotKey, owner: owner,
+            currentReading: currentReading, previousReading: previousReading,
+            consumption: consumption, readingDateStr: readingDateStr, tariff: TARIFF
         });
     }
     console.log(`Electricity loaded: ${result.size} записей`);
@@ -324,7 +379,7 @@ function buildDetailedPurpose(debt) {
     return result;
 }
 
-function buildPaymentQR(plotNumber, amount, debtData, isElectricity = false) {
+function buildPaymentQR(plotNumber, amount, debtData = null, isElectricity = false) {
     const sumKop = Math.round(amount * 100);
     let finalPurpose;
     if (isElectricity) finalPurpose = `Электроэнергия ${formatAmountShort(amount)}р уч.${plotNumber}`;
@@ -335,13 +390,14 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity = false) {
 }
 
 async function generateQR(text) {
-    return await QRCode.toDataURL(text, { width:280, margin:1, errorCorrectionLevel:'H' });
+    return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
 
 async function generateAndShowQR(type, btn, qrText) {
-    const containerId = type === 'debt' ? 'debtQrContainer' : 'eeQrContainer';
-    const btnGroupId = type === 'debt' ? 'debtQrButtons' : 'eeQrButtons';
+    const containerId = type === 'debt' ? 'debtQrContainer' : (type === 'ee' ? 'eeQrContainer' : 'manualQrContainer');
+    const btnGroupId = type === 'debt' ? 'debtQrButtons' : (type === 'ee' ? 'eeQrButtons' : 'manualQrButtons');
     const container = document.getElementById(containerId);
+    if (!container) return;
     const oldImg = document.getElementById(`${type}QrImg`);
     if (oldImg) oldImg.remove();
 
@@ -366,9 +422,9 @@ window.shareQR = async function(imgId) {
     if (!img) return;
     try {
         const blob = await fetch(img.src).then(r => r.blob());
-        const file = new File([blob], "qr_payment.png", { type:"image/png" });
-        if (navigator.share) await navigator.share({ files:[file], title:"QR-код оплаты" });
-        else { const a = document.createElement('a'); a.download="qr_payment.png"; a.href=img.src; a.click(); }
+        const file = new File([blob], "qr_payment.png", { type: "image/png" });
+        if (navigator.share) await navigator.share({ files: [file], title: "QR-код оплаты" });
+        else { const a = document.createElement('a'); a.download = "qr_payment.png"; a.href = img.src; a.click(); }
     } catch(e) { console.error(e); }
 };
 
@@ -382,41 +438,85 @@ window.saveQR = function(imgId) {
 };
 
 // ==============================================================
-// ЗАГРУЗКА ДАННЫХ
+// ЗАГРУЗКА ДАННЫХ (синхронизация трёх источников)
 // ==============================================================
+async function syncAllData() {
+    const loadingDiv = document.getElementById("loadingIndicator");
+    loadingDiv.classList.remove("hidden");
+    loadingDiv.innerHTML = "📁 Загрузка реестра участков...";
+
+    try {
+        // Загружаем base.ods первым
+        if (cachedBaseMap.size === 0) {
+            cachedBaseMap = await fetchAndParseOds(BASE_URL, parseBaseOds);
+        }
+
+        loadingDiv.innerHTML = "💰 Загрузка долгов...";
+        if (cachedDebtMap.size === 0) {
+            cachedDebtMap = await fetchAndParseOds(DEBIT_URL, parseDebitOds);
+        }
+
+        loadingDiv.innerHTML = "⚡ Загрузка электроэнергии...";
+        if (cachedElectricityMap.size === 0) {
+            cachedElectricityMap = await fetchAndParseOds(EE_URL, parseElectricityOds);
+        }
+
+        loadingDiv.classList.add("hidden");
+        return true;
+    } catch (err) {
+        loadingDiv.classList.add("hidden");
+        throw err;
+    }
+}
+
 async function loadPlotData(plotNumber) {
     const normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
+
     const debtDiv = document.getElementById("debtCard");
     const eeDiv = document.getElementById("electricityCard");
+    const manualDiv = document.getElementById("manualPaymentCard");
     const notFound = document.getElementById("notFoundBlock");
     const loading = document.getElementById("loadingIndicator");
     const errorDiv = document.getElementById("errorMessage");
 
     debtDiv.classList.add("hidden");
     eeDiv.classList.add("hidden");
+    manualDiv.classList.add("hidden");
     notFound.classList.add("hidden");
     errorDiv.classList.add("hidden");
     loading.classList.remove("hidden");
+    loading.innerHTML = "🔄 Синхронизация данных...";
 
     try {
-        if (cachedDebtMap.size === 0) {
-            loading.innerHTML = "☁️ Загрузка долгов...";
-            cachedDebtMap = await fetchAndParseOds(DEBIT_URL, parseDebitOds);
-            loading.innerHTML = "⚡ Загрузка э/э...";
-            cachedElectricityMap = await fetchAndParseOds(EE_URL, parseElectricityOds);
-        }
+        await syncAllData();
         loading.classList.add("hidden");
 
         const debt = cachedDebtMap.get(normalized);
         const ee = cachedElectricityMap.get(normalized);
+        const member = cachedBaseMap.get(normalized);
 
-        if (!debt && !ee) {
+        currentMemberRecord = member || null;
+
+        // Если участка нет ни в одном источнике — ошибка
+        if (!debt && !ee && !member) {
             notFound.classList.remove("hidden");
             return;
         }
-        if (debt) renderDebtCard(debt);
-        if (ee) renderElectricityCard(ee);
+
+        // Показываем карточку долга если есть данные
+        if (debt) {
+            renderDebtCard(debt);
+        }
+
+        // Показываем карточку электроэнергии если есть данные
+        if (ee) {
+            renderElectricityCard(ee);
+        }
+
+        // Карточка ручной оплаты — всегда если участок найден (из любого источника)
+        renderManualPaymentCard(member, debt, ee);
+
     } catch (err) {
         loading.classList.add("hidden");
         errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
@@ -425,87 +525,77 @@ async function loadPlotData(plotNumber) {
 }
 
 // ==============================================================
-// ФУНКЦИИ ДЛЯ ФОТО
+// КАРТОЧКА РУЧНОЙ ОПЛАТЫ (как в Android)
 // ==============================================================
-async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
-    const formData = new FormData();
-    formData.append('plot_number', plotNumber);
-    formData.append('reading_value', readingValue);
-    formData.append('photo', photoFile);
+function renderManualPaymentCard(member, debt, ee) {
+    const container = document.getElementById("manualPaymentCard");
 
-    const response = await fetch(`${API_BASE_URL}/upload`, {
-        method: 'POST',
-        body: formData
-    });
+    // Определяем владельца: из debt > ee > member
+    let ownerName = "";
+    if (debt && debt.owner) ownerName = debt.owner;
+    else if (ee && ee.owner) ownerName = ee.owner;
+    else if (member && member.owner) ownerName = member.owner;
 
-    if (!response.ok) {
-        let errorMsg = `HTTP ${response.status}`;
-        try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch(e) {}
-        throw new Error(errorMsg);
-    }
-    return await response.json();
-}
+    container.classList.remove("hidden");
+    container.innerHTML = `
+        <div class="card-content">
+            <div class="card-header">💰 Оплата взносов</div>
+            <div style="font-size:13px;">Участок №${currentPlotNumber}</div>
+            <div class="plot-owner">${escapeHtml(ownerName || "Владелец не указан")}</div>
 
-function takePhoto() {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.capture = "environment";
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+            <input type="number" id="manualAmountInput" class="manual-input" placeholder="Сумма к оплате (₽)" step="any" value="">
+            <input type="text" id="manualPurposeInput" class="manual-input" placeholder="Назначение платежа (необязательно)" value="">
 
-        const readingInput = document.getElementById("newReadingInput");
-        const readingValue = readingInput ? readingInput.value : "";
+            <button id="manualGenerateBtn" class="qr-btn" style="background:#2E7D32;">📱 Сгенерировать QR для оплаты</button>
 
-        // Превью
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const preview = document.getElementById("photoPreview");
-            if (preview) { preview.src = ev.target.result; preview.style.display = "block"; }
-        };
-        reader.readAsDataURL(file);
+            <div id="manualQrContainer"></div>
+            <div id="manualQrButtons" class="qr-group" style="display:none;">
+                <button onclick="shareQR('manualQrImg')">↗ Поделиться</button>
+                <button onclick="saveQR('manualQrImg')">💾 Сохранить</button>
+            </div>
+        </div>
+    `;
 
-        // UI
-        const takeBtn = document.getElementById("takePhotoBtn");
-        const progress = document.getElementById("photoUploadProgress");
-        const success = document.getElementById("photoUploadSuccess");
-        const errorDiv = document.getElementById("photoUploadError");
-        const ydStatus = document.getElementById("ydStatus");
-        const actions = document.getElementById("photoActions");
+    const amountInput = document.getElementById("manualAmountInput");
+    const purposeInput = document.getElementById("manualPurposeInput");
+    const generateBtn = document.getElementById("manualGenerateBtn");
 
-        if (takeBtn) takeBtn.style.display = "none";
-        if (progress) progress.style.display = "block";
-        if (success) success.style.display = "none";
-        if (errorDiv) errorDiv.style.display = "none";
-        if (ydStatus) ydStatus.innerHTML = "☁ Загрузка...";
-
-        try {
-            await uploadPhotoToServer(currentPlotNumber, readingValue, file);
-            if (progress) progress.style.display = "none";
-            if (success) success.style.display = "block";
-            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено";
-            if (takeBtn) { takeBtn.style.display = "block"; takeBtn.innerHTML = "📷 Сфотографировать ещё раз"; }
-            if (actions) actions.style.display = "none";
-        } catch (err) {
-            if (progress) progress.style.display = "none";
-            if (errorDiv) { errorDiv.style.display = "block"; errorDiv.innerHTML = `⚠️ ${err.message}`; }
-            if (ydStatus) ydStatus.innerHTML = "☁ Ошибка загрузки";
-            if (takeBtn) takeBtn.style.display = "block";
+    const updateManualQr = () => {
+        const amount = parseFloat(amountInput.value);
+        if (isNaN(amount) || amount <= 0) {
+            generateBtn.disabled = true;
+            generateBtn.innerText = "📱 Введите сумму";
+            generateBtn.style.opacity = "0.5";
+            return;
         }
+        generateBtn.disabled = false;
+        generateBtn.innerText = "📱 Сгенерировать QR для оплаты";
+        generateBtn.style.opacity = "1";
+
+        generateBtn.onclick = async () => {
+            const amountVal = parseFloat(amountInput.value);
+            const purpose = purposeInput.value.trim();
+            const qrText = buildPaymentQR(currentPlotNumber, amountVal, null, false);
+            await generateAndShowQR('manual', generateBtn, qrText);
+        };
     };
-    input.click();
+
+    amountInput.addEventListener("input", updateManualQr);
+    purposeInput.addEventListener("input", updateManualQr);
+    updateManualQr();
 }
 
 // ==============================================================
-// ОТРИСОВКА КАРТОЧЕК
+// КАРТОЧКА ДОЛГА
 // ==============================================================
 function renderDebtCard(debt) {
     const container = document.getElementById("debtCard");
     container.classList.remove("hidden");
+
     let html = `<div class="card-content"><div class="card-header">💰 Задолженность</div>
         <div style="font-size:13px;">Участок №${debt.plotNumber}</div>
         <div class="plot-owner">${escapeHtml(debt.owner || "Владелец не указан")}</div>`;
+
     if (debt.hasDebt) {
         html += `<div class="debt-total amount-red">Задолженность: ${formatMoney(debt.totalDebt)} ₽</div>
             <div style="margin-top:8px;">`;
@@ -515,8 +605,9 @@ function renderDebtCard(debt) {
         if (debt.workDebt > 0.01) html += `<div class="debt-line"><span>Отработка:</span><span class="amount-red">${formatMoney(debt.workDebt)} ₽</span></div>`;
         if (debt.electricityDebt > 0.01) html += `<div class="debt-line"><span>Электроэнергия:</span><span class="amount-red">${formatMoney(debt.electricityDebt)} ₽</span></div>`;
         html += `</div><div style="font-size:12px; margin:10px 0;">Прописью: ${numberToWords(debt.totalDebt)}</div>`;
+
         const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
-        html += `<button class="qr-btn" data-qr-text="${qrText.replace(/'/g, "\\'")}">📱 QR для оплаты</button>
+        html += `<button id="debtQrGenerateBtn" class="qr-btn">📱 QR для оплаты</button>
             <div id="debtQrContainer"></div>
             <div id="debtQrButtons" style="display:none;" class="qr-group">
                 <button onclick="shareQR('debtQrImg')">↗ Поделиться</button>
@@ -530,13 +621,23 @@ function renderDebtCard(debt) {
     html += `</div>`;
     container.innerHTML = html;
 
-    const btn = container.querySelector('.qr-btn');
-    if (btn) btn.onclick = () => generateAndShowQR('debt', btn, btn.dataset.qrText);
+    const generateBtn = document.getElementById("debtQrGenerateBtn");
+    if (generateBtn && debt.hasDebt) {
+        const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
+        generateBtn.onclick = () => generateAndShowQR('debt', generateBtn, qrText);
+    }
 }
 
+// ==============================================================
+// КАРТОЧКА ЭЛЕКТРОЭНЕРГИИ
+// ==============================================================
+let currentEeData = null;
+
 function renderElectricityCard(ee) {
+    currentEeData = ee;
     const container = document.getElementById("electricityCard");
     container.classList.remove("hidden");
+
     let html = `<div class="card-content"><div class="card-header">⚡ Электроэнергия</div>
         <div style="font-size:13px;">Участок №${ee.plotNumber}</div>
         <div class="plot-owner">${escapeHtml(ee.owner || "Владелец не указан")}</div>
@@ -592,7 +693,82 @@ function renderElectricityCard(ee) {
         });
     }
 
-    document.getElementById("takePhotoBtn").onclick = takePhoto;
+    const takeBtn = document.getElementById("takePhotoBtn");
+    if (takeBtn) takeBtn.onclick = () => takePhoto(currentPlotNumber);
+}
+
+// ==============================================================
+// ФУНКЦИИ ДЛЯ ФОТО (с передачей номера участка)
+// ==============================================================
+async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
+    const formData = new FormData();
+    formData.append('plot_number', plotNumber);
+    formData.append('reading_value', readingValue);
+    formData.append('photo', photoFile);
+
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        let errorMsg = `HTTP ${response.status}`;
+        try { const err = await response.json(); errorMsg = err.error || errorMsg; } catch(e) {}
+        throw new Error(errorMsg);
+    }
+    return await response.json();
+}
+
+function takePhoto(plotNumber) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment";
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const readingInput = document.getElementById("newReadingInput");
+        const readingValue = readingInput ? readingInput.value : "";
+
+        // Превью
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const preview = document.getElementById("photoPreview");
+            if (preview) { preview.src = ev.target.result; preview.style.display = "block"; }
+        };
+        reader.readAsDataURL(file);
+
+        // UI
+        const takeBtn = document.getElementById("takePhotoBtn");
+        const progress = document.getElementById("photoUploadProgress");
+        const success = document.getElementById("photoUploadSuccess");
+        const errorDiv = document.getElementById("photoUploadError");
+        const ydStatus = document.getElementById("ydStatus");
+        const actions = document.getElementById("photoActions");
+
+        if (takeBtn) takeBtn.style.display = "none";
+        if (progress) progress.style.display = "block";
+        if (success) success.style.display = "none";
+        if (errorDiv) errorDiv.style.display = "none";
+        if (ydStatus) ydStatus.innerHTML = "☁ Загрузка...";
+        if (actions) actions.style.display = "flex";
+
+        try {
+            await uploadPhotoToServer(plotNumber, readingValue, file);
+            if (progress) progress.style.display = "none";
+            if (success) success.style.display = "block";
+            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено";
+            if (takeBtn) { takeBtn.style.display = "block"; takeBtn.innerHTML = "📷 Сфотографировать ещё раз"; }
+            if (actions) actions.style.display = "none";
+        } catch (err) {
+            if (progress) progress.style.display = "none";
+            if (errorDiv) { errorDiv.style.display = "block"; errorDiv.innerHTML = `⚠️ ${err.message}`; }
+            if (ydStatus) ydStatus.innerHTML = "☁ Ошибка загрузки";
+            if (takeBtn) takeBtn.style.display = "block";
+        }
+    };
+    input.click();
 }
 
 // ==============================================================
@@ -612,6 +788,7 @@ function revokeConsent() {
     localStorage.removeItem(CONSENT_VERSION_KEY);
     cachedDebtMap.clear();
     cachedElectricityMap.clear();
+    cachedBaseMap.clear();
     location.reload();
 }
 
@@ -639,35 +816,41 @@ function showConsentScreen() {
         <div style="padding:16px 20px;border-top:1px solid #E0E0E0;"><button id="acceptBtn" style="width:100%;padding:14px;background:#2E7D32;color:white;border:none;border-radius:50px;font-weight:bold;cursor:pointer;" disabled>✓ Принять</button>
         <button id="declineBtn" style="width:100%;padding:12px;background:none;color:#757575;border:none;font-size:14px;cursor:pointer;margin-top:8px;">Отказаться</button></div></div>`;
     document.body.appendChild(overlay);
-    const c1=document.getElementById('c1'), c2=document.getElementById('c2'), c3=document.getElementById('c3');
-    const accept=document.getElementById('acceptBtn');
-    function update(){ accept.disabled = !(c1.checked && c2.checked && c3.checked); }
-    c1.onchange=c2.onchange=c3.onchange=update;
-    accept.onclick = () => { saveConsent(); overlay.remove(); document.getElementById('mainApp').style.display=''; initMainApp(); };
-    document.getElementById('declineBtn').onclick = () => { if(confirm('Без согласия использование невозможно. Закрыть?')) window.close(); };
+    const c1 = document.getElementById('c1'), c2 = document.getElementById('c2'), c3 = document.getElementById('c3');
+    const accept = document.getElementById('acceptBtn');
+    function update() { accept.disabled = !(c1.checked && c2.checked && c3.checked); }
+    c1.onchange = c2.onchange = c3.onchange = update;
+    accept.onclick = () => { saveConsent(); overlay.remove(); document.getElementById('mainApp').style.display = ''; initMainApp(); };
+    document.getElementById('declineBtn').onclick = () => { if (confirm('Без согласия использование невозможно. Закрыть?')) window.close(); };
 }
 
 function showSettingsModal() {
     const modal = document.createElement('div');
     modal.className = 'consent-overlay';
     modal.innerHTML = `<div style="background:white;border-radius:24px;width:90%;max-width:450px;"><div style="background:#424242;padding:20px;color:white;text-align:center;"><h2>⚙️ Настройки</h2></div>
-        <div style="padding:20px;"><div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Статус согласия</p><small>ФЗ-152</small></div><div><span style="background:#F1F8E9;color:#388E3C;padding:4px 12px;border-radius:50px;">✓ Принято</span></div></div>
-        <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button id="revokeBtn" style="background:#E65100;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Отозвать</button></div>
-        <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Очистить кэш данных</p></div><button id="clearBtn" style="background:#C62828;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Очистить</button></div></div>
+        <div style="padding:20px;">
+            <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Статус согласия</p><small>ФЗ-152</small></div><div><span style="background:#F1F8E9;color:#388E3C;padding:4px 12px;border-radius:50px;">✓ Принято</span></div></div>
+            <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button id="revokeBtn" style="background:#E65100;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Отозвать</button></div>
+            <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Очистить кэш данных</p></div><button id="clearBtn" style="background:#C62828;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Очистить</button></div>
+        </div>
         <div style="padding:16px;border-top:1px solid #E0E0E0;"><button id="closeBtn" style="width:100%;padding:14px;background:#757575;color:white;border:none;border-radius:50px;cursor:pointer;">Закрыть</button></div></div>`;
     document.body.appendChild(modal);
-    const close=()=>modal.remove();
-    modal.querySelector('#closeBtn').onclick=close;
-    modal.querySelector('#revokeBtn').onclick=()=>{if(confirm('Отозвать согласие?')) revokeConsent();};
-    modal.querySelector('#clearBtn').onclick=()=>{cachedDebtMap.clear(); cachedElectricityMap.clear(); alert('Кэш очищен'); close();};
+    const close = () => modal.remove();
+    modal.querySelector('#closeBtn').onclick = close;
+    modal.querySelector('#revokeBtn').onclick = () => { if (confirm('Отозвать согласие?')) revokeConsent(); };
+    modal.querySelector('#clearBtn').onclick = () => { cachedDebtMap.clear(); cachedElectricityMap.clear(); cachedBaseMap.clear(); alert('Кэш очищен'); close(); };
 }
 
 function initMainApp() {
-    document.getElementById("searchBtn").onclick = () => { const v = document.getElementById("plotInput").value; if(v.trim()) loadPlotData(v); else alert("Введите номер участка"); };
-    document.getElementById("plotInput").onkeypress = (e) => { if(e.key === "Enter") document.getElementById("searchBtn").click(); };
+    document.getElementById("searchBtn").onclick = () => { const v = document.getElementById("plotInput").value; if (v.trim()) loadPlotData(v); else alert("Введите номер участка"); };
+    document.getElementById("plotInput").onkeypress = (e) => { if (e.key === "Enter") document.getElementById("searchBtn").click(); };
     document.getElementById("settingsBtn").onclick = showSettingsModal;
+
+    // Предзагружаем данные после запуска (фоном)
+    syncAllData().catch(console.warn);
 }
 
+// Запуск
 if (isConsentAccepted()) {
     document.getElementById('mainApp').style.display = '';
     initMainApp();
