@@ -40,10 +40,10 @@
 
         /* Банковские реквизиты */
         .bank-details { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
-        .bank-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E0E0E0; }
+        .bank-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E0E0E0; align-items: center; }
         .bank-label { color: #757575; font-size: 12px; }
         .bank-value { font-weight: 500; font-size: 13px; color: #212121; }
-        .copy-btn { background: none; border: none; color: #2E7D32; font-size: 12px; cursor: pointer; margin-left: 8px; }
+        .copy-btn { background: none; border: none; color: #2E7D32; font-size: 12px; cursor: pointer; margin-left: 8px; padding: 4px 8px; }
 
         /* Предупреждение */
         .warning-card { background: #FFF3E0; margin: 0 16px 16px; border-radius: 16px; padding: 16px; border-left: 4px solid #E65100; }
@@ -64,6 +64,26 @@
         /* Ручная оплата */
         .manual-card { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
         .manual-input { width: 100%; padding: 14px 16px; font-size: 16px; border: 1.5px solid #E0E0E0; border-radius: 16px; margin: 12px 0; }
+
+        /* Модальное окно */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; border-radius: 24px; width: 90%; max-width: 450px;
+            overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+        }
+        .modal-header { background: #424242; padding: 20px; color: white; text-align: center; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px; border-top: 1px solid #E0E0E0; }
+        .modal-setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #F0F0F0; }
+        .modal-setting-row:last-child { border-bottom: none; }
+        .danger-btn { background: #E65100; color: white; border: none; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: bold; }
+        .warning-btn { background: #C62828; color: white; border: none; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: bold; }
+        .close-modal-btn { width: 100%; padding: 14px; background: #757575; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; }
 
         @media (max-width: 480px) {
             .search-input-group { flex-direction: column; }
@@ -92,7 +112,7 @@
     <div id="loadingIndicator" class="loading-state hidden">☁️ Загрузка данных...</div>
     <div id="errorMessage" class="error-state hidden"></div>
 
-    <!-- Реквизиты получателя (скрывается/показывается) -->
+    <!-- Реквизиты получателя -->
     <div id="bankDetailsCard" class="bank-details hidden">
         <div class="card-content">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -135,7 +155,7 @@
 
 <script>
 // ==============================================================
-// КОНСТАНТЫ (синхронизированы с Android-версией)
+// КОНСТАНТЫ
 // ==============================================================
 const API_BASE_URL = "https://wwcat.duckdns.org:12580";
 const CONSENT_VERSION = "1.0";
@@ -156,7 +176,7 @@ const BASE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.o
 
 let cachedDebtMap = new Map();
 let cachedElectricityMap = new Map();
-let cachedBaseMap = new Map();  // Мастер-справочник (все участки)
+let cachedBaseMap = new Map();
 let currentPlotNumber = "";
 let currentMemberRecord = null;
 let isBankExpanded = true;
@@ -207,7 +227,7 @@ function escapeHtml(str) {
 }
 
 // ==============================================================
-// ПАРСИНГ .ods (синхронизирован с Android)
+// ПАРСИНГ .ods
 // ==============================================================
 async function fetchAndParseOds(url, parserFn) {
     const response = await fetch(url);
@@ -252,7 +272,6 @@ function expandRowCells(rowElement) {
     return cells;
 }
 
-// Парсинг base.ods (мастер-справочник)
 function parseBaseOds(xmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, "application/xml");
@@ -482,7 +501,7 @@ window.saveQR = function(imgId) {
 };
 
 // ==============================================================
-// ЗАГРУЗКА ДАННЫХ (синхронизация трёх источников)
+// ЗАГРУЗКА ДАННЫХ
 // ==============================================================
 async function syncAllData() {
     const loadingDiv = document.getElementById("loadingIndicator");
@@ -541,7 +560,6 @@ async function loadPlotData(plotNumber) {
 
         currentMemberRecord = member || null;
 
-        // Если участка нет ни в одном источнике — ошибка
         if (!debt && !ee && !member) {
             notFound.classList.remove("hidden");
             document.getElementById("bankDetailsCard").classList.add("hidden");
@@ -550,23 +568,13 @@ async function loadPlotData(plotNumber) {
             return;
         }
 
-        // Показываем карточки реквизитов, предупреждения, инструкции
         document.getElementById("bankDetailsCard").classList.remove("hidden");
         document.getElementById("warningCard").classList.remove("hidden");
         document.getElementById("instructionCard").classList.remove("hidden");
         renderBankDetails();
 
-        // Карточка долга
-        if (debt) {
-            renderDebtCard(debt);
-        }
-
-        // Карточка электроэнергии
-        if (ee) {
-            renderElectricityCard(ee);
-        }
-
-        // Карточка ручной оплаты — всегда если участок найден (из любого источника)
+        if (debt) renderDebtCard(debt);
+        if (ee) renderElectricityCard(ee);
         renderManualPaymentCard(member, debt, ee);
 
     } catch (err) {
@@ -577,7 +585,7 @@ async function loadPlotData(plotNumber) {
 }
 
 // ==============================================================
-// БАНКОВСКИЕ РЕКВИЗИТЫ (как в Android)
+// БАНКОВСКИЕ РЕКВИЗИТЫ
 // ==============================================================
 function renderBankDetails() {
     document.getElementById("bankOrg").textContent = ORGANIZATION;
@@ -587,7 +595,6 @@ function renderBankDetails() {
     document.getElementById("bankBic").textContent = BIC;
     document.getElementById("bankCorresp").textContent = CORRESP_ACC;
 
-    // Копирование отдельных полей
     document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.onclick = () => {
             const fieldId = btn.getAttribute('data-copy');
@@ -597,14 +604,12 @@ function renderBankDetails() {
         };
     });
 
-    // Копирование всех реквизитов
     document.getElementById("copyAllRekvizityBtn").onclick = () => {
         const text = `Получатель: ${ORGANIZATION}\nИНН: ${INN}\nР/счёт: ${PERSONAL_ACC}\nБанк: ${BANK_NAME}\nБИК: ${BIC}\nК/счёт: ${CORRESP_ACC}`;
         navigator.clipboard.writeText(text);
         alert("Реквизиты скопированы");
     };
 
-    // Сворачивание/разворачивание
     const toggleBtn = document.getElementById("toggleBankBtn");
     const content = document.getElementById("bankDetailsContent");
     toggleBtn.onclick = () => {
@@ -615,12 +620,11 @@ function renderBankDetails() {
 }
 
 // ==============================================================
-// КАРТОЧКА РУЧНОЙ ОПЛАТЫ (как в Android)
+// КАРТОЧКА РУЧНОЙ ОПЛАТЫ
 // ==============================================================
 function renderManualPaymentCard(member, debt, ee) {
     const container = document.getElementById("manualPaymentCard");
 
-    // Определяем владельца: из debt > ee > member
     let ownerName = "";
     if (debt && debt.owner) ownerName = debt.owner;
     else if (ee && ee.owner) ownerName = ee.owner;
@@ -788,7 +792,7 @@ function renderElectricityCard(ee) {
 }
 
 // ==============================================================
-// ФУНКЦИИ ДЛЯ ФОТО (отправка на сервер)
+// ФУНКЦИИ ДЛЯ ФОТО
 // ==============================================================
 async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
     const formData = new FormData();
@@ -821,7 +825,6 @@ function takePhoto(plotNumber) {
         const readingInput = document.getElementById("newReadingInput");
         const readingValue = readingInput ? readingInput.value : "";
 
-        // Превью
         const reader = new FileReader();
         reader.onload = (ev) => {
             const preview = document.getElementById("photoPreview");
@@ -829,7 +832,6 @@ function takePhoto(plotNumber) {
         };
         reader.readAsDataURL(file);
 
-        // UI
         const takeBtn = document.getElementById("takePhotoBtn");
         const progress = document.getElementById("photoUploadProgress");
         const success = document.getElementById("photoUploadSuccess");
@@ -884,27 +886,29 @@ function revokeConsent() {
 
 function showConsentScreen() {
     const overlay = document.createElement('div');
-    overlay.className = 'consent-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
-    overlay.innerHTML = `<div style="background:white;border-radius:24px;width:90%;max-width:500px;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
-        <div style="background:#2E7D32;padding:20px;color:white;text-align:center;"><div style="font-size:32px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p>Согласие с условиями</p></div>
-        <div style="flex:1;overflow-y:auto;padding:20px;">
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `<div class="modal-content">
+        <div class="modal-header"><div style="font-size:32px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p>Согласие с условиями</p></div>
+        <div class="modal-body" style="max-height:60vh; overflow-y:auto;">
             <div style="margin-bottom:16px;">Оператор: СНТ «Берёзка-2» (ИНН 5433118499)</div>
             <div style="background:#F1F8E9;border-radius:16px;padding:16px;margin-bottom:16px;">
                 <div style="font-weight:bold;margin-bottom:12px;">🔐 Персональные данные</div>
-                <div class="consent-check-row"><input type="checkbox" id="c1"><label> Я согласен(а) на обработку ПД в соответствии с ФЗ-152</label></div>
+                <div><input type="checkbox" id="c1"><label> Я согласен(а) на обработку ПД в соответствии с ФЗ-152</label></div>
             </div>
             <div style="background:#F1F8E9;border-radius:16px;padding:16px;margin-bottom:16px;">
                 <div style="font-weight:bold;margin-bottom:12px;">📋 Пользовательское соглашение</div>
-                <div class="consent-check-row"><input type="checkbox" id="c2"><label> Я принимаю условия Пользовательского соглашения</label></div>
+                <div><input type="checkbox" id="c2"><label> Я принимаю условия Пользовательского соглашения</label></div>
             </div>
             <div style="background:#F1F8E9;border-radius:16px;padding:16px;">
                 <div style="font-weight:bold;margin-bottom:12px;">👤 Подтверждение</div>
-                <div class="consent-check-row"><input type="checkbox" id="c3"><label> Мне исполнилось 18 лет, я член СНТ или его представитель</label></div>
+                <div><input type="checkbox" id="c3"><label> Мне исполнилось 18 лет, я член СНТ или его представитель</label></div>
             </div>
         </div>
-        <div style="padding:16px 20px;border-top:1px solid #E0E0E0;"><button id="acceptBtn" style="width:100%;padding:14px;background:#2E7D32;color:white;border:none;border-radius:50px;font-weight:bold;cursor:pointer;" disabled>✓ Принять</button>
-        <button id="declineBtn" style="width:100%;padding:12px;background:none;color:#757575;border:none;font-size:14px;cursor:pointer;margin-top:8px;">Отказаться</button></div></div>`;
+        <div class="modal-footer">
+            <button id="acceptBtn" style="width:100%;padding:14px;background:#2E7D32;color:white;border:none;border-radius:50px;font-weight:bold;cursor:pointer;" disabled>✓ Принять</button>
+            <button id="declineBtn" style="width:100%;padding:12px;background:none;color:#757575;border:none;font-size:14px;cursor:pointer;margin-top:8px;">Отказаться</button>
+        </div>
+    </div>`;
     document.body.appendChild(overlay);
     const c1 = document.getElementById('c1'), c2 = document.getElementById('c2'), c3 = document.getElementById('c3');
     const accept = document.getElementById('acceptBtn');
@@ -915,20 +919,46 @@ function showConsentScreen() {
 }
 
 function showSettingsModal() {
-    const modal = document.createElement('div');
-    modal.className = 'consent-overlay';
-    modal.innerHTML = `<div style="background:white;border-radius:24px;width:90%;max-width:450px;"><div style="background:#424242;padding:20px;color:white;text-align:center;"><h2>⚙️ Настройки</h2></div>
-        <div style="padding:20px;">
-            <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Статус согласия</p><small>ФЗ-152</small></div><div><span style="background:#F1F8E9;color:#388E3C;padding:4px 12px;border-radius:50px;">✓ Принято</span></div></div>
-            <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Отозвать согласие</p><small>После отзыва приложение запросит повторное согласие</small></div><button id="revokeBtn" style="background:#E65100;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Отозвать</button></div>
-            <div style="display:flex;justify-content:space-between;padding:12px 0;"><div><p>Очистить кэш данных</p></div><button id="clearBtn" style="background:#C62828;color:white;border:none;padding:8px 16px;border-radius:50px;cursor:pointer;">Очистить</button></div>
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `<div class="modal-content">
+        <div class="modal-header"><h2>⚙️ Настройки</h2></div>
+        <div class="modal-body">
+            <div class="modal-setting-row">
+                <div><strong>Статус согласия</strong><br><small style="color:#666;">ФЗ-152</small></div>
+                <div><span style="background:#F1F8E9;color:#388E3C;padding:4px 12px;border-radius:50px;">✓ Принято</span></div>
+            </div>
+            <div class="modal-setting-row">
+                <div><strong>Отозвать согласие</strong><br><small style="color:#666;">После отзыва приложение запросит повторное согласие</small></div>
+                <button id="revokeBtn" class="danger-btn">Отозвать</button>
+            </div>
+            <div class="modal-setting-row">
+                <div><strong>Очистить кэш данных</strong><br><small style="color:#666;">Сбросить загруженные данные</small></div>
+                <button id="clearBtn" class="warning-btn">Очистить</button>
+            </div>
         </div>
-        <div style="padding:16px;border-top:1px solid #E0E0E0;"><button id="closeBtn" style="width:100%;padding:14px;background:#757575;color:white;border:none;border-radius:50px;cursor:pointer;">Закрыть</button></div></div>`;
-    document.body.appendChild(modal);
-    const close = () => modal.remove();
-    modal.querySelector('#closeBtn').onclick = close;
-    modal.querySelector('#revokeBtn').onclick = () => { if (confirm('Отозвать согласие?')) revokeConsent(); };
-    modal.querySelector('#clearBtn').onclick = () => { cachedDebtMap.clear(); cachedElectricityMap.clear(); cachedBaseMap.clear(); alert('Кэш очищен'); close(); };
+        <div class="modal-footer">
+            <button id="closeModalBtn" class="close-modal-btn">Закрыть</button>
+        </div>
+    </div>`;
+    document.body.appendChild(overlay);
+
+    const closeModal = () => overlay.remove();
+    document.getElementById('closeModalBtn').onclick = closeModal;
+    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+
+    document.getElementById('revokeBtn').onclick = () => {
+        if (confirm('Отозвать согласие на обработку персональных данных?\n\nПосле отзыва приложение запросит повторное согласие.')) {
+            revokeConsent();
+        }
+    };
+    document.getElementById('clearBtn').onclick = () => {
+        cachedDebtMap.clear();
+        cachedElectricityMap.clear();
+        cachedBaseMap.clear();
+        alert('Кэш данных очищен');
+        closeModal();
+    };
 }
 
 function initMainApp() {
@@ -936,7 +966,6 @@ function initMainApp() {
     document.getElementById("plotInput").onkeypress = (e) => { if (e.key === "Enter") document.getElementById("searchBtn").click(); };
     document.getElementById("settingsBtn").onclick = showSettingsModal;
 
-    // Предзагружаем данные фоном
     syncAllData().catch(console.warn);
 }
 
