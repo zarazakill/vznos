@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>СНТ «Берёзка-2» — Система управления взносами</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+:root {
+  --green-50:#f0f7f0;--green-100:#d4ebd4;--green-200:#a8d5a8;--green-400:#5dab5d;
+  --green-600:#2e7d32;--green-700:#1b5e20;--green-800:#144d17;
+  --orange-50:#fff3e0;--orange-400:#ff9800;--orange-600:#e65100;
+  --red-50:#ffebee;--red-400:#ef5350;--red-600:#c62828;
+  --blue-50:#e3f2fd;--blue-400:#42a5f5;--blue-600:#1565c0;
+  --gray-50:#fafafa;--gray-100:#f5f5f5;--gray-200:#eeeeee;--gray-300:#e0e0e0;
+  --gray-400:#bdbdbd;--gray-500:#9e9e9e;--gray-600:#757575;--gray-700:#616161;
+  --gray-800:#424242;--gray-900:#212121;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:0 4px 12px rgba(0,0,0,.1);
+  --shadow-lg:0 8px 24px rgba(0,0,0,.12);
+  --radius:10px;--radius-lg:16px;--radius-xl:24px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f0;color:var(--gray-900);min-height:100vh;}
+/* NAVBAR */
+.navbar{background:var(--green-700);color:#fff;padding:0 24px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md);}
+.navbar-brand{font-size:1.1rem;font-weight:700;padding:16px 0;margin-right:24px;white-space:nowrap;}
+.navbar-brand span{opacity:.7;font-weight:400;font-size:.85rem;}
+.nav-tabs{display:flex;height:100%;}
+.nav-tab{padding:18px 18px;font-size:.87rem;cursor:pointer;border-bottom:3px solid transparent;color:rgba(255,255,255,.75);transition:.2s;white-space:nowrap;}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,.08);}
+.nav-tab.active{color:#fff;border-bottom-color:#a5d6a7;}
+.navbar-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+/* LAYOUT */
+.content{max-width:1400px;margin:0 auto;padding:28px 20px;}
+.page{display:none;}
+.page.active{display:block;}
+/* CARDS */
+.card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);padding:24px;margin-bottom:20px;border:1px solid var(--gray-200);}
+.card-title{font-size:1rem;font-weight:600;color:var(--green-700);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:var(--radius-lg);padding:20px;border:1px solid var(--gray-200);box-shadow:var(--shadow-sm);}
+.stat-label{font-size:.78rem;color:var(--gray-600);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.stat-value{font-size:1.8rem;font-weight:700;line-height:1;}
+.stat-sub{font-size:.78rem;color:var(--gray-500);margin-top:6px;}
+.stat-card.green .stat-value{color:var(--green-600);}
+.stat-card.orange .stat-value{color:var(--orange-600);}
+.stat-card.red .stat-value{color:var(--red-600);}
+.stat-card.blue .stat-value{color:var(--blue-600);}
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--green-200);border-radius:var(--radius-lg);background:var(--green-50);padding:40px 24px;text-align:center;cursor:pointer;transition:.2s;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green-400);background:#e8f5e9;}
+.upload-zone p{color:var(--gray-600);margin-top:8px;font-size:.9rem;}
+.upload-btn-label{display:inline-block;background:var(--green-600);color:#fff;padding:10px 24px;border-radius:50px;font-weight:600;cursor:pointer;margin-top:12px;font-size:.9rem;}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:50px;border:none;font-size:.87rem;font-weight:600;cursor:pointer;transition:.18s;text-decoration:none;}
+.btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-primary{background:var(--green-600);color:#fff;}
+.btn-secondary{background:var(--gray-200);color:var(--gray-800);}
+.btn-blue{background:var(--blue-600);color:#fff;}
+.btn-orange{background:#e65100;color:#fff;}
+.btn-danger{background:var(--red-600);color:#fff;}
+.btn-outline{background:transparent;color:var(--green-600);border:1.5px solid var(--green-600);}
+.btn-sm{padding:6px 14px;font-size:.8rem;}
+/* BADGES */
+.badge{display:inline-block;padding:2px 10px;border-radius:50px;font-size:.72rem;font-weight:600;}
+.badge-green{background:var(--green-100);color:var(--green-700);}
+.badge-orange{background:var(--orange-50);color:var(--orange-600);}
+.badge-red{background:var(--red-50);color:var(--red-600);}
+.badge-blue{background:var(--blue-50);color:var(--blue-600);}
+.badge-gray{background:var(--gray-200);color:var(--gray-700);}
+/* PLOTS LIST */
+.plots-list{max-height:480px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);}
+.plot-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--gray-100);transition:.15s;cursor:pointer;}
+.plot-row:last-child{border-bottom:none;}
+.plot-row:hover{background:var(--green-50);}
+.plot-row input[type=checkbox]{width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;flex-shrink:0;}
+.plot-num-badge{background:var(--green-100);color:var(--green-800);font-weight:700;font-size:.8rem;padding:4px 12px;border-radius:50px;min-width:70px;text-align:center;white-space:nowrap;}
+.plot-name{flex:1;font-size:.9rem;}
+.plot-debt-amt{font-weight:700;color:var(--red-600);font-size:.92rem;white-space:nowrap;}
+.plot-type-badges{display:flex;gap:4px;flex-wrap:wrap;}
+/* TOOLBAR */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 0;border-bottom:1px solid var(--gray-200);margin-bottom:16px;}
+.toolbar-right{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;}
+/* TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:.84rem;}
+.data-table th{background:var(--green-50);color:var(--green-700);font-weight:600;padding:10px 12px;text-align:left;border-bottom:2px solid var(--green-100);position:sticky;top:0;z-index:2;white-space:nowrap;cursor:pointer;user-select:none;}
+.data-table th:hover{background:var(--green-100);}
+.data-table td{padding:9px 12px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+.data-table tr:hover td{background:var(--gray-50);}
+.data-table tr.selected td{background:var(--green-50);}
+.table-wrap{overflow-x:auto;max-height:550px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);}
+/* SEARCH */
+.search-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.search-input{padding:8px 16px;border:1.5px solid var(--gray-300);border-radius:50px;font-size:.88rem;width:260px;outline:none;transition:.2s;}
+.search-input:focus{border-color:var(--green-400);}
+select.filter-sel{padding:8px 12px;border:1.5px solid var(--gray-300);border-radius:50px;font-size:.87rem;outline:none;background:#fff;cursor:pointer;}
+select.filter-sel:focus{border-color:var(--green-400);}
+/* PROGRESS BAR */
+.progress-bar-wrap{height:6px;background:var(--gray-200);border-radius:50px;overflow:hidden;margin-top:8px;}
+.progress-bar{height:100%;background:var(--green-400);border-radius:50px;transition:width .3s;}
+/* RECEIPT PREVIEW */
+.receipt-preview-area{font-family:serif;font-size:12px;line-height:1.5;color:#000;}
+.receipt-part{border:1.5px solid #333;margin-bottom:6px;display:flex;min-height:180px;}
+.receipt-main{flex:3;padding:8px 10px;}
+.receipt-side{flex:1;border-left:1.5px solid #333;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;text-align:center;font-size:.85em;}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;justify-content:center;align-items:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:var(--radius-xl);width:min(95vw,960px);max-height:92vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);}
+.modal-header{padding:18px 24px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;justify-content:space-between;}
+.modal-header h3{font-size:1.05rem;font-weight:600;color:var(--green-700);}
+.modal-body{overflow-y:auto;flex:1;padding:20px 24px;}
+.modal-footer{padding:14px 24px;border-top:1px solid var(--gray-200);display:flex;gap:10px;justify-content:flex-end;}
+.close-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--gray-500);padding:4px 8px;border-radius:6px;line-height:1;}
+.close-btn:hover{background:var(--gray-100);}
+/* SETTINGS */
+.settings-section{margin-bottom:28px;}
+.settings-section h3{font-size:.95rem;font-weight:600;color:var(--gray-800);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--gray-200);}
+.setting-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100);}
+.setting-row:last-child{border-bottom:none;}
+.setting-label{flex:1;}
+.setting-label p{font-size:.9rem;font-weight:500;}
+.setting-label small{font-size:.78rem;color:var(--gray-500);}
+.setting-input{padding:7px 12px;border:1.5px solid var(--gray-300);border-radius:8px;font-size:.88rem;outline:none;width:280px;transition:.2s;}
+.setting-input:focus{border-color:var(--green-400);}
+/* CHART BARS */
+.mini-chart{display:flex;gap:6px;align-items:flex-end;height:80px;margin-top:12px;}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.bar{width:100%;background:var(--green-400);border-radius:4px 4px 0 0;min-height:3px;transition:.4s;}
+.bar-label{font-size:.65rem;color:var(--gray-600);text-align:center;}
+/* STATUS */
+.status-msg{padding:10px 18px;border-radius:50px;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;}
+.status-msg.info{background:var(--blue-50);color:var(--blue-600);}
+.status-msg.success{background:var(--green-50);color:var(--green-600);}
+.status-msg.error{background:var(--red-50);color:var(--red-600);}
+.status-msg.warning{background:var(--orange-50);color:var(--orange-600);}
+/* TOGGLE */
+.toggle{position:relative;display:inline-block;width:44px;height:24px;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;inset:0;background:var(--gray-300);border-radius:50px;cursor:pointer;transition:.3s;}
+.toggle input:checked+.toggle-slider{background:var(--green-400);}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.3s;}
+.toggle input:checked+.toggle-slider:before{left:23px;}
+/* SORT ARROW */
+.sort-arrow{font-size:.7rem;margin-left:4px;opacity:.5;}
+.sort-arrow.asc::after{content:'▲';}
+.sort-arrow.desc::after{content:'▼';}
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:60px 20px;color:var(--gray-500);}
+.empty-state .icon{font-size:3rem;margin-bottom:12px;}
+/* BREAKDOWN BARS */
+.breakdown-item{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.breakdown-label{width:200px;font-size:.82rem;color:var(--gray-700);}
+.breakdown-bar-wrap{flex:1;height:10px;background:var(--gray-100);border-radius:50px;overflow:hidden;}
+.breakdown-bar-fill{height:100%;border-radius:50px;transition:.5s;}
+.breakdown-amount{width:100px;text-align:right;font-size:.82rem;font-weight:600;color:var(--gray-800);}
+@media(max-width:720px){
+  .navbar{padding:0 12px;flex-wrap:wrap;}
+  .nav-tab{padding:14px 10px;font-size:.8rem;}
+  .content{padding:16px 12px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .setting-input{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<div class="navbar">
+  <div class="navbar-brand">🌿 СНТ «Берёзка-2» <span>v2.0</span></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-page="dashboard">📊 Дашборд</div>
+    <div class="nav-tab" data-page="debtors">📋 Должники</div>
+    <div class="nav-tab" data-page="receipts">🧾 Квитанции</div>
+    <div class="nav-tab" data-page="settings">⚙️ Настройки</div>
+  </div>
+  <div class="navbar-right">
+    <span id="navFileInfo" style="font-size:.78rem;color:rgba(255,255,255,.6);">Файл не загружен</span>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ====== DASHBOARD PAGE ====== -->
+<div class="page active" id="page-dashboard">
+  <div class="card" id="uploadCard">
+    <div class="card-title">📂 Загрузка данных</div>
+    <div class="upload-zone" id="uploadZone">
+      <div style="font-size:2.5rem;">📁</div>
+      <div style="font-size:1rem;font-weight:600;margin-top:8px;">Перетащите файл или нажмите для выбора</div>
+      <p>Поддерживаются: .ods, .xlsx, .xls — данные не покидают устройство</p>
+      <label class="upload-btn-label">Выбрать файл <input type="file" id="fileInput" accept=".ods,.xlsx,.xls" style="display:none"></label>
+    </div>
+    <div id="statusMsg" class="status-msg info" style="margin-top:14px;">📌 Ожидание загрузки файла с данными по участкам...</div>
+  </div>
+
+  <div id="dashContent" style="display:none;">
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div class="card">
+        <div class="card-title">📊 Структура задолженности</div>
+        <div id="breakdownChart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔝 Топ-10 должников</div>
+        <div id="top10List"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📈 Распределение сумм долга</div>
+      <div id="debtDistChart" class="mini-chart" style="height:120px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== DEBTORS PAGE ====== -->
+<div class="page" id="page-debtors">
+  <div class="card">
+    <div class="card-title">📋 Реестр участков и задолженностей</div>
+    <div id="debtorsNoData" class="empty-state">
+      <div class="icon">📂</div>
+      <p>Загрузите файл данных на вкладке «Дашборд»</p>
+    </div>
+    <div id="debtorsDataView" style="display:none;">
+      <div class="search-bar">
+        <input type="text" class="search-input" id="searchInput" placeholder="🔍 Поиск по участку, ФИО, виду взноса...">
+        <select class="filter-sel" id="filterType">
+          <option value="">Все виды долга</option>
+          <option value="membership">Членские взносы</option>
+          <option value="target">Целевые взносы</option>
+          <option value="arrears">Задолженность прошлых лет</option>
+          <option value="work">Отработка</option>
+          <option value="electricity">Электроэнергия</option>
+        </select>
+        <select class="filter-sel" id="filterDebtRange">
+          <option value="">Любой размер долга</option>
+          <option value="small">До 1 000 ₽</option>
+          <option value="medium">1 000 – 5 000 ₽</option>
+          <option value="large">5 000 – 15 000 ₽</option>
+          <option value="huge">Более 15 000 ₽</option>
+        </select>
+        <div class="toolbar-right">
+          <button class="btn btn-secondary btn-sm" id="resetFiltersBtn">✕ Сброс</button>
+          <button class="btn btn-blue btn-sm" id="exportXlsBtn">📥 Excel</button>
+          <button class="btn btn-secondary btn-sm" id="exportCsvBtn">📄 CSV</button>
+          <button class="btn btn-secondary btn-sm" id="printDebtorsBtn">🖨️ Печать</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">
+          <input type="checkbox" id="selectAllCb" style="width:17px;height:17px;accent-color:var(--green-600);">
+          Выбрать все
+        </label>
+        <span id="selectedCountBadge" class="badge badge-green">Выбрано: 0</span>
+        <span id="filteredCountBadge" class="badge badge-gray">Показано: 0</span>
+        <div class="toolbar-right">
+          <button class="btn btn-outline btn-sm" id="openReceiptsForSelected">🧾 Квитанции для выбранных</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:36px;"></th>
+              <th data-sort="plotNumber" style="width:90px;">№ уч. <span class="sort-arrow"></span></th>
+              <th data-sort="payerName">ФИО владельца <span class="sort-arrow"></span></th>
+              <th data-sort="totalDebt" style="width:120px;">Итого долг ₽ <span class="sort-arrow desc"></span></th>
+              <th style="width:100px;">Чл. взносы ₽</th>
+              <th style="width:100px;">Целевые ₽</th>
+              <th style="width:100px;">Прош. годы ₽</th>
+              <th style="width:95px;">Отработка ₽</th>
+              <th style="width:100px;">Электр. ₽</th>
+              <th>Состав долга</th>
+            </tr>
+          </thead>
+          <tbody id="debtorsTableBody"></tbody>
+        </table>
+      </div>
+      <div id="tableFooter" style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;">
+        <span id="tableTotal" style="font-size:.85rem;color:var(--gray-600);"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== RECEIPTS PAGE ====== -->
+<div class="page" id="page-receipts">
+  <div class="card">
+    <div class="card-title">🧾 Генерация квитанций ПД-4</div>
+    <div id="receiptsNoData" class="empty-state">
+      <div class="icon">📂</div>
+      <p>Загрузите файл данных на вкладке «Дашборд»</p>
+    </div>
+    <div id="receiptsDataView" style="display:none;">
+      <div class="search-bar">
+        <input type="text" class="search-input" id="receiptSearchInput" placeholder="🔍 Поиск по участку или ФИО...">
+        <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">
+          <input type="checkbox" id="receiptsSelectAll" style="width:17px;height:17px;accent-color:var(--green-600);">
+          Выбрать все
+        </label>
+        <span id="receiptsSelectedBadge" class="badge badge-green">Выбрано: 0</span>
+      </div>
+
+      <div class="plots-list" id="receiptPlotsList" style="max-height:380px;"></div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
+        <button class="btn btn-primary" id="printSelectedReceiptsBtn">🖨️ Печать выбранных</button>
+        <button class="btn btn-blue" id="printAllReceiptsBtn">🖨️ Печать всех</button>
+        <button class="btn btn-orange" id="downloadPdfSelectedBtn">📄 PDF выбранных</button>
+        <button class="btn btn-secondary" id="downloadPdfAllBtn">📄 PDF все</button>
+        <div id="receiptProgress" style="flex:1;min-width:200px;display:none;">
+          <div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;" id="receiptProgressText">Обработка...</div>
+          <div class="progress-bar-wrap"><div class="progress-bar" id="receiptProgressBar" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT PREVIEW MODAL -->
+  <div class="modal-overlay" id="receiptModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🧾 Предпросмотр квитанции</h3>
+        <button class="close-btn" id="closeReceiptModal">×</button>
+      </div>
+      <div class="modal-body" id="receiptPreviewBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="closeReceiptModalBtn">Закрыть</button>
+        <button class="btn btn-blue" id="printReceiptModalBtn">🖨️ Печать</button>
+        <button class="btn btn-primary" id="pdfReceiptModalBtn">📄 Скачать PDF</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== SETTINGS PAGE ====== -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="card-title">⚙️ Реквизиты организации</div>
+    <div class="settings-section">
+      <div class="setting-row">
+        <div class="setting-label"><p>Наименование организации</p><small>Используется в квитанциях ПД-4</small></div>
+        <input class="setting-input" id="setName" value="СНТ «Березка-2»">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>ИНН получателя</p></div>
+        <input class="setting-input" id="setINN" value="5433118499">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>Расчётный счёт</p><small>20-значный номер счёта</small></div>
+        <input class="setting-input" id="setAcc" value="40703810644050040322">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>Наименование банка</p></div>
+        <input class="setting-input" id="setBankName" value="Сибирский Банк ПАО Сбербанк г. Новосибирск">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>БИК банка</p></div>
+        <input class="setting-input" id="setBIC" value="045004641">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>Корреспондентский счёт</p></div>
+        <input class="setting-input" id="setCorr" value="30101810500000000641">
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn btn-primary" id="saveSettingsBtn">💾 Сохранить реквизиты</button>
+        <span id="settingsSaved" style="display:none;margin-left:12px;font-size:.85rem;color:var(--green-600);font-weight:600;">✓ Сохранено</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎛️ Настройки квитанций</div>
+    <div class="settings-section">
+      <div class="setting-row">
+        <div class="setting-label"><p>Год для квитанций</p><small>Отображается в заголовке назначения платежа</small></div>
+        <input class="setting-input" id="setYear" value="2026" style="width:120px;">
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>Показывать QR-код на квитанции</p><small>QR для Сбербанк Онлайн</small></div>
+        <label class="toggle"><input type="checkbox" id="setQrToggle" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>Печатать извещение + квитанцию</p><small>Два блока на одном листе</small></div>
+        <label class="toggle"><input type="checkbox" id="setDuplicateToggle" checked><span class="toggle-slider"></span></label>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label"><p>Минимальная сумма для отображения</p><small>Участки с долгом ниже этой суммы скрываются</small></div>
+        <input class="setting-input" id="setMinDebt" value="0.01" style="width:120px;"> руб.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗑️ Данные и сброс</div>
+    <div class="settings-section">
+      <div class="setting-row">
+        <div class="setting-label"><p>Очистить загруженные данные</p><small>Удаляет все данные об участках из памяти</small></div>
+        <button class="btn btn-danger btn-sm" id="clearDataBtn">🗑️ Очистить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<script>
+// ===================== STATE =====================
+let allPlots = [];
+let filteredPlots = [];
+let selectedIds = new Set();
+let receiptSelectedIds = new Set();
+let sortCol = 'totalDebt';
+let sortDir = -1;
+let currentReceiptPlot = null;
+
+let REQ = {
+  Name: localStorage.getItem('snt_Name') || 'СНТ «Березка-2»',
+  PayeeINN: localStorage.getItem('snt_INN') || '5433118499',
+  PersonalAcc: localStorage.getItem('snt_Acc') || '40703810644050040322',
+  BankName: localStorage.getItem('snt_BankName') || 'Сибирский Банк ПАО Сбербанк г. Новосибирск',
+  BIC: localStorage.getItem('snt_BIC') || '045004641',
+  CorrespAcc: localStorage.getItem('snt_Corr') || '30101810500000000641',
+};
+let CFG = {
+  year: localStorage.getItem('snt_Year') || '2026',
+  showQr: localStorage.getItem('snt_QR') !== '0',
+  duplicate: localStorage.getItem('snt_Dup') !== '0',
+  minDebt: parseFloat(localStorage.getItem('snt_MinDebt') || '0.01'),
+};
+
+// ===================== SETTINGS INIT =====================
+function initSettings() {
+  document.getElementById('setName').value = REQ.Name;
+  document.getElementById('setINN').value = REQ.PayeeINN;
+  document.getElementById('setAcc').value = REQ.PersonalAcc;
+  document.getElementById('setBankName').value = REQ.BankName;
+  document.getElementById('setBIC').value = REQ.BIC;
+  document.getElementById('setCorr').value = REQ.CorrespAcc;
+  document.getElementById('setYear').value = CFG.year;
+  document.getElementById('setQrToggle').checked = CFG.showQr;
+  document.getElementById('setDuplicateToggle').checked = CFG.duplicate;
+  document.getElementById('setMinDebt').value = CFG.minDebt;
+}
+document.getElementById('saveSettingsBtn').onclick = () => {
+  REQ.Name = document.getElementById('setName').value.trim();
+  REQ.PayeeINN = document.getElementById('setINN').value.trim();
+  REQ.PersonalAcc = document.getElementById('setAcc').value.trim();
+  REQ.BankName = document.getElementById('setBankName').value.trim();
+  REQ.BIC = document.getElementById('setBIC').value.trim();
+  REQ.CorrespAcc = document.getElementById('setCorr').value.trim();
+  CFG.year = document.getElementById('setYear').value.trim();
+  CFG.showQr = document.getElementById('setQrToggle').checked;
+  CFG.duplicate = document.getElementById('setDuplicateToggle').checked;
+
+  // НОВОЕ: сохраняем и ПРИМЕНЯЕМ минимальную сумму
+  const newMinDebt = parseFloat(document.getElementById('setMinDebt').value);
+  if (!isNaN(newMinDebt) && newMinDebt >= 0) {
+    CFG.minDebt = newMinDebt;
+  } else {
+    CFG.minDebt = 0.01;
+    document.getElementById('setMinDebt').value = CFG.minDebt;
+  }
+
+  localStorage.setItem('snt_Name', REQ.Name);
+  localStorage.setItem('snt_INN', REQ.PayeeINN);
+  localStorage.setItem('snt_Acc', REQ.PersonalAcc);
+  localStorage.setItem('snt_BankName', REQ.BankName);
+  localStorage.setItem('snt_BIC', REQ.BIC);
+  localStorage.setItem('snt_Corr', REQ.CorrespAcc);
+  localStorage.setItem('snt_Year', CFG.year);
+  localStorage.setItem('snt_QR', CFG.showQr ? '1' : '0');
+  localStorage.setItem('snt_Dup', CFG.duplicate ? '1' : '0');
+  localStorage.setItem('snt_MinDebt', CFG.minDebt);
+
+  // НОВОЕ: если данные уже загружены - перезагрузить их с новым фильтром
+  if (allPlots.length > 0) {
+    // Перефильтровываем исходные данные по новой минимальной сумме
+    const originalPlots = window._originalPlots || [...allPlots];
+    if (!window._originalPlots) window._originalPlots = [...allPlots];
+
+    allPlots = originalPlots.filter(p => p.totalDebt >= CFG.minDebt);
+
+    // Очищаем выбранные ID (чтобы не было ошибок)
+    selectedIds.clear();
+    receiptSelectedIds.clear();
+
+    // Перерисовываем все интерфейсы
+    renderDashboard();
+    renderDebtorsTable();
+    renderReceiptsList();
+
+    setStatus(`✅ Применён фильтр: показаны участки с долгом от ${CFG.minDebt} руб. (${allPlots.length} из ${originalPlots.length})`, 'success');
+  }
+
+  const s = document.getElementById('settingsSaved');
+  s.style.display = 'inline';
+  setTimeout(() => s.style.display = 'none', 2500);
+};
+document.getElementById('clearDataBtn').onclick = () => {
+  if (!confirm('Очистить все загруженные данные?')) return;
+  allPlots = []; filteredPlots = []; selectedIds.clear(); receiptSelectedIds.clear();
+  document.getElementById('dashContent').style.display = 'none';
+  document.getElementById('uploadCard').style.display = '';
+  document.getElementById('debtorsNoData').style.display = '';
+  document.getElementById('debtorsDataView').style.display = 'none';
+  document.getElementById('receiptsNoData').style.display = '';
+  document.getElementById('receiptsDataView').style.display = 'none';
+  document.getElementById('navFileInfo').textContent = 'Файл не загружен';
+  setStatus('🗑️ Данные очищены. Загрузите файл снова.', 'info');
+};
+
+// ===================== NAV =====================
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('page-' + tab.dataset.page).classList.add('active');
+  });
+});
+
+// ===================== STATUS =====================
+function setStatus(msg, type='info') {
+  const el = document.getElementById('statusMsg');
+  el.className = 'status-msg ' + type;
+  el.innerHTML = msg;
+}
+
+// ===================== FILE UPLOAD =====================
+const uploadZone = document.getElementById('uploadZone');
+const fileInput = document.getElementById('fileInput');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+async function handleFile(file) {
+  setStatus('⏳ Обработка файла...', 'info');
+  try {
+    const plots = await parseFile(file);
+    if (!plots.length) { setStatus('⚠️ Должников с долгом не найдено.', 'warning'); return; }
+    allPlots = plots;
+    window._originalPlots = [...plots];
+    document.getElementById('navFileInfo').textContent = `📁 ${file.name} (${plots.length} уч.)`;
+    setStatus(`✅ Загружено: ${plots.length} участков с задолженностью.`, 'success');
+    document.getElementById('uploadCard').style.display = 'none';
+    renderDashboard();
+    renderDebtorsTable();
+    renderReceiptsList();
+    document.getElementById('dashContent').style.display = '';
+    document.getElementById('debtorsNoData').style.display = 'none';
+    document.getElementById('debtorsDataView').style.display = '';
+    document.getElementById('receiptsNoData').style.display = 'none';
+    document.getElementById('receiptsDataView').style.display = '';
+  } catch(e) { setStatus('❌ Ошибка: ' + e.message, 'error'); }
+}
+
+// ===================== PARSE =====================
+async function parseFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: 'array', defval: '' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        resolve(parseRows(rows));
+      } catch(err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function cleanStr(v) { return String(v || '').replace(/\t/g, '').trim(); }
+function toNum(v) {
+  const s = String(v || '').replace(',', '.').replace(/[^\d.-]/g, '');
+  return s ? parseFloat(s) || 0 : 0;
+}
+
+function parseRows(rows) {
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(20, rows.length); i++) {
+    const s = rows[i].map(c => cleanStr(c).toLowerCase()).join(' ');
+    if (s.includes('номер') && s.includes('владельцы')) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) throw new Error('Не найдены колонки «Номер» и «Владельцы участка»');
+
+  const map = new Map();
+  let cur = null;
+
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    const c0 = cleanStr(row[0]);
+    const c1 = cleanStr(row[1]);
+    const c3 = toNum(row[3]); // долг на начало
+    const c4 = toNum(row[4]); // переплата на начало
+    const c5 = toNum(row[5]); // начислено
+    const c6 = toNum(row[6]); // оплачено
+    const c7 = toNum(row[7]); // долг на конец
+    const c8 = toNum(row[8]); // переплата на конец
+
+    if (!c0 || c0 === 'Итого') { cur = null; continue; }
+    const isPlot = /^\d/.test(c0) && c1;
+
+    if (isPlot) {
+      // col7 = долг на конец периода (что должны нам)
+      const debt = c7 > 0 ? c7 : 0;
+      if (debt >= CFG.minDebt) {
+        cur = {
+          id: `${c0}_${c1}`, plotNumber: c0, payerName: c1,
+          totalDebt: debt,
+          membershipSum: 0, targetSum: 0, arrearsSum: 0, workSum: 0, electricitySum: 0,
+          details: [], qrParts: []
+        };
+        map.set(cur.id, cur);
+      } else { cur = null; }
+      continue;
+    }
+
+    // detail row
+    if (cur && c0 && !/^\d/.test(c0)) {
+      const amount = c7 > 0 ? c7 : (c3 > 0 && !c6 ? c3 : 0);
+      if (amount <= 0) continue;
+      const name = c0;
+      let label = '', qr = '', cat = '';
+      if (name.includes('Членские взносы')) {
+        label = `Членские взносы ${CFG.year}: ${fmt(amount)} ₽`; qr = `Членские взносы: ${fmt(amount)} руб.`; cat = 'membership';
+        cur.membershipSum += amount;
+      } else if (name.includes('Целевые')) {
+        label = `Целевые взносы: ${fmt(amount)} ₽`; qr = `Целевые взносы: ${fmt(amount)} руб.`; cat = 'target';
+        cur.targetSum += amount;
+      } else if (name.includes('Отработка')) {
+        const yr = name.match(/\d{4}/)?.[0] || '';
+        label = `Отработка${yr?' '+yr:''}: ${fmt(amount)} ₽`; qr = `Отработка: ${fmt(amount)} руб.`; cat = 'work';
+        cur.workSum += amount;
+      } else if (name.includes('Задолженность прошлых лет') && !name.includes('Отработка') && !name.includes('Целевые')) {
+        label = `Задолженность прошлых лет: ${fmt(amount)} ₽`; qr = `Задолженность прошлых лет: ${fmt(amount)} руб.`; cat = 'arrears';
+        cur.arrearsSum += amount;
+      } else if (name.includes('Электроэнергия')) {
+        label = `Электроэнергия: ${fmt(amount)} ₽`; qr = `Электроэнергия: ${fmt(amount)} руб.`; cat = 'electricity';
+        cur.electricitySum += amount;
+      }
+      if (label && !cur.details.find(d => d.label === label)) {
+        cur.details.push({ label, cat }); cur.qrParts.push(qr);
+      }
+    }
+  }
+  return Array.from(map.values()).filter(p => p.totalDebt >= CFG.minDebt);
+}
+
+function fmt(n) { return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+function fmtShort(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1) + ' млн';
+  if (n >= 1000) return (n/1000).toFixed(1) + ' тыс.';
+  return n.toFixed(0);
+}
+
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  const total = allPlots.reduce((s, p) => s + p.totalDebt, 0);
+  const maxDebt = Math.max(...allPlots.map(p => p.totalDebt));
+  const avgDebt = total / allPlots.length;
+  const membershipTotal = allPlots.reduce((s, p) => s + p.membershipSum, 0);
+  const electricTotal = allPlots.reduce((s, p) => s + p.electricitySum, 0);
+  const arrearsTotal = allPlots.reduce((s, p) => s + p.arrearsSum + p.workSum, 0);
+  const targetTotal = allPlots.reduce((s, p) => s + p.targetSum, 0);
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card green">
+      <div class="stat-label">Всего должников</div>
+      <div class="stat-value">${allPlots.length}</div>
+      <div class="stat-sub">участков с задолженностью</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-label">Общий долг</div>
+      <div class="stat-value">${fmtShort(total)}</div>
+      <div class="stat-sub">${fmt(total)} ₽</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Максимальный долг</div>
+      <div class="stat-value">${fmtShort(maxDebt)}</div>
+      <div class="stat-sub">среднее: ${fmtShort(avgDebt)} ₽</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-label">Членские взносы</div>
+      <div class="stat-value">${fmtShort(membershipTotal)}</div>
+      <div class="stat-sub">${fmt(membershipTotal)} ₽</div>
+    </div>
+  `;
+
+  // Breakdown chart
+  const cats = [
+    { label: 'Членские взносы', total: membershipTotal, color: '#2e7d32' },
+    { label: 'Задолж. прошлых лет', total: arrearsTotal, color: '#e65100' },
+    { label: 'Целевые взносы', total: targetTotal, color: '#1565c0' },
+    { label: 'Электроэнергия', total: electricTotal, color: '#7b1fa2' },
+  ].filter(c => c.total > 0).sort((a,b) => b.total - a.total);
+  const maxCat = Math.max(...cats.map(c => c.total));
+  document.getElementById('breakdownChart').innerHTML = cats.map(c => `
+    <div class="breakdown-item">
+      <div class="breakdown-label">${c.label}</div>
+      <div class="breakdown-bar-wrap"><div class="breakdown-bar-fill" style="width:${(c.total/maxCat*100).toFixed(1)}%;background:${c.color};"></div></div>
+      <div class="breakdown-amount">${fmt(c.total)} ₽</div>
+    </div>`).join('');
+
+  // Top 10
+  const top10 = [...allPlots].sort((a,b) => b.totalDebt - a.totalDebt).slice(0, 10);
+  const maxTop = top10[0].totalDebt;
+  document.getElementById('top10List').innerHTML = top10.map((p, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100);">
+      <span style="width:22px;text-align:center;font-size:.75rem;color:var(--gray-500);">${i+1}</span>
+      <span class="plot-num-badge" style="min-width:55px;">Уч. ${p.plotNumber}</span>
+      <span style="flex:1;font-size:.82rem;">${p.payerName}</span>
+      <span style="font-weight:700;color:var(--red-600);font-size:.85rem;">${fmt(p.totalDebt)} ₽</span>
+    </div>`).join('');
+
+  // Distribution histogram
+  const buckets = [
+    { label: '<500', min: 0, max: 500, count: 0 },
+    { label: '0.5–1K', min: 500, max: 1000, count: 0 },
+    { label: '1–3K', min: 1000, max: 3000, count: 0 },
+    { label: '3–5K', min: 3000, max: 5000, count: 0 },
+    { label: '5–10K', min: 5000, max: 10000, count: 0 },
+    { label: '10–20K', min: 10000, max: 20000, count: 0 },
+    { label: '>20K', min: 20000, max: Infinity, count: 0 },
+  ];
+  allPlots.forEach(p => { const b = buckets.find(b => p.totalDebt >= b.min && p.totalDebt < b.max); if (b) b.count++; });
+  const maxCount = Math.max(...buckets.map(b => b.count), 1);
+  document.getElementById('debtDistChart').innerHTML = buckets.map(b => `
+    <div class="bar-col">
+      <div class="bar-label">${b.count}</div>
+      <div class="bar" style="height:${Math.max(4, b.count/maxCount*100)}px;background:${b.count > 10 ? 'var(--red-400)' : 'var(--green-400)'}"></div>
+      <div class="bar-label">${b.label}</div>
+    </div>`).join('');
+}
+
+// ===================== DEBTORS TABLE =====================
+function getFilteredPlots() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const fType = document.getElementById('filterType').value;
+  const fRange = document.getElementById('filterDebtRange').value;
+  return allPlots.filter(p => {
+    if (search && !p.plotNumber.toLowerCase().includes(search) && !p.payerName.toLowerCase().includes(search) && !p.details.map(d => d.label).join(' ').toLowerCase().includes(search)) return false;
+    if (fType) {
+      if (fType === 'membership' && !p.membershipSum) return false;
+      if (fType === 'target' && !p.targetSum) return false;
+      if (fType === 'arrears' && !p.arrearsSum) return false;
+      if (fType === 'work' && !p.workSum) return false;
+      if (fType === 'electricity' && !p.electricitySum) return false;
+    }
+    if (fRange) {
+      if (fRange === 'small' && p.totalDebt >= 1000) return false;
+      if (fRange === 'medium' && (p.totalDebt < 1000 || p.totalDebt >= 5000)) return false;
+      if (fRange === 'large' && (p.totalDebt < 5000 || p.totalDebt >= 15000)) return false;
+      if (fRange === 'huge' && p.totalDebt < 15000) return false;
+    }
+    return true;
+  }).sort((a, b) => {
+    const va = a[sortCol] || 0, vb = b[sortCol] || 0;
+    if (typeof va === 'string') return va.localeCompare(vb) * sortDir;
+    return (va - vb) * sortDir;
+  });
+}
+
+function renderDebtorsTable() {
+  filteredPlots = getFilteredPlots();
+  const tbody = document.getElementById('debtorsTableBody');
+  if (!filteredPlots.length) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--gray-500);">Нет данных по заданным фильтрам</td></tr>`;
+  } else {
+    const totalShown = filteredPlots.reduce((s, p) => s + p.totalDebt, 0);
+    tbody.innerHTML = filteredPlots.map(p => {
+      const checked = selectedIds.has(p.id);
+      const typeBadges = [];
+      if (p.membershipSum > 0) typeBadges.push(`<span class="badge badge-green">Чл.</span>`);
+      if (p.targetSum > 0) typeBadges.push(`<span class="badge badge-blue">Цел.</span>`);
+      if (p.arrearsSum + p.workSum > 0) typeBadges.push(`<span class="badge badge-orange">Пр.г.</span>`);
+      if (p.electricitySum > 0) typeBadges.push(`<span class="badge badge-gray">Эл.</span>`);
+      return `<tr class="${checked?'selected':''}" data-id="${p.id}">
+        <td><input type="checkbox" ${checked?'checked':''} class="row-cb" data-id="${p.id}" style="width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;"></td>
+        <td><span class="plot-num-badge">${p.plotNumber}</span></td>
+        <td>${p.payerName}</td>
+        <td class="plot-debt-amt">${fmt(p.totalDebt)}</td>
+        <td style="color:${p.membershipSum?'var(--gray-800)':'var(--gray-400)'};">${p.membershipSum>0?fmt(p.membershipSum):'—'}</td>
+        <td style="color:${p.targetSum?'var(--gray-800)':'var(--gray-400)'};">${p.targetSum>0?fmt(p.targetSum):'—'}</td>
+        <td style="color:${p.arrearsSum?'var(--gray-800)':'var(--gray-400)'};">${p.arrearsSum>0?fmt(p.arrearsSum):'—'}</td>
+        <td style="color:${p.workSum?'var(--gray-800)':'var(--gray-400)'};">${p.workSum>0?fmt(p.workSum):'—'}</td>
+        <td style="color:${p.electricitySum?'var(--gray-800)':'var(--gray-400)'};">${p.electricitySum>0?fmt(p.electricitySum):'—'}</td>
+        <td><div style="display:flex;gap:4px;flex-wrap:wrap;">${typeBadges.join('')} <span style="font-size:.76rem;color:var(--gray-500);">${p.details.map(d=>d.label).join('; ')}</span></div></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('tableTotal').textContent = `Показано: ${filteredPlots.length} из ${allPlots.length} | Сумма: ${fmt(totalShown)} ₽`;
+  }
+  document.getElementById('filteredCountBadge').textContent = `Показано: ${filteredPlots.length}`;
+  document.getElementById('selectedCountBadge').textContent = `Выбрано: ${selectedIds.size}`;
+  document.getElementById('selectAllCb').indeterminate = selectedIds.size > 0 && selectedIds.size < filteredPlots.length;
+  document.getElementById('selectAllCb').checked = filteredPlots.length > 0 && filteredPlots.every(p => selectedIds.has(p.id));
+
+  // Row checkboxes
+  document.querySelectorAll('.row-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) selectedIds.add(cb.dataset.id); else selectedIds.delete(cb.dataset.id);
+      renderDebtorsTable();
+    });
+  });
+  // Row click (not checkbox)
+  document.querySelectorAll('#debtorsTableBody tr').forEach(tr => {
+    tr.addEventListener('click', e => {
+      if (e.target.type === 'checkbox') return;
+      const id = tr.dataset.id;
+      if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+      renderDebtorsTable();
+    });
+  });
+}
+
+// Sort
+document.querySelectorAll('.data-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.sort;
+    if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = -1; }
+    document.querySelectorAll('.sort-arrow').forEach(a => a.className = 'sort-arrow');
+    th.querySelector('.sort-arrow').className = 'sort-arrow ' + (sortDir === 1 ? 'asc' : 'desc');
+    renderDebtorsTable();
+  });
+});
+
+document.getElementById('selectAllCb').addEventListener('change', e => {
+  filteredPlots.forEach(p => { if (e.target.checked) selectedIds.add(p.id); else selectedIds.delete(p.id); });
+  renderDebtorsTable();
+});
+document.getElementById('searchInput').addEventListener('input', renderDebtorsTable);
+document.getElementById('filterType').addEventListener('change', renderDebtorsTable);
+document.getElementById('filterDebtRange').addEventListener('change', renderDebtorsTable);
+document.getElementById('resetFiltersBtn').addEventListener('click', () => {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterType').value = '';
+  document.getElementById('filterDebtRange').value = '';
+  selectedIds.clear();
+  renderDebtorsTable();
+});
+
+// Export
+document.getElementById('exportCsvBtn').addEventListener('click', () => {
+  const plots = filteredPlots.length ? filteredPlots : allPlots;
+  const header = ['№ участка','ФИО','Итого долг','Членские','Целевые','Задолж. прош.','Отработка','Электроэнергия','Состав'];
+  const rows = plots.map(p => [p.plotNumber, p.payerName, p.totalDebt.toFixed(2), p.membershipSum.toFixed(2), p.targetSum.toFixed(2), p.arrearsSum.toFixed(2), p.workSum.toFixed(2), p.electricitySum.toFixed(2), p.details.map(d=>d.label).join('; ')]);
+  const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dolzhniki_snt.csv'; a.click();
+});
+
+document.getElementById('exportXlsBtn').addEventListener('click', () => {
+  const plots = filteredPlots.length ? filteredPlots : allPlots;
+  const wb = XLSX.utils.book_new();
+  const data = [['№ участка','ФИО','Итого долг','Членские взносы','Целевые взносы','Задолж. прошлых лет','Отработка','Электроэнергия','Состав долга']];
+  plots.forEach(p => data.push([p.plotNumber, p.payerName, p.totalDebt, p.membershipSum, p.targetSum, p.arrearsSum, p.workSum, p.electricitySum, p.details.map(d=>d.label).join('; ')]));
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, 'Должники');
+  XLSX.writeFile(wb, 'dolzhniki_snt.xlsx');
+});
+
+document.getElementById('printDebtorsBtn').addEventListener('click', () => {
+  const plots = filteredPlots.length ? filteredPlots : allPlots;
+  const rows = plots.map(p => `<tr><td>${p.plotNumber}</td><td>${p.payerName}</td><td><b>${fmt(p.totalDebt)} ₽</b></td><td>${p.details.map(d=>d.label).join('<br>')}</td></tr>`).join('');
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><meta charset="UTF-8"><title>Должники СНТ Берёзка-2</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:12px;}th,td{border:1px solid #ccc;padding:6px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}</style></head><body><h2>СНТ «Берёзка-2» — Реестр задолженности (${new Date().toLocaleDateString('ru-RU')})</h2><p>Итого: ${plots.length} участков, сумма: ${fmt(plots.reduce((s,p)=>s+p.totalDebt,0))} ₽</p><table><thead><tr><th>№ уч.</th><th>ФИО</th><th>Сумма</th><th>Состав</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+  w.document.close(); setTimeout(() => w.print(), 600);
+});
+
+document.getElementById('openReceiptsForSelected').addEventListener('click', () => {
+  if (!selectedIds.size) { alert('Выберите участки для генерации квитанций'); return; }
+  receiptSelectedIds = new Set(selectedIds);
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelector('.nav-tab[data-page="receipts"]').classList.add('active');
+  document.getElementById('page-receipts').classList.add('active');
+  renderReceiptsList();
+});
+
+// ===================== RECEIPTS LIST =====================
+function renderReceiptsList() {
+  const search = document.getElementById('receiptSearchInput').value.toLowerCase();
+  const listEl = document.getElementById('receiptPlotsList');
+  const plots = allPlots.filter(p =>
+    !search || p.plotNumber.toLowerCase().includes(search) || p.payerName.toLowerCase().includes(search));
+  listEl.innerHTML = plots.map(p => {
+    const sel = receiptSelectedIds.has(p.id);
+    const typeTags = [];
+    if (p.membershipSum > 0) typeTags.push(`<span class="badge badge-green">Чл.</span>`);
+    if (p.targetSum > 0) typeTags.push(`<span class="badge badge-blue">Цел.</span>`);
+    if (p.arrearsSum > 0 || p.workSum > 0) typeTags.push(`<span class="badge badge-orange">Пр.г.</span>`);
+    if (p.electricitySum > 0) typeTags.push(`<span class="badge badge-gray">Эл.</span>`);
+    return `<div class="plot-row" data-id="${p.id}">
+      <input type="checkbox" ${sel?'checked':''} class="receipt-row-cb" data-id="${p.id}" style="width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;">
+      <span class="plot-num-badge">Уч. ${p.plotNumber}</span>
+      <span class="plot-name">${p.payerName}</span>
+      <div class="plot-type-badges">${typeTags.join('')}</div>
+      <span class="plot-debt-amt">${fmt(p.totalDebt)} ₽</span>
+      <button class="btn btn-outline btn-sm preview-receipt-btn" data-id="${p.id}" style="padding:4px 12px;">👁 Открыть</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('receiptsSelectedBadge').textContent = `Выбрано: ${receiptSelectedIds.size}`;
+  document.getElementById('receiptsSelectAll').checked = plots.length > 0 && plots.every(p => receiptSelectedIds.has(p.id));
+
+  document.querySelectorAll('.receipt-row-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if (cb.checked) receiptSelectedIds.add(cb.dataset.id); else receiptSelectedIds.delete(cb.dataset.id);
+      document.getElementById('receiptsSelectedBadge').textContent = `Выбрано: ${receiptSelectedIds.size}`;
+    });
+    cb.addEventListener('click', e => e.stopPropagation());
+  });
+  document.querySelectorAll('.preview-receipt-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const plot = allPlots.find(p => p.id === btn.dataset.id);
+      if (plot) openReceiptModal(plot);
+    });
+  });
+  document.querySelectorAll('.plot-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.type === 'checkbox' || e.target.classList.contains('btn')) return;
+      const cb = row.querySelector('.receipt-row-cb');
+      cb.checked = !cb.checked;
+      if (cb.checked) receiptSelectedIds.add(cb.dataset.id); else receiptSelectedIds.delete(cb.dataset.id);
+      document.getElementById('receiptsSelectedBadge').textContent = `Выбрано: ${receiptSelectedIds.size}`;
+    });
+  });
+}
+
+document.getElementById('receiptSearchInput').addEventListener('input', () => renderReceiptsList());
+document.getElementById('receiptsSelectAll').addEventListener('change', e => {
+  allPlots.forEach(p => { if (e.target.checked) receiptSelectedIds.add(p.id); else receiptSelectedIds.delete(p.id); });
+  renderReceiptsList();
+});
+
+// ===================== QR & RECEIPT HTML (ПД-4 как в PDF) =====================
+function qrPurpose(plot) {
+    let parts = [...(plot.qrParts || [])];
+    if (parts.length === 0) {
+        if (plot.membershipSum > 0) parts.push(`Членские взносы: ${plot.membershipSum.toFixed(2)} руб.`);
+        if (plot.targetSum > 0) parts.push(`Целевые взносы: ${plot.targetSum.toFixed(2)} руб.`);
+        if (plot.arrearsSum > 0) parts.push(`Задолженность прошлых лет: ${plot.arrearsSum.toFixed(2)} руб.`);
+        if (plot.workSum > 0) parts.push(`Отработка: ${plot.workSum.toFixed(2)} руб.`);
+        if (plot.electricitySum > 0) parts.push(`Электроэнергия: ${plot.electricitySum.toFixed(2)} руб.`);
+    }
+    let s = parts.join(', ') + `, уч. ${plot.plotNumber}`;
+    if (s.length > 150) s = `Оплата взносов уч.${plot.plotNumber}`;
+    return s.slice(0, 150);
+}
+
+function rubleCase(n) {
+    const last = n % 10, lastTwo = n % 100;
+    if (lastTwo >= 11 && lastTwo <= 19) return 'рублей';
+    if (last === 1) return 'рубль';
+    if (last >= 2 && last <= 4) return 'рубля';
+    return 'рублей';
+}
+
+function numberToWordsFull(num) {
+    if (num === 0) return 'Ноль рублей 00 копеек';
+    const rub = Math.floor(num);
+    const kop = Math.round((num - rub) * 100);
+
+    const units = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'];
+    const unitsFemale = ['', 'одна', 'две', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'];
+    const teens = ['десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать'];
+    const tens = ['', 'десять', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто'];
+    const hundreds = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
+
+    function convertLess(n, female) {
+        if (n === 0) return '';
+        let res = '';
+        if (n >= 100) { res += hundreds[Math.floor(n / 100)] + ' '; n %= 100; }
+        if (n >= 20) { res += tens[Math.floor(n / 10)] + ' '; n %= 10; }
+        else if (n >= 10) { res += teens[n - 10] + ' '; n = 0; }
+        if (n > 0) res += (female ? unitsFemale[n] : units[n]) + ' ';
+        return res;
+    }
+
+    let result = '';
+    let rubPart = rub;
+    if (rubPart >= 1000) {
+        const thousands = Math.floor(rubPart / 1000);
+        rubPart %= 1000;
+        result += convertLess(thousands, true) + ' ';
+        const thLast = thousands % 10, thLastTwo = thousands % 100;
+        if (thLastTwo >= 11 && thLastTwo <= 19) result += 'тысяч ';
+        else if (thLast === 1) result += 'тысяча ';
+        else if (thLast >= 2 && thLast <= 4) result += 'тысячи ';
+        else result += 'тысяч ';
+    }
+    if (rubPart > 0 || result === '') result += convertLess(rubPart, false) + ' ';
+    result += rubleCase(rub) + ' ';
+    result += kop.toString().padStart(2, '0') + ' коп.';
+    return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+async function buildReceiptHTML(plot) {
+    const today = new Date().toLocaleDateString('ru-RU');
+    const purpose = qrPurpose(plot);
+    const amountWords = numberToWordsFull(plot.totalDebt);
+    const sumKop = Math.round(plot.totalDebt * 100);
+    const qrRaw = `ST00012|Name=${REQ.Name}|PersonalAcc=${REQ.PersonalAcc}|BankName=${REQ.BankName}|BIC=${REQ.BIC}|CorrespAcc=${REQ.CorrespAcc}|PayeeINN=${REQ.PayeeINN}|Sum=${sumKop}|Purpose=${purpose}`;
+    const qrDataUrl = CFG.showQr ? await QRCode.toDataURL(qrRaw, { width: 320, margin: 1, errorCorrectionLevel: 'H' }) : '';
+
+    // Сбор детализации платежа
+    let detailsHtml = '';
+    if (plot.details && plot.details.length) {
+        plot.details.forEach(d => {
+            if (d.label && !d.label.includes('Итого')) detailsHtml += `<div style="margin-bottom: 2px; font-size: 8pt;">${d.label}</div>`;
+        });
+    } else {
+        if (plot.membershipSum > 0) detailsHtml += `<div style="margin-bottom: 2px;">Членские взносы ${CFG.year}: ${plot.membershipSum.toFixed(2)} руб.</div>`;
+        if (plot.targetSum > 0) detailsHtml += `<div style="margin-bottom: 2px;">Целевые взносы: ${plot.targetSum.toFixed(2)} руб.</div>`;
+        if (plot.arrearsSum > 0) detailsHtml += `<div style="margin-bottom: 2px;">Задолженность прошлых лет: ${plot.arrearsSum.toFixed(2)} руб.</div>`;
+        if (plot.workSum > 0) detailsHtml += `<div style="margin-bottom: 2px;">Отработка: ${plot.workSum.toFixed(2)} руб.</div>`;
+        if (plot.electricitySum > 0) detailsHtml += `<div style="margin-bottom: 2px;">Электроэнергия: ${plot.electricitySum.toFixed(2)} руб.</div>`;
+    }
+
+    const partHtml = (title, withQr) => `
+        <div style="border: 1px solid #000000; margin-bottom: 5px; display: flex; min-height: 195px; page-break-inside: avoid; background: white;">
+            <div style="flex: 3; padding: 8px 10px;">
+                <div style="font-weight: bold; font-size: 11pt; text-align: center; margin-bottom: 6px;">Форма № ПД-4</div>
+                <div style="margin-bottom: 3px; border-bottom: 1px solid #000;">
+                    <div style="font-size: 9pt; font-weight: 500;">${REQ.Name}</div>
+                    <div style="font-size: 6pt; color: #555;">(наименование получателя платежа)</div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 3px;">
+                    <div style="flex: 1; border-bottom: 1px solid #000;">
+                        <div style="font-size: 8pt;">${REQ.PayeeINN}</div>
+                        <div style="font-size: 6pt; color: #555;">(ИНН получателя платежа)</div>
+                    </div>
+                    <div style="flex: 1; border-bottom: 1px solid #000;">
+                        <div style="font-size: 8pt;">${REQ.PersonalAcc}</div>
+                        <div style="font-size: 6pt; color: #555;">(номер счёта получателя платежа)</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 3px; border-bottom: 1px solid #000;">
+                    <div style="font-size: 8pt;">${REQ.BankName}</div>
+                    <div style="font-size: 6pt; color: #555;">(наименование банка получателя платежа)</div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 3px;">
+                    <div style="flex: 1; border-bottom: 1px solid #000;">
+                        <div style="font-size: 8pt;">${REQ.BIC}</div>
+                        <div style="font-size: 6pt; color: #555;">(БИК)</div>
+                    </div>
+                    <div style="flex: 1; border-bottom: 1px solid #000;">
+                        <div style="font-size: 8pt;">${REQ.CorrespAcc}</div>
+                        <div style="font-size: 6pt; color: #555;">(номер кор./сч. банка получателя платежа)</div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 3px; border-bottom: 1px solid #000;">
+                    <div style="font-size: 8pt;">${purpose}</div>
+                    <div style="font-size: 6pt; color: #555;">(наименование платежа)</div>
+                </div>
+                <div style="margin-bottom: 3px; border-bottom: 1px solid #000;">
+                    <div style="font-size: 8pt;">${plot.payerName}</div>
+                    <div style="font-size: 6pt; color: #555;">(Ф.И.О. плательщика, адрес)</div>
+                </div>
+                <div style="margin-top: 4px; padding-top: 2px; border-top: 1px solid #000;">
+                    ${detailsHtml}
+                    <div style="font-size: 9pt; font-weight: bold; text-align: right; border-top: 1px solid #000; margin-top: 4px; padding-top: 2px;">Итого к доплате: ${plot.totalDebt.toFixed(2)} руб.</div>
+                </div>
+                <div style="font-size: 7pt; border: 1px solid #000; padding: 4px; margin-top: 5px; background: #f9f9f9; line-height: 1.3;">
+                    <strong>Сумма прописью:</strong> ${amountWords}
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 8pt;">
+                    <div>Дата ${today}</div>
+                    <div>
+                        <div>Плательщик (подпись) ______ / ______________</div>
+                        <div>Кассир ______ / ______________</div>
+                    </div>
+                </div>
+            </div>
+            <div style="flex: 1; border-left: 1px solid #000; background: #fafaf5; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 12px 5px; text-align: center;">
+                <div style="font-weight: bold; font-size: 14pt; text-transform: uppercase;">${title}</div>
+                ${withQr && qrDataUrl ? `<div style="margin: 8px 0;"><img src="${qrDataUrl}" style="width: 50mm; height: 50mm; border: 1px solid #aaa;"></div><div style="font-size: 7pt;">Сканируйте для оплаты</div>` : '<div style="margin: 8px 0;"></div>'}
+                <div style="font-size: 10pt; margin-top: 8px;">Кассир</div>
+            </div>
+        </div>
+    `;
+
+    if (CFG.duplicate) {
+        return `<div style="width: 210mm; margin: 0 auto; font-family: 'Times New Roman', Times, serif; font-size: 9pt; background: white; padding: 5mm;">
+            ${partHtml('ИЗВЕЩЕНИЕ', true)}
+            <div style="text-align: center; margin: 4px 0; letter-spacing: 2px; font-size: 8pt;">────────────────────────────────────────────────────</div>
+            ${partHtml('КВИТАНЦИЯ', false)}
+        </div>`;
+    } else {
+        return `<div style="width: 210mm; margin: 0 auto; font-family: 'Times New Roman', Times, serif; font-size: 9pt; background: white; padding: 5mm;">
+            ${partHtml('КВИТАНЦИЯ', CFG.showQr)}
+        </div>`;
+    }
+}
+
+async function openReceiptModal(plot) {
+  currentReceiptPlot = plot;
+  document.getElementById('receiptPreviewBody').innerHTML = '<div style="text-align:center;padding:30px;color:#666;">⏳ Генерация квитанции...</div>';
+  document.getElementById('receiptModal').classList.add('open');
+  const html = await buildReceiptHTML(plot);
+  document.getElementById('receiptPreviewBody').innerHTML = html;
+}
+
+document.getElementById('closeReceiptModal').onclick =
+document.getElementById('closeReceiptModalBtn').onclick = () => document.getElementById('receiptModal').classList.remove('open');
+document.getElementById('receiptModal').addEventListener('click', e => { if (e.target === document.getElementById('receiptModal')) document.getElementById('receiptModal').classList.remove('open'); });
+
+document.getElementById('printReceiptModalBtn').addEventListener('click', async () => {
+  if (!currentReceiptPlot) return;
+  const html = await buildReceiptHTML(currentReceiptPlot);
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><meta charset="UTF-8"><style>@page{margin:10mm;}body{margin:0;}</style></head><body>${html}</body></html>`);
+  w.document.close(); setTimeout(() => w.print(), 700);
+});
+
+document.getElementById('pdfReceiptModalBtn').addEventListener('click', async () => {
+  if (!currentReceiptPlot) return;
+  await generateAndSavePDF([currentReceiptPlot], `kvitanciya_${currentReceiptPlot.plotNumber}.pdf`);
+});
+
+// Print selected/all
+document.getElementById('printSelectedReceiptsBtn').addEventListener('click', async () => {
+  const sel = allPlots.filter(p => receiptSelectedIds.has(p.id));
+  if (!sel.length) { alert('Выберите участки'); return; }
+  await printMultiple(sel);
+});
+document.getElementById('printAllReceiptsBtn').addEventListener('click', () => printMultiple(allPlots));
+
+async function printMultiple(plots) {
+  const parts = [];
+  const progWrap = document.getElementById('receiptProgress');
+  const progBar = document.getElementById('receiptProgressBar');
+  const progText = document.getElementById('receiptProgressText');
+  progWrap.style.display = '';
+  for (let i = 0; i < plots.length; i++) {
+    progText.textContent = `Генерация ${i+1} / ${plots.length}...`;
+    progBar.style.width = ((i+1)/plots.length*100) + '%';
+    parts.push(await buildReceiptHTML(plots[i]));
+  }
+  progWrap.style.display = 'none';
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><meta charset="UTF-8"><style>@page{margin:10mm;}body{margin:0;}.pb{page-break-before:always;}</style></head><body>${parts.map((h,i) => i ? '<div class="pb">'+h+'</div>' : h).join('')}</body></html>`);
+  w.document.close(); setTimeout(() => w.print(), 900);
+}
+
+document.getElementById('downloadPdfSelectedBtn').addEventListener('click', async () => {
+  const sel = allPlots.filter(p => receiptSelectedIds.has(p.id));
+  if (!sel.length) { alert('Выберите участки'); return; }
+  await generateAndSavePDF(sel, 'kvitancii_vybrannyh.pdf');
+});
+document.getElementById('downloadPdfAllBtn').addEventListener('click', () => generateAndSavePDF(allPlots, 'kvitancii_vse.pdf'));
+
+async function generateAndSavePDF(plots, filename) {
+  const prog = document.getElementById('receiptProgress');
+  const bar = document.getElementById('receiptProgressBar');
+  const txt = document.getElementById('receiptProgressText');
+  prog.style.display = '';
+  const { jsPDF } = window.jspdf;
+  let pdf = null;
+  for (let i = 0; i < plots.length; i++) {
+    txt.textContent = `PDF ${i+1}/${plots.length}: ${plots[i].plotNumber}...`;
+    bar.style.width = ((i+1)/plots.length*100) + '%';
+    const html = await buildReceiptHTML(plots[i]);
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:220mm;height:auto;border:none;';
+    document.body.appendChild(iframe);
+    iframe.contentDocument.open();
+    iframe.contentDocument.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;}</style></head><body>${html}</body></html>`);
+    iframe.contentDocument.close();
+    await new Promise(r => setTimeout(r, 500));
+    const canvas = await html2canvas(iframe.contentDocument.body, { scale: 2, backgroundColor: '#fff', useCORS: true });
+    document.body.removeChild(iframe);
+    if (!pdf) pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    else pdf.addPage();
+    const iw = pdf.internal.pageSize.getWidth();
+    const ih = canvas.height * iw / canvas.width;
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, iw, Math.min(ih, pdf.internal.pageSize.getHeight()));
+  }
+  prog.style.display = 'none';
+  if (pdf) pdf.save(filename);
+}
+
+// ===================== INIT =====================
+initSettings();
+</script>
+</body>
+</html>
