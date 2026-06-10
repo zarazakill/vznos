@@ -65,25 +65,36 @@
         .manual-card { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
         .manual-input { width: 100%; padding: 14px 16px; font-size: 16px; border: 1.5px solid #E0E0E0; border-radius: 16px; margin: 12px 0; }
 
-        /* Модальное окно */
+        /* Модальное окно — поверх всего */
         .modal-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.75); z-index: 1000;
+            background: rgba(0,0,0,0.85); z-index: 10000;
             display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         .modal-content {
-            background: white; border-radius: 24px; width: 90%; max-width: 450px;
-            overflow: hidden; box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+            background: white; border-radius: 28px; width: 90%; max-width: 450px;
+            overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+            animation: slideUp 0.25s ease-out;
         }
-        .modal-header { background: #424242; padding: 20px; color: white; text-align: center; }
-        .modal-body { padding: 20px; }
-        .modal-footer { padding: 16px; border-top: 1px solid #E0E0E0; }
-        .modal-setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #F0F0F0; }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header { background: #2E7D32; padding: 20px; color: white; text-align: center; }
+        .modal-body { padding: 20px; max-height: 65vh; overflow-y: auto; }
+        .modal-footer { padding: 16px 20px 24px; border-top: 1px solid #E0E0E0; }
+        .modal-setting-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #F0F0F0; }
         .modal-setting-row:last-child { border-bottom: none; }
-        .danger-btn { background: #E65100; color: white; border: none; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: bold; }
-        .warning-btn { background: #C62828; color: white; border: none; padding: 8px 16px; border-radius: 50px; cursor: pointer; font-weight: bold; }
-        .close-modal-btn { width: 100%; padding: 14px; background: #757575; color: white; border: none; border-radius: 50px; cursor: pointer; font-weight: bold; }
+        .danger-btn { background: #E65100; color: white; border: none; padding: 8px 18px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .warning-btn { background: #C62828; color: white; border: none; padding: 8px 18px; border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .close-modal-btn { width: 100%; padding: 14px; background: #757575; color: white; border: none; border-radius: 60px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.2s; }
+        .close-modal-btn:hover, .danger-btn:hover, .warning-btn:hover { opacity: 0.9; transform: scale(0.98); }
 
         @media (max-width: 480px) {
             .search-input-group { flex-direction: column; }
@@ -918,6 +929,7 @@ function showConsentScreen() {
     document.getElementById('declineBtn').onclick = () => { if (confirm('Без согласия использование невозможно. Закрыть?')) window.close(); };
 }
 
+// ИСПРАВЛЕННОЕ МОДАЛЬНОЕ ОКНО НАСТРОЕК — теперь поверх всего!
 function showSettingsModal() {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -943,6 +955,7 @@ function showSettingsModal() {
     </div>`;
     document.body.appendChild(overlay);
 
+    // Закрытие по кнопке и по клику на оверлей
     const closeModal = () => overlay.remove();
     document.getElementById('closeModalBtn').onclick = closeModal;
     overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
