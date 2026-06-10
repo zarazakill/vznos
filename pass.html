@@ -4,77 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>СНТ «Берёзка-2» — Паспорт участка</title>
-    <!-- JSZip для распаковки ODS -->
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         :root {
-            --bg-light: #F4F6F4;
+            --bg-light: #f4f7f4;
             --card-light: #ffffff;
-            --text-light: #1e2a1e;
-            --border-light: #e0e7e0;
-            --green-main: #2E7D32;
-            --green-light: #E8F5E9;
-            --red-main: #C62828;
-            --red-light: #FFEBEE;
-            --yellow-main: #ED6C02;
-            --yellow-light: #FFF4E5;
-            --blue-main: #1565C0;
-            --blue-light: #E3F2FD;
-            --gray-600: #5f6b5f;
+            --text-light: #1a2a1a;
+            --border-light: #e2e8e2;
+            --green-main: #2e7d32;
+            --green-light: #e8f5e9;
+            --red-main: #c62828;
+            --red-light: #ffebee;
+            --orange-main: #ed6c02;
+            --orange-light: #fff4e5;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
         }
-
+        
         body.dark {
-            --bg-light: #121212;
-            --card-light: #1e2a1e;
-            --text-light: #eef5ee;
-            --border-light: #2c3a2c;
+            --bg-light: #0f120f;
+            --card-light: #1a241a;
+            --text-light: #e8ede8;
+            --border-light: #2a352a;
             --green-light: #1b3b1f;
             --red-light: #3b1e1e;
-            --yellow-light: #3a2a1a;
-            --blue-light: #1a2a40;
-            --gray-600: #a0b0a0;
+            --orange-light: #3a2a1a;
         }
-
+        
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-light);
             color: var(--text-light);
-            transition: background 0.2s, color 0.2s;
+            transition: all 0.2s;
         }
-
-        /* Навбар */
+        
+        /* Навигация */
         .navbar {
             background: var(--green-main);
             padding: 0 24px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 24px;
             flex-wrap: wrap;
             position: sticky;
             top: 0;
             z-index: 100;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
         .navbar-brand {
-            font-weight: bold;
+            font-weight: 700;
             font-size: 1.2rem;
             color: white;
             padding: 14px 0;
         }
         .nav-tabs {
             display: flex;
-            gap: 8px;
+            gap: 4px;
         }
         .nav-tab {
             padding: 14px 20px;
             cursor: pointer;
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.85);
             font-weight: 600;
             border-bottom: 3px solid transparent;
             transition: 0.2s;
@@ -85,23 +77,20 @@
         }
         .navbar-right {
             margin-left: auto;
-            display: flex;
-            align-items: center;
-            gap: 15px;
         }
         .theme-toggle {
             background: rgba(255,255,255,0.2);
             border: none;
             border-radius: 30px;
-            padding: 8px 16px;
+            padding: 8px 18px;
             color: white;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
         }
-
-        /* Контейнер */
+        
+        /* Контент */
         .content {
-            max-width: 1400px;
+            max-width: 1300px;
             margin: 0 auto;
             padding: 24px 20px;
         }
@@ -111,28 +100,28 @@
         .page.active {
             display: block;
         }
-
-        /* Поисковая карточка */
+        
+        /* Карточка поиска */
         .search-card {
             background: var(--card-light);
             border-radius: 24px;
             padding: 24px;
             margin-bottom: 24px;
             border: 1px solid var(--border-light);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .search-input-group {
             display: flex;
             gap: 12px;
-            flex-wrap: wrap;
             margin-top: 12px;
+            flex-wrap: wrap;
         }
         .search-input {
             flex: 1;
             padding: 14px 18px;
             font-size: 16px;
             border: 1.5px solid var(--border-light);
-            border-radius: 50px;
+            border-radius: 60px;
             background: var(--card-light);
             color: var(--text-light);
             outline: none;
@@ -143,52 +132,60 @@
         .search-btn {
             background: var(--green-main);
             border: none;
-            padding: 0 26px;
-            border-radius: 50px;
+            padding: 0 28px;
+            border-radius: 60px;
             color: white;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
         }
-
+        
         /* Результаты поиска */
         .search-results {
-            margin-top: 20px;
-            max-height: 300px;
+            margin-top: 18px;
+            max-height: 320px;
             overflow-y: auto;
             border: 1px solid var(--border-light);
             border-radius: 20px;
             background: var(--card-light);
         }
         .result-item {
-            padding: 12px 18px;
+            padding: 14px 18px;
             border-bottom: 1px solid var(--border-light);
             cursor: pointer;
             transition: 0.1s;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
         }
         .result-item:hover {
             background: var(--green-light);
         }
         .result-plot {
-            font-weight: bold;
+            font-weight: 700;
+            background: var(--green-light);
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 0.85rem;
         }
         .result-owner {
             color: var(--gray-600);
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
-
-        /* Карточка паспорта */
+        
+        /* Паспорт */
         .passport-container {
             background: var(--card-light);
             border-radius: 28px;
             border: 1px solid var(--border-light);
             overflow: hidden;
         }
+        
+        /* KPI панель */
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
             gap: 16px;
             padding: 24px;
             background: var(--green-light);
@@ -197,96 +194,96 @@
         .kpi-card {
             background: var(--card-light);
             border-radius: 20px;
-            padding: 16px;
+            padding: 16px 12px;
             text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .kpi-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
+            font-weight: 600;
             color: var(--gray-600);
+            letter-spacing: 0.5px;
         }
         .kpi-value {
-            font-size: 1.7rem;
+            font-size: 1.6rem;
             font-weight: 800;
             margin-top: 6px;
         }
-        .badge-debt-none { color: #2e7d32; }
-        .badge-debt-low { color: #ed6c02; }
-        .badge-debt-high { color: #c62828; }
-
+        .debt-none { color: #2e7d32; }
+        .debt-low { color: #ed6c02; }
+        .debt-high { color: #c62828; }
+        
         /* Секции */
         .section {
-            padding: 20px 24px;
+            padding: 22px 28px;
             border-bottom: 1px solid var(--border-light);
         }
         .section-title {
-            font-size: 1.2rem;
+            font-size: 1.15rem;
             font-weight: 700;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             color: var(--green-main);
         }
         .info-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 14px;
+            gap: 18px;
         }
         .info-row {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 5px;
         }
         .info-label {
             font-size: 0.7rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             color: var(--gray-600);
+            letter-spacing: 0.3px;
         }
         .info-value {
             font-size: 1rem;
             font-weight: 500;
             word-break: break-word;
         }
-        .subnote {
-            font-size: 0.8rem;
-            color: var(--gray-600);
-            margin-top: 4px;
-        }
         .debt-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
         .debt-table th, .debt-table td {
             padding: 10px 8px;
             text-align: left;
             border-bottom: 1px solid var(--border-light);
         }
+        .debt-table th {
+            color: var(--gray-600);
+            font-weight: 600;
+        }
         .empty-message {
-            padding: 20px;
+            padding: 30px;
             text-align: center;
             color: var(--gray-600);
             font-style: italic;
         }
-        .color-indicator {
+        .badge {
             display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
+            padding: 3px 10px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            font-weight: 600;
         }
-        .status-green { background: #2e7d32; }
-        .status-yellow { background: #ed6c02; }
-        .status-red { background: #c62828; }
-
-        @media (max-width: 700px) {
-            .navbar { padding: 0 12px; }
-            .nav-tab { padding: 12px 12px; font-size: 0.85rem; }
-            .kpi-value { font-size: 1.2rem; }
+        .badge-green { background: #e8f5e9; color: #2e7d32; }
+        .badge-orange { background: #fff4e5; color: #ed6c02; }
+        
+        @media (max-width: 640px) {
+            .navbar { padding: 0 12px; gap: 8px; }
+            .nav-tab { padding: 12px 10px; font-size: 0.8rem; }
             .section { padding: 16px; }
+            .kpi-value { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -299,7 +296,7 @@
         <div class="nav-tab" data-page="info">ℹ️ О системе</div>
     </div>
     <div class="navbar-right">
-        <button class="theme-toggle" id="themeToggleBtn">🌓 Тёмная тема</button>
+        <button class="theme-toggle" id="themeToggleBtn">🌓 Тема</button>
     </div>
 </div>
 
@@ -307,9 +304,10 @@
     <!-- Страница паспорта -->
     <div class="page active" id="page-passport">
         <div class="search-card">
-            <div style="font-weight: 600; margin-bottom: 4px;">🔍 Поиск участка / владельца</div>
+            <div style="font-weight: 600; margin-bottom: 6px;">🔍 Поиск участка</div>
+            <div style="font-size: 0.8rem; color: var(--gray-600); margin-bottom: 8px;">Ищите по номеру, фамилии, телефону, адресу, кадастру</div>
             <div class="search-input-group">
-                <input type="text" id="globalSearchInput" class="search-input" placeholder="Номер участка, фамилия, телефон, адрес, кадастровый номер...">
+                <input type="text" id="globalSearchInput" class="search-input" placeholder="Например: 15, Иванов, 8-913, улица...">
                 <button id="searchBtn" class="search-btn">Найти</button>
             </div>
             <div id="searchResultsPanel" class="search-results" style="display: none;"></div>
@@ -317,9 +315,7 @@
 
         <div id="passportView" style="display: none;">
             <div class="passport-container">
-                <!-- KPI блок -->
                 <div class="kpi-grid" id="kpiBlock"></div>
-                <!-- Основные секции -->
                 <div class="section" id="generalSection"></div>
                 <div class="section" id="ownersSection"></div>
                 <div class="section" id="financeSection"></div>
@@ -328,306 +324,332 @@
                 <div class="section" id="notesSection"></div>
             </div>
         </div>
-        <div id="noPlotSelectedMessage" class="empty-message" style="padding: 40px;">🔎 Выберите участок из результатов поиска, чтобы увидеть полный паспорт.</div>
+        <div id="noPlotSelectedMessage" class="empty-message" style="padding: 50px; text-align: center;">
+            🔎 Введите номер участка или фамилию владельца и выберите результат поиска
+        </div>
     </div>
 
-    <!-- Страница информации -->
     <div class="page" id="page-info">
         <div class="search-card">
-            <div class="section-title">📘 О модуле «Паспорт участка»</div>
+            <div class="section-title">📘 О системе «Паспорт участка»</div>
             <div class="info-grid">
-                <div class="info-row"><span class="info-label">Архитектура</span><span class="info-value">BaseRepository, DebitRepository, ElectricityRepository + PlotPassportService</span></div>
-                <div class="info-row"><span class="info-label">Источники данных</span><span class="info-value">base.ods, debit.ods, ee.ods (кэшируются один раз)</span></div>
-                <div class="info-row"><span class="info-label">Поиск</span><span class="info-value">По номеру, ФИО, телефону, адресу, кадастру, любым полям</span></div>
-                <div class="info-row"><span class="info-label">Индикаторы долга</span><span class="info-value">🟢 нет долга / 🟡 небольшой (до 2000₽) / 🔴 значительный (>2000₽)</span></div>
-                <div class="info-row"><span class="info-label">Совместимость</span><span class="info-value">Не удаляет и не изменяет существующий функционал, работает независимо</span></div>
+                <div class="info-row"><span class="info-label">Архитектура</span><span class="info-value">BaseRepository + DebitRepository + ElectricityRepository</span></div>
+                <div class="info-row"><span class="info-label">Источники</span><span class="info-value">base.ods, debit.ods, ee.ods (кэшируются при первом загрузке)</span></div>
+                <div class="info-row"><span class="info-label">Поиск</span><span class="info-value">По всем текстовым полям: участок, ФИО, телефон, адрес, кадастр</span></div>
+                <div class="info-row"><span class="info-label">Цветовая индикация долга</span><span class="info-value">🟢 нет долга / 🟡 до 2000₽ / 🔴 от 2000₽</span></div>
+                <div class="info-row"><span class="info-label">Совместимость</span><span class="info-value">Не изменяет исходные ODS-файлы, работает независимо</span></div>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // ========================= МОДУЛЬНАЯ АРХИТЕКТУРА =========================
-    // Репозитории работают только со своими ODS-файлами и кэшируют данные.
-    // PlotPassportService собирает полную модель.
-
-    // --- Вспомогательные парсеры ODS ---
-    async function parseOdsToMap(url, rowProcessor) {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`Не удалось загрузить ${url}`);
-        const arrayBuffer = await response.arrayBuffer();
-        const zip = await JSZip.loadAsync(arrayBuffer);
-        const contentXml = await zip.file("content.xml").async("string");
+    // ============================================================
+    // РЕПОЗИТОРИИ — чистый слой доступа к данным
+    // ============================================================
+    
+    // Утилиты для парсинга ODS
+    async function loadOdsToRawRows(url) {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`Ошибка загрузки ${url}: ${resp.status}`);
+        const ab = await resp.arrayBuffer();
+        const zip = await JSZip.loadAsync(ab);
+        const xml = await zip.file("content.xml").async("string");
         const parser = new DOMParser();
-        const doc = parser.parseFromString(contentXml, "application/xml");
-        const allRows = Array.from(doc.getElementsByTagName("*")).filter(el => el.localName === "table-row");
-        const resultMap = new Map();
-        for (let i = 0; i < allRows.length; i++) {
-            const cells = extractCellsFromRow(allRows[i]);
-            const processed = rowProcessor(cells, i);
-            if (processed && processed.key) resultMap.set(processed.key, processed.data);
-        }
-        console.log(`[${url}] загружено: ${resultMap.size} записей`);
-        return resultMap;
-    }
-
-    function extractCellsFromRow(rowElement) {
-        const cells = [];
-        for (let child of rowElement.childNodes) {
-            if (child.localName !== "table-cell" && child.localName !== "covered-table-cell") continue;
-            let repeat = 1;
-            if (child.hasAttribute("table:number-columns-repeated")) {
-                repeat = parseInt(child.getAttribute("table:number-columns-repeated")) || 1;
-            }
-            let text = "";
-            for (let p of child.childNodes) {
-                if (p.localName === "p") text += p.textContent || "";
-            }
-            text = text.trim();
-            for (let r = 0; r < Math.min(repeat, 30); r++) cells.push(text);
-        }
-        return cells;
-    }
-
-    // ------------------- BaseRepository (реестр участков) -------------------
-    class BaseRepository {
-        constructor() { this.cache = null; }
-        async loadData() {
-            if (this.cache) return this.cache;
-            this.cache = await parseOdsToMap('./base.ods', (cells) => {
-                if (cells.length < 12) return null;
-                const plotRaw = (cells[10] || "").trim();
-                if (!plotRaw || plotRaw.toLowerCase() === "итого") return null;
-                const key = plotRaw.toLowerCase();
-                const owner = cells[1] || "";
-                const membership = cells[2] || "";
-                const phone = cells[3] || "";
-                const email = cells[4] || "";
-                const plotAddress = cells[11] || "";
-                const area = cells[12] || "";
-                const cadastral = cells[13] || "";
-                const sector = cells[14] || "";
-                const status = cells[15] || "";
-                const registrationDate = cells[16] || "";
-                const notes = cells[17] || "";
-                const additionalOwners = cells[18] || "";
-                const postalAddress = cells[19] || "";
-                const street = cells[20] || "";
-                const category = cells[21] || "";
-                return {
-                    key,
-                    data: {
-                        plotNumber: plotRaw, owner, membershipStatus: membership, phone, email,
-                        plotAddress, area, cadastral, sector, status, registrationDate, notes,
-                        additionalOwners, postalAddress, street, category,
-                        isMember: membership && !membership.toLowerCase().includes("не является")
+        const doc = parser.parseFromString(xml, "application/xml");
+        const rows = [];
+        const allElements = doc.getElementsByTagName("*");
+        for (let el of allElements) {
+            if (el.localName === "table-row") {
+                const cells = [];
+                for (let child of el.childNodes) {
+                    if (child.localName !== "table-cell" && child.localName !== "covered-table-cell") continue;
+                    let repeat = 1;
+                    if (child.hasAttribute("table:number-columns-repeated")) {
+                        repeat = parseInt(child.getAttribute("table:number-columns-repeated")) || 1;
                     }
-                };
-            });
-            return this.cache;
+                    let text = "";
+                    for (let p of child.childNodes) {
+                        if (p.localName === "p") text += p.textContent || "";
+                    }
+                    text = text.trim();
+                    for (let r = 0; r < Math.min(repeat, 30); r++) cells.push(text);
+                }
+                if (cells.length > 0) rows.push(cells);
+            }
         }
-        async getPlotByKey(key) { const map = await this.loadData(); return map.get(key.toLowerCase()) || null; }
-        async getAllPlots() { const map = await this.loadData(); return Array.from(map.values()); }
+        return rows;
     }
-
-    // ------------------- DebitRepository (только взносы) -------------------
+    
+    // BaseRepository — работает только с base.ods
+    class BaseRepository {
+        constructor() { this.cache = null; this.allPlots = null; }
+        async load() {
+            if (this.cache) return this.cache;
+            const rows = await loadOdsToRawRows('./base.ods');
+            const plots = new Map();
+            // Ищем строку с заголовками, чтобы определить колонки
+            let headerRow = null;
+            for (let i = 0; i < Math.min(rows.length, 30); i++) {
+                const row = rows[i];
+                const joined = row.join(' ').toLowerCase();
+                if (joined.includes('участок') || (joined.includes('номер') && joined.includes('владел'))) {
+                    headerRow = row;
+                    break;
+                }
+            }
+            // Если заголовки не найдены, используем индексы по умолчанию
+            let colPlot = 0, colOwner = 1, colPhone = 3, colEmail = 4, colAddress = 11;
+            let colArea = 12, colCadastral = 13, colSector = 14, colStatus = 15, colRegDate = 16;
+            let colNotes = 17, colAdditionalOwners = 18, colPostalAddress = 19, colStreet = 20, colCategory = 21;
+            
+            if (headerRow) {
+                for (let idx = 0; idx < headerRow.length; idx++) {
+                    const val = headerRow[idx].toLowerCase();
+                    if (val === 'участок' || val === 'номер' || val === '№') colPlot = idx;
+                    if (val.includes('владел') || val === 'фио') colOwner = idx;
+                    if (val.includes('телефон')) colPhone = idx;
+                    if (val.includes('email')) colEmail = idx;
+                    if (val.includes('адрес') && !val.includes('почтов')) colAddress = idx;
+                    if (val.includes('площадь') || val === 'сотки') colArea = idx;
+                    if (val.includes('кадастр')) colCadastral = idx;
+                    if (val.includes('сектор')) colSector = idx;
+                    if (val.includes('статус')) colStatus = idx;
+                    if (val.includes('регистр')) colRegDate = idx;
+                    if (val.includes('примечан')) colNotes = idx;
+                }
+            }
+            
+            for (const row of rows) {
+                const plotRaw = row[colPlot]?.trim();
+                if (!plotRaw || plotRaw.toLowerCase() === 'итого') continue;
+                if (/^\d{1,3}[а-яёa-z]?$/i.test(plotRaw) || (plotRaw.length > 0 && !isNaN(parseFloat(plotRaw)))) {
+                    const key = plotRaw.toLowerCase();
+                    plots.set(key, {
+                        plotNumber: plotRaw,
+                        owner: row[colOwner] || '',
+                        phone: row[colPhone] || '',
+                        email: row[colEmail] || '',
+                        plotAddress: row[colAddress] || '',
+                        area: row[colArea] || '',
+                        cadastral: row[colCadastral] || '',
+                        sector: row[colSector] || '',
+                        status: row[colStatus] || '',
+                        registrationDate: row[colRegDate] || '',
+                        notes: row[colNotes] || '',
+                        additionalOwners: row[colAdditionalOwners] || '',
+                        postalAddress: row[colPostalAddress] || '',
+                        street: row[colStreet] || '',
+                        category: row[colCategory] || ''
+                    });
+                }
+            }
+            this.cache = plots;
+            this.allPlots = Array.from(plots.values());
+            console.log(`BaseRepository: загружено ${plots.size} участков`);
+            return plots;
+        }
+        async getPlot(key) { const map = await this.load(); return map.get(key.toLowerCase()) || null; }
+        async getAllPlots() { await this.load(); return this.allPlots; }
+    }
+    
+    // DebitRepository — работает только с debit.ods (взносы)
     class DebitRepository {
         constructor() { this.cache = null; }
-        async loadData() {
+        async load() {
             if (this.cache) return this.cache;
-            this.cache = await parseOdsToMap('./debit.ods', (cells) => {
-                if (cells.length < 8) return null;
-                const plotRaw = (cells[0] || "").trim();
-                if (!plotRaw || plotRaw.toLowerCase() === "итого" || !/^\d/i.test(plotRaw)) return null;
-                const key = plotRaw.toLowerCase();
-                const owner = cells[1] || "";
-                const debtEnd = parseFloat(String(cells[7] || "0").replace(",", ".")) || 0;
-                const overpayEnd = parseFloat(String(cells[8] || "0").replace(",", ".")) || 0;
-                let membershipDebt = 0, targetDebt = 0, arrearsDebt = 0, workDebt = 0, electricityDebt = 0;
-                // Для детализации нужно читать следующие строки? Парсинг деталей как в исходном варианте
-                return {
-                    key, data: {
-                        plotNumber: plotRaw, owner, totalDebt: debtEnd, overpayEnd,
-                        membershipDebt, targetDebt, arrearsDebt, workDebt, electricityDebt,
-                        details: []  // будет заполнено позже после полного прохода
-                    }
-                };
-            });
-            // Дополнительный проход для детализации (аналогично исходной логике)
-            const fullMap = await this.buildDetailedDebit();
-            this.cache = fullMap;
-            return this.cache;
-        }
-        async buildDetailedDebit() {
-            const response = await fetch('./debit.ods');
-            const arrayBuffer = await response.arrayBuffer();
-            const zip = await JSZip.loadAsync(arrayBuffer);
-            const contentXml = await zip.file("content.xml").async("string");
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(contentXml, "application/xml");
-            const allRows = Array.from(doc.getElementsByTagName("*")).filter(el => el.localName === "table-row");
+            const rows = await loadOdsToRawRows('./debit.ods');
             const result = new Map();
             let current = null;
+            let started = false;
             let headerFound = false;
-            for (let i = 0; i < allRows.length; i++) {
-                const cells = extractCellsFromRow(allRows[i]);
-                if (cells.length === 0) continue;
-                const col0 = (cells[0] || "").trim();
+            
+            for (const row of rows) {
+                if (row.length < 3) continue;
+                const first = row[0]?.trim() || '';
                 if (!headerFound) {
-                    if (cells.some(c => c.toLowerCase().includes("владельц") || c === "№")) headerFound = true;
+                    if (row.some(c => c.toLowerCase().includes('владельц') || c === '№')) {
+                        headerFound = true;
+                    }
                     continue;
                 }
-                if (/^\d{1,3}[а-яёa-z]?$/i.test(col0) && cells[1] && cells[1].trim() !== "") {
-                    if (current && current.totalDebt > 0.01) result.set(current.plotNumber, current);
-                    const plotKey = col0.toLowerCase();
-                    const debtEnd = parseFloat(String(cells[7] || "0").replace(",", ".")) || 0;
-                    const overpayEnd = parseFloat(String(cells[8] || "0").replace(",", ".")) || 0;
+                // Проверка на строку участка
+                if (/^\d{1,3}[а-яёa-z]?$/i.test(first) && row[1] && row[1].trim()) {
+                    if (current && current.totalDebt > 0) result.set(current.plotNumber, current);
+                    const debtEnd = parseFloat((row[7] || '0').toString().replace(',', '.')) || 0;
+                    const overpayEnd = parseFloat((row[8] || '0').toString().replace(',', '.')) || 0;
                     current = {
-                        plotNumber: plotKey, owner: cells[1]?.trim() || "", totalDebt: debtEnd, overpayEnd,
-                        membershipDebt: 0, targetDebt: 0, arrearsDebt: 0, workDebt: 0, electricityDebt: 0,
+                        plotNumber: first.toLowerCase(),
+                        owner: row[1]?.trim() || '',
+                        totalDebt: debtEnd,
+                        overpay: overpayEnd,
+                        membershipDebt: 0, targetDebt: 0, arrearsDebt: 0, workDebt: 0,
                         details: []
                     };
-                } else if (current && col0 !== "" && !/^\d/.test(col0)) {
-                    const amount = parseFloat(String(cells[7] || "0").replace(",", ".")) || 0;
+                    started = true;
+                } 
+                else if (current && first !== '' && !/^\d/.test(first) && started) {
+                    const amount = parseFloat((row[7] || '0').toString().replace(',', '.')) || 0;
                     if (amount > 0.01) {
-                        const catLower = col0.toLowerCase();
-                        let label = col0;
-                        if (catLower.includes("членские взносы")) { current.membershipDebt += amount; label = `Членские взносы: ${amount.toFixed(2)} ₽`; }
-                        else if (catLower.includes("целевые")) { current.targetDebt += amount; label = `Целевые взносы: ${amount.toFixed(2)} ₽`; }
-                        else if (catLower.includes("задолженность прошлых лет") && !catLower.includes("отработка")) { current.arrearsDebt += amount; label = `Задолженность прошлых лет: ${amount.toFixed(2)} ₽`; }
-                        else if (catLower.includes("отработка")) { current.workDebt += amount; label = `Отработка: ${amount.toFixed(2)} ₽`; }
-                        else if (catLower.includes("электроэнергия")) { current.electricityDebt += amount; label = `Электроэнергия: ${amount.toFixed(2)} ₽`; }
-                        else label = `${col0}: ${amount.toFixed(2)} ₽`;
-                        current.details.push({ label, amount });
+                        const lower = first.toLowerCase();
+                        let category = '';
+                        if (lower.includes('членские взносы')) { current.membershipDebt += amount; category = 'Членские взносы'; }
+                        else if (lower.includes('целевые')) { current.targetDebt += amount; category = 'Целевые взносы'; }
+                        else if (lower.includes('задолженность прошлых лет') && !lower.includes('отработка')) { current.arrearsDebt += amount; category = 'Задолженность прошлых лет'; }
+                        else if (lower.includes('отработка')) { current.workDebt += amount; category = 'Отработка'; }
+                        else { category = first; }
+                        current.details.push({ label: category, amount: amount });
                     }
                 }
             }
-            if (current && current.totalDebt > 0.01) result.set(current.plotNumber, current);
+            if (current && current.totalDebt > 0) result.set(current.plotNumber, current);
+            this.cache = result;
+            console.log(`DebitRepository: загружено ${result.size} записей`);
             return result;
         }
-        async getDebtByPlot(key) { const map = await this.loadData(); return map.get(key.toLowerCase()) || null; }
+        async getDebt(key) { const map = await this.load(); return map.get(key.toLowerCase()) || null; }
     }
-
-    // ------------------- ElectricityRepository (только э/э) -------------------
+    
+    // ElectricityRepository — только ee.ods
     class ElectricityRepository {
         constructor() { this.cache = null; }
-        async loadData() {
+        async load() {
             if (this.cache) return this.cache;
-            this.cache = await parseOdsToMap('./ee.ods', (cells) => {
-                if (cells.length < 7) return null;
-                const plotRaw = (cells[0] || "").trim();
-                if (!plotRaw || !/^\d/i.test(plotRaw)) return null;
-                const key = plotRaw.toLowerCase();
-                const owner = cells[1] || "";
-                const readingDateStr = cells[4] || "";
-                const previousReading = parseFloat(String(cells[5] || "0").replace(",", ".")) || 0;
-                const currentReading = parseFloat(String(cells[6] || "0").replace(",", ".")) || 0;
-                const consumption = parseFloat(String(cells[7] || "0").replace(",", ".")) || 0;
-                const tariff = 3.82;
-                const accrued = consumption * tariff;
-                return {
-                    key, data: {
-                        plotNumber: plotRaw, owner, readingDateStr, previousReading, currentReading,
-                        consumption, tariff, accrued, paid: 0, debt: accrued
+            const rows = await loadOdsToRawRows('./ee.ods');
+            const result = new Map();
+            let headerFound = false;
+            const tariff = 3.82;
+            
+            for (const row of rows) {
+                if (row.length < 5) continue;
+                const first = row[0]?.trim() || '';
+                if (!headerFound) {
+                    if (row.some(c => c.toLowerCase().includes('участок') || c === '№')) {
+                        headerFound = true;
                     }
-                };
-            });
-            return this.cache;
+                    continue;
+                }
+                if (/^\d{1,3}[а-яёa-z]?$/i.test(first)) {
+                    const key = first.toLowerCase();
+                    const previous = parseFloat((row[5] || '0').toString().replace(',', '.')) || 0;
+                    const currentVal = parseFloat((row[6] || '0').toString().replace(',', '.')) || 0;
+                    const consumption = parseFloat((row[7] || '0').toString().replace(',', '.')) || 0;
+                    const accrued = consumption * tariff;
+                    result.set(key, {
+                        plotNumber: first,
+                        owner: row[1]?.trim() || '',
+                        readingDate: row[4] || '',
+                        previousReading: previous,
+                        currentReading: currentVal,
+                        consumption: consumption,
+                        tariff: tariff,
+                        accrued: accrued,
+                        debt: accrued
+                    });
+                }
+            }
+            this.cache = result;
+            console.log(`ElectricityRepository: загружено ${result.size} записей`);
+            return result;
         }
-        async getElectricityByPlot(key) { const map = await this.loadData(); return map.get(key.toLowerCase()) || null; }
+        async getElectricity(key) { const map = await this.load(); return map.get(key.toLowerCase()) || null; }
     }
-
-    // ------------------- PlotPassportService (сборка паспорта) -------------------
+    
+    // Сервис сборки паспорта
     class PlotPassportService {
         constructor(baseRepo, debitRepo, eeRepo) {
             this.baseRepo = baseRepo;
             this.debitRepo = debitRepo;
             this.eeRepo = eeRepo;
         }
-        async getFullPassport(plotNumber) {
-            const normalizedKey = plotNumber.toLowerCase();
-            const baseData = await this.baseRepo.getPlotByKey(normalizedKey);
-            const debitData = await this.debitRepo.getDebtByPlot(normalizedKey);
-            const eeData = await this.eeRepo.getElectricityByPlot(normalizedKey);
-            if (!baseData && !debitData && !eeData) return null;
-
+        
+        async getPassport(plotNumber) {
+            const key = plotNumber.toLowerCase();
+            const [base, debt, ee] = await Promise.all([
+                this.baseRepo.getPlot(key),
+                this.debitRepo.getDebt(key),
+                this.eeRepo.getElectricity(key)
+            ]);
+            if (!base && !debt && !ee) return null;
+            
+            // Собираем собственников
+            const ownersList = [];
+            if (base?.owner) ownersList.push({ name: base.owner, type: 'Основной' });
+            if (base?.additionalOwners) {
+                base.additionalOwners.split(/[,;]+/).forEach(s => {
+                    if (s.trim()) ownersList.push({ name: s.trim(), type: 'Сособственник' });
+                });
+            }
+            
             return {
-                general: baseData ? {
-                    plotNumber: baseData.plotNumber,
-                    street: baseData.street || '',
-                    address: baseData.plotAddress,
-                    sector: baseData.sector,
-                    area: baseData.area,
-                    category: baseData.category,
-                    status: baseData.status,
-                    registrationDate: baseData.registrationDate,
-                    cadastral: baseData.cadastral,
-                } : { plotNumber: normalizedKey },
-                owners: this.extractOwners(baseData, debitData),
-                finance: debitData ? {
-                    totalDebt: debitData.totalDebt,
-                    overpay: debitData.overpayEnd,
-                    membershipDebt: debitData.membershipDebt,
-                    targetDebt: debitData.targetDebt,
-                    arrearsDebt: debitData.arrearsDebt,
-                    workDebt: debitData.workDebt,
-                    details: debitData.details || []
+                general: {
+                    plotNumber: plotNumber,
+                    street: base?.street || '',
+                    address: base?.plotAddress || '',
+                    sector: base?.sector || '',
+                    area: base?.area || '',
+                    category: base?.category || '',
+                    status: base?.status || '',
+                    registrationDate: base?.registrationDate || '',
+                    cadastral: base?.cadastral || ''
+                },
+                owners: {
+                    list: ownersList,
+                    phones: base?.phone || '',
+                    email: base?.email || '',
+                    postalAddress: base?.postalAddress || ''
+                },
+                finance: debt ? {
+                    totalDebt: debt.totalDebt,
+                    overpay: debt.overpay,
+                    membershipDebt: debt.membershipDebt,
+                    targetDebt: debt.targetDebt,
+                    arrearsDebt: debt.arrearsDebt,
+                    workDebt: debt.workDebt,
+                    details: debt.details
                 } : null,
-                electricity: eeData ? {
-                    currentReading: eeData.currentReading,
-                    previousReading: eeData.previousReading,
-                    consumption: eeData.consumption,
-                    accrued: eeData.accrued,
-                    debt: eeData.debt,
-                    tariff: eeData.tariff,
-                    readingDate: eeData.readingDateStr
+                electricity: ee ? {
+                    currentReading: ee.currentReading,
+                    previousReading: ee.previousReading,
+                    consumption: ee.consumption,
+                    accrued: ee.accrued,
+                    debt: ee.debt,
+                    tariff: ee.tariff,
+                    readingDate: ee.readingDate
                 } : null,
-                historyEntries: this.extractHistory(baseData),
-                notes: baseData?.notes || '',
-                additionalOwnersRaw: baseData?.additionalOwners || '',
-                postalAddress: baseData?.postalAddress || '',
-                phone: baseData?.phone || (debitData?.owner ? '' : ''),
-                email: baseData?.email || '',
-                memberStatus: baseData?.membershipStatus || ''
+                notes: base?.notes || '',
+                history: this.buildHistory(base)
             };
         }
-
-        extractOwners(base, debit) {
-            let primary = base?.owner || debit?.owner || '';
-            let additional = base?.additionalOwners || '';
-            let phones = base?.phone || '';
-            let emails = base?.email || '';
-            let ownersList = [];
-            if (primary) ownersList.push({ name: primary, type: 'Основной' });
-            if (additional) {
-                additional.split(/[,;]/).forEach(p => { if(p.trim()) ownersList.push({ name: p.trim(), type: 'Сособственник' }); });
+        
+        buildHistory(base) {
+            const entries = [];
+            if (base?.registrationDate) {
+                entries.push({ date: base.registrationDate, event: 'Регистрация участка', detail: `Статус: ${base.status || 'не указан'}` });
             }
-            return { ownersList, phones, emails, postalAddress: base?.postalAddress || '' };
-        }
-
-        extractHistory(base) {
-            const history = [];
-            if (base?.registrationDate) history.push({ date: base.registrationDate, event: 'Регистрация участка', detail: `Статус: ${base.status || '—'}` });
-            if (base?.status) history.push({ date: '', event: 'Текущий статус', detail: base.status });
-            return history;
+            if (base?.status) {
+                entries.push({ date: '', event: 'Текущий статус', detail: base.status });
+            }
+            return entries;
         }
     }
-
-    // ------------------- Глобальные экземпляры и кэш -------------------
+    
+    // ============================================================
+    // ИНИЦИАЛИЗАЦИЯ И UI
+    // ============================================================
     const baseRepo = new BaseRepository();
     const debitRepo = new DebitRepository();
     const eeRepo = new ElectricityRepository();
     const passportService = new PlotPassportService(baseRepo, debitRepo, eeRepo);
-    let allPlotsCache = []; // для быстрого поиска
-
-    async function warmupCaches() {
+    let allPlotsForSearch = [];
+    
+    async function warmup() {
         try {
-            await baseRepo.loadData();
-            await debitRepo.loadData();
-            await eeRepo.loadData();
+            await baseRepo.load();
+            await debitRepo.load();
+            await eeRepo.load();
             const plots = await baseRepo.getAllPlots();
-            allPlotsCache = plots.map(p => ({
-                key: p.plotNumber.toLowerCase(),
+            allPlotsForSearch = plots.map(p => ({
                 plotNumber: p.plotNumber,
                 owner: p.owner,
                 phone: p.phone,
@@ -636,152 +658,178 @@
                 sector: p.sector,
                 notes: p.notes
             }));
-            console.log("Кэш загружен, всего участков:", allPlotsCache.length);
-        } catch(e) { console.error("Ошибка загрузки кэша:", e); }
+            console.log(`Поисковый индекс: ${allPlotsForSearch.length} участков`);
+        } catch(e) {
+            console.error('Ошибка загрузки:', e);
+        }
     }
-
-    // Поиск по тексту
+    
     function searchPlots(query) {
         if (!query.trim()) return [];
-        const lowerQuery = query.toLowerCase();
-        return allPlotsCache.filter(p => {
-            return p.plotNumber.toLowerCase().includes(lowerQuery) ||
-                   (p.owner && p.owner.toLowerCase().includes(lowerQuery)) ||
-                   (p.phone && p.phone.toLowerCase().includes(lowerQuery)) ||
-                   (p.address && p.address.toLowerCase().includes(lowerQuery)) ||
-                   (p.cadastral && p.cadastral.toLowerCase().includes(lowerQuery)) ||
-                   (p.sector && p.sector.toLowerCase().includes(lowerQuery)) ||
-                   (p.notes && p.notes.toLowerCase().includes(lowerQuery));
-        }).slice(0, 30);
+        const q = query.toLowerCase();
+        return allPlotsForSearch.filter(p => {
+            return p.plotNumber.toLowerCase().includes(q) ||
+                   (p.owner && p.owner.toLowerCase().includes(q)) ||
+                   (p.phone && p.phone.toLowerCase().includes(q)) ||
+                   (p.address && p.address.toLowerCase().includes(q)) ||
+                   (p.cadastral && p.cadastral.toLowerCase().includes(q)) ||
+                   (p.sector && p.sector.toLowerCase().includes(q));
+        }).slice(0, 35);
     }
-
-    function renderSearchResults(results) {
-        const panel = document.getElementById('searchResultsPanel');
-        if (!results.length) { panel.style.display = 'none'; return; }
-        panel.style.display = 'block';
-        panel.innerHTML = results.map(res => `
-            <div class="result-item" data-plot="${res.plotNumber}">
-                <div><span class="result-plot">Уч. ${res.plotNumber}</span> <span class="result-owner">${escapeHtml(res.owner || '—')}</span></div>
-                <div style="font-size:12px;">${res.address ? res.address.substring(0,40) : ''}</div>
-            </div>
-        `).join('');
-        document.querySelectorAll('.result-item').forEach(el => {
-            el.addEventListener('click', () => {
-                const plotNum = el.getAttribute('data-plot');
-                document.getElementById('globalSearchInput').value = plotNum;
-                loadAndDisplayPassport(plotNum);
-                panel.style.display = 'none';
-            });
-        });
+    
+    function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, function(m){ return m==='&'?'&amp;': m==='<'?'&lt;':'&gt;'; }); }
+    function formatMoney(v) { return new Intl.NumberFormat('ru-RU', {minimumFractionDigits:2}).format(v || 0); }
+    
+    function getDebtStyle(debt) {
+        if (!debt || debt <= 0.01) return { class: 'debt-none', text: 'Нет долга' };
+        if (debt < 2000) return { class: 'debt-low', text: 'Небольшой долг' };
+        return { class: 'debt-high', text: 'Значительный долг' };
     }
-
-    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-
-    function formatMoney(amt) { return new Intl.NumberFormat('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(amt || 0); }
-
-    function getDebtStatusClass(debtAmount) {
-        if (!debtAmount || debtAmount <= 0.01) return { class: 'badge-debt-none', text: 'Нет долга', color: 'green' };
-        if (debtAmount < 2000) return { class: 'badge-debt-low', text: 'Небольшой долг', color: 'yellow' };
-        return { class: 'badge-debt-high', text: 'Значительный долг', color: 'red' };
-    }
-
-    async function loadAndDisplayPassport(plotNumber) {
-        const passport = await passportService.getFullPassport(plotNumber);
-        if (!passport) { alert('Участок не найден в данных'); return; }
+    
+    async function renderPassport(plotNumber) {
+        const passport = await passportService.getPassport(plotNumber);
+        if (!passport) { alert('Данные не найдены'); return; }
+        
         document.getElementById('passportView').style.display = 'block';
         document.getElementById('noPlotSelectedMessage').style.display = 'none';
-
+        
         const totalDebt = passport.finance?.totalDebt || 0;
         const eeDebt = passport.electricity?.debt || 0;
-        const debtInfo = getDebtStatusClass(totalDebt);
+        const debtStyle = getDebtStyle(totalDebt);
+        
+        // KPI
         document.getElementById('kpiBlock').innerHTML = `
-            <div class="kpi-card"><div class="kpi-label">Общая задолженность (взносы)</div><div class="kpi-value ${debtInfo.class}">${formatMoney(totalDebt)} ₽</div><div style="font-size:12px;">${debtInfo.text}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Задолженность (взносы)</div><div class="kpi-value ${debtStyle.class}">${formatMoney(totalDebt)} ₽</div><div style="font-size:12px;">${debtStyle.text}</div></div>
             <div class="kpi-card"><div class="kpi-label">Задолженность э/э</div><div class="kpi-value">${formatMoney(eeDebt)} ₽</div></div>
             <div class="kpi-card"><div class="kpi-label">Переплата</div><div class="kpi-value">${formatMoney(passport.finance?.overpay || 0)} ₽</div></div>
-            <div class="kpi-card"><div class="kpi-label">Площадь участка</div><div class="kpi-value">${passport.general.area || '—'} сот.</div></div>
-            <div class="kpi-card"><div class="kpi-label">Собственники</div><div class="kpi-value">${passport.owners.ownersList.length}</div></div>
+            <div class="kpi-card"><div class="kpi-label">Площадь</div><div class="kpi-value">${passport.general.area || '—'} сот.</div></div>
+            <div class="kpi-card"><div class="kpi-label">Собственников</div><div class="kpi-value">${passport.owners.list.length}</div></div>
         `;
-
+        
         // Общая информация
-        const gen = passport.general;
-        document.getElementById('generalSection').innerHTML = `<div class="section-title">📋 Общая информация</div><div class="info-grid">
-            <div class="info-row"><span class="info-label">Номер участка</span><span class="info-value">${gen.plotNumber}</span></div>
-            <div class="info-row"><span class="info-label">Улица / Адрес</span><span class="info-value">${gen.street || gen.address || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Сектор</span><span class="info-value">${gen.sector || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Кадастровый номер</span><span class="info-value">${gen.cadastral || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Статус</span><span class="info-value">${gen.status || '—'}</span></div>
-            <div class="info-row"><span class="info-label">Дата регистрации</span><span class="info-value">${gen.registrationDate || '—'}</span></div>
-        </div>`;
-
-        // Собственники
-        const ownersHtml = `<div class="section-title">👥 Собственники</div>
+        const g = passport.general;
+        document.getElementById('generalSection').innerHTML = `
+            <div class="section-title">📋 Общая информация</div>
             <div class="info-grid">
-                <div class="info-row"><span class="info-label">Основной владелец</span><span class="info-value">${passport.owners.ownersList.filter(o=>o.type==='Основной').map(o=>o.name).join(', ') || '—'}</span></div>
-                <div class="info-row"><span class="info-label">Сособственники</span><span class="info-value">${passport.owners.ownersList.filter(o=>o.type==='Сособственник').map(o=>o.name).join(', ') || '—'}</span></div>
-                <div class="info-row"><span class="info-label">Телефоны</span><span class="info-value">${passport.owners.phones || '—'}</span></div>
-                <div class="info-row"><span class="info-label">E-mail</span><span class="info-value">${passport.email || '—'}</span></div>
-                <div class="info-row"><span class="info-label">Почтовый адрес</span><span class="info-value">${passport.owners.postalAddress || '—'}</span></div>
-            </div>`;
-        document.getElementById('ownersSection').innerHTML = ownersHtml;
-
+                <div class="info-row"><span class="info-label">Номер участка</span><span class="info-value">${escapeHtml(g.plotNumber)}</span></div>
+                <div class="info-row"><span class="info-label">Улица / Адрес</span><span class="info-value">${escapeHtml(g.street || g.address || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Сектор</span><span class="info-value">${escapeHtml(g.sector || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Кадастровый номер</span><span class="info-value">${escapeHtml(g.cadastral || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Площадь</span><span class="info-value">${escapeHtml(g.area || '—')} сот.</span></div>
+                <div class="info-row"><span class="info-label">Категория</span><span class="info-value">${escapeHtml(g.category || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Статус</span><span class="info-value">${escapeHtml(g.status || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Дата регистрации</span><span class="info-value">${escapeHtml(g.registrationDate || '—')}</span></div>
+            </div>
+        `;
+        
+        // Собственники
+        const owners = passport.owners;
+        document.getElementById('ownersSection').innerHTML = `
+            <div class="section-title">👥 Собственники и контакты</div>
+            <div class="info-grid">
+                <div class="info-row"><span class="info-label">Основной владелец</span><span class="info-value">${escapeHtml(owners.list.find(o=>o.type==='Основной')?.name || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Сособственники</span><span class="info-value">${escapeHtml(owners.list.filter(o=>o.type==='Сособственник').map(o=>o.name).join(', ') || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Телефоны</span><span class="info-value">${escapeHtml(owners.phones || '—')}</span></div>
+                <div class="info-row"><span class="info-label">E-mail</span><span class="info-value">${escapeHtml(owners.email || '—')}</span></div>
+                <div class="info-row"><span class="info-label">Почтовый адрес</span><span class="info-value">${escapeHtml(owners.postalAddress || '—')}</span></div>
+            </div>
+        `;
+        
         // Финансы (только взносы)
-        let financeHtml = `<div class="section-title">💰 Финансовая информация (взносы)</div>`;
-        if (passport.finance && passport.finance.totalDebt > 0 || passport.finance?.details?.length) {
-            financeHtml += `<table class="debt-table"><tr><th>Вид</th><th>Сумма (₽)</th></tr>`;
+        let financeHtml = `<div class="section-title">💰 Финансы (взносы)</div>`;
+        if (passport.finance && (passport.finance.totalDebt > 0 || passport.finance.details.length > 0)) {
+            financeHtml += `<table class="debt-table"><tr><th>Вид задолженности</th><th>Сумма (₽)</th></tr>`;
             if (passport.finance.membershipDebt > 0) financeHtml += `<tr><td>Членские взносы</td><td>${formatMoney(passport.finance.membershipDebt)}</td></tr>`;
             if (passport.finance.targetDebt > 0) financeHtml += `<tr><td>Целевые взносы</td><td>${formatMoney(passport.finance.targetDebt)}</td></tr>`;
             if (passport.finance.arrearsDebt > 0) financeHtml += `<tr><td>Задолженность прошлых лет</td><td>${formatMoney(passport.finance.arrearsDebt)}</td></tr>`;
             if (passport.finance.workDebt > 0) financeHtml += `<tr><td>Отработка</td><td>${formatMoney(passport.finance.workDebt)}</td></tr>`;
             financeHtml += `<tr style="border-top:2px solid var(--border-light);font-weight:bold;"><td>ИТОГО</td><td>${formatMoney(passport.finance.totalDebt)}</td></tr>`;
-            if(passport.finance.overpay > 0) financeHtml += `<tr><td>Переплата</td><td class="badge-debt-none">${formatMoney(passport.finance.overpay)}</td></tr>`;
+            if (passport.finance.overpay > 0) financeHtml += `<tr style="color:#2e7d32;"><td>Переплата</td><td>${formatMoney(passport.finance.overpay)}</td></tr>`;
             financeHtml += `</table>`;
-        } else { financeHtml += `<div class="empty-message">Нет задолженности по взносам</div>`; }
+        } else {
+            financeHtml += `<div class="empty-message">✅ Нет задолженности по взносам</div>`;
+        }
         document.getElementById('financeSection').innerHTML = financeHtml;
-
+        
         // Электроэнергия
         let eeHtml = `<div class="section-title">⚡ Электроэнергия</div>`;
         if (passport.electricity) {
-            eeHtml = `<div class="info-grid"><div class="info-row"><span class="info-label">Текущие показания</span><span class="info-value">${passport.electricity.currentReading} кВт·ч</span></div>
-            <div class="info-row"><span class="info-label">Предыдущие показания</span><span class="info-value">${passport.electricity.previousReading} кВт·ч</span></div>
-            <div class="info-row"><span class="info-label">Расход</span><span class="info-value">${passport.electricity.consumption} кВт·ч</span></div>
-            <div class="info-row"><span class="info-label">Начислено</span><span class="info-value">${formatMoney(passport.electricity.accrued)} ₽</span></div>
-            <div class="info-row"><span class="info-label">Задолженность</span><span class="info-value">${formatMoney(passport.electricity.debt)} ₽</span></div>
-            <div class="info-row"><span class="info-label">Тариф</span><span class="info-value">${passport.electricity.tariff} ₽/кВт·ч</span></div>
-            <div class="info-row"><span class="info-label">Дата показаний</span><span class="info-value">${passport.electricity.readingDate || '—'}</span></div></div>`;
-        } else { eeHtml += `<div class="empty-message">Нет данных по электроэнергии</div>`; }
+            eeHtml = `<div class="info-grid">
+                <div class="info-row"><span class="info-label">Текущие показания</span><span class="info-value">${passport.electricity.currentReading} кВт·ч</span></div>
+                <div class="info-row"><span class="info-label">Предыдущие показания</span><span class="info-value">${passport.electricity.previousReading} кВт·ч</span></div>
+                <div class="info-row"><span class="info-label">Расход</span><span class="info-value">${passport.electricity.consumption} кВт·ч</span></div>
+                <div class="info-row"><span class="info-label">Начислено</span><span class="info-value">${formatMoney(passport.electricity.accrued)} ₽</span></div>
+                <div class="info-row"><span class="info-label">Задолженность по э/э</span><span class="info-value">${formatMoney(passport.electricity.debt)} ₽</span></div>
+                <div class="info-row"><span class="info-label">Тариф</span><span class="info-value">${passport.electricity.tariff} ₽/кВт·ч</span></div>
+                <div class="info-row"><span class="info-label">Дата показаний</span><span class="info-value">${escapeHtml(passport.electricity.readingDate || '—')}</span></div>
+            </div>`;
+        } else {
+            eeHtml += `<div class="empty-message">📭 Нет данных по электроэнергии</div>`;
+        }
         document.getElementById('electricitySection').innerHTML = eeHtml;
-
+        
         // История
         let historyHtml = `<div class="section-title">📜 История участка</div>`;
-        if (passport.historyEntries.length) {
-            passport.historyEntries.forEach(h => { historyHtml += `<div class="info-row"><span class="info-label">${h.date || '—'}</span><span class="info-value">${h.event} - ${h.detail}</span></div>`; });
-        } else { historyHtml += `<div class="empty-message">Нет записей истории</div>`; }
+        if (passport.history.length > 0) {
+            historyHtml += `<div class="info-grid">`;
+            passport.history.forEach(h => {
+                historyHtml += `<div class="info-row"><span class="info-label">${h.date || '—'}</span><span class="info-value">${escapeHtml(h.event)}: ${escapeHtml(h.detail)}</span></div>`;
+            });
+            historyHtml += `</div>`;
+        } else {
+            historyHtml += `<div class="empty-message">Нет записей истории</div>`;
+        }
         document.getElementById('historySection').innerHTML = historyHtml;
-
+        
         // Примечания
-        document.getElementById('notesSection').innerHTML = `<div class="section-title">📝 Примечания</div><div class="info-value">${passport.notes ? escapeHtml(passport.notes) : '—'}</div>`;
+        document.getElementById('notesSection').innerHTML = `
+            <div class="section-title">📝 Примечания</div>
+            <div class="info-value">${escapeHtml(passport.notes || '—')}</div>
+        `;
     }
-
-    // Поиск + отрисовка результатов
-    document.getElementById('searchBtn').addEventListener('click', async () => {
+    
+    function renderSearchResults(results) {
+        const panel = document.getElementById('searchResultsPanel');
+        if (!results.length) { panel.style.display = 'none'; return; }
+        panel.style.display = 'block';
+        panel.innerHTML = results.map(r => `
+            <div class="result-item" data-plot="${escapeHtml(r.plotNumber)}">
+                <div><span class="result-plot">Уч. ${escapeHtml(r.plotNumber)}</span> <span class="result-owner">${escapeHtml(r.owner || '—')}</span></div>
+                <div style="font-size:0.75rem; color:var(--gray-600);">${escapeHtml(r.address || '')}</div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.result-item').forEach(el => {
+            el.addEventListener('click', () => {
+                const plot = el.getAttribute('data-plot');
+                document.getElementById('globalSearchInput').value = plot;
+                renderPassport(plot);
+                panel.style.display = 'none';
+            });
+        });
+    }
+    
+    // Обработчики
+    document.getElementById('searchBtn').addEventListener('click', () => {
         const query = document.getElementById('globalSearchInput').value.trim();
-        if (!query) { document.getElementById('searchResultsPanel').style.display = 'none'; return; }
+        if (!query) return;
         const results = searchPlots(query);
         renderSearchResults(results);
         if (results.length === 1) {
-            await loadAndDisplayPassport(results[0].plotNumber);
+            renderPassport(results[0].plotNumber);
             document.getElementById('searchResultsPanel').style.display = 'none';
         }
     });
+    
     document.getElementById('globalSearchInput').addEventListener('input', (e) => {
-        const query = e.target.value.trim();
-        if (query.length > 1) {
-            const results = searchPlots(query);
-            renderSearchResults(results);
-        } else { document.getElementById('searchResultsPanel').style.display = 'none'; }
+        const q = e.target.value.trim();
+        if (q.length >= 2) {
+            renderSearchResults(searchPlots(q));
+        } else {
+            document.getElementById('searchResultsPanel').style.display = 'none';
+        }
     });
-
-    // Навигация по вкладкам + тема
+    
+    // Навигация по вкладкам
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -790,11 +838,17 @@
             document.getElementById(`page-${tab.dataset.page}`).classList.add('active');
         });
     });
-    const themeToggle = document.getElementById('themeToggleBtn');
-    themeToggle.addEventListener('click', () => { document.body.classList.toggle('dark'); localStorage.setItem('snt_theme', document.body.classList.contains('dark') ? 'dark' : 'light'); });
+    
+    // Тёмная тема
+    const themeBtn = document.getElementById('themeToggleBtn');
+    themeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        localStorage.setItem('snt_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    });
     if (localStorage.getItem('snt_theme') === 'dark') document.body.classList.add('dark');
-
-    warmupCaches();
+    
+    // Запуск
+    warmup();
 </script>
 </body>
 </html>
