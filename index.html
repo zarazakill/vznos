@@ -38,6 +38,19 @@
         .not-found { text-align: center; padding: 40px 20px; background: white; border-radius: 20px; margin: 16px; }
         .footer-note { text-align: center; font-size: 11px; color: #9E9E9E; margin-top: 30px; }
 
+        /* Банковские реквизиты */
+        .bank-details { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
+        .bank-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E0E0E0; }
+        .bank-label { color: #757575; font-size: 12px; }
+        .bank-value { font-weight: 500; font-size: 13px; color: #212121; }
+        .copy-btn { background: none; border: none; color: #2E7D32; font-size: 12px; cursor: pointer; margin-left: 8px; }
+
+        /* Предупреждение */
+        .warning-card { background: #FFF3E0; margin: 0 16px 16px; border-radius: 16px; padding: 16px; border-left: 4px solid #E65100; }
+        .instruction-card { background: #E3F2FD; margin: 0 16px 16px; border-radius: 16px; padding: 16px; }
+        .instruction-step { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
+        .step-number { width: 24px; height: 24px; background: #1565C0; color: white; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; flex-shrink: 0; }
+
         /* Фото */
         .photo-preview { width: 100%; max-height: 250px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; display: none; }
         .upload-progress { display: none; text-align: center; padding: 20px; background: #F1F8E9; border-radius: 12px; margin-bottom: 12px; }
@@ -48,12 +61,9 @@
         .btn-upload { flex: 1; background: #1565C0; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
         .btn-retake { flex: 1; background: #E0E0E0; color: #424242; border: none; padding: 12px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
-        /* Manual payment card */
+        /* Ручная оплата */
         .manual-card { background: white; margin: 0 16px 16px; border-radius: 20px; overflow: hidden; }
-        .manual-card .card-content { padding: 20px; }
-        .manual-card .card-header { color: #2E7D32; }
         .manual-input { width: 100%; padding: 14px 16px; font-size: 16px; border: 1.5px solid #E0E0E0; border-radius: 16px; margin: 12px 0; }
-        .manual-actions { display: flex; gap: 10px; margin: 8px 0; }
 
         @media (max-width: 480px) {
             .search-input-group { flex-direction: column; }
@@ -81,28 +91,64 @@
 
     <div id="loadingIndicator" class="loading-state hidden">☁️ Загрузка данных...</div>
     <div id="errorMessage" class="error-state hidden"></div>
+
+    <!-- Реквизиты получателя (скрывается/показывается) -->
+    <div id="bankDetailsCard" class="bank-details hidden">
+        <div class="card-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div class="card-header" style="margin-bottom:0;">🏦 Реквизиты получателя</div>
+                <button id="toggleBankBtn" style="background:none; border:none; color:#9E9E9E; font-size:12px; cursor:pointer;">скрыть ▲</button>
+            </div>
+            <div id="bankDetailsContent">
+                <div class="bank-row"><span class="bank-label">Получатель:</span><span class="bank-value" id="bankOrg"></span></div>
+                <div class="bank-row"><span class="bank-label">ИНН:</span><span class="bank-value" id="bankInn"></span></div>
+                <div class="bank-row"><span class="bank-label">Р/счёт:</span><span class="bank-value" id="bankAccount"></span><button class="copy-btn" data-copy="bankAccount">📋</button></div>
+                <div class="bank-row"><span class="bank-label">Банк:</span><span class="bank-value" id="bankName"></span></div>
+                <div class="bank-row"><span class="bank-label">БИК:</span><span class="bank-value" id="bankBic"></span></div>
+                <div class="bank-row"><span class="bank-label">К/счёт:</span><span class="bank-value" id="bankCorresp"></span><button class="copy-btn" data-copy="bankCorresp">📋</button></div>
+            </div>
+            <button id="copyAllRekvizityBtn" style="width:100%; margin-top:16px; padding:10px; background:none; border:1px solid #AED581; border-radius:12px; color:#2E7D32; font-weight:bold; cursor:pointer;">📋 Скопировать все реквизиты</button>
+        </div>
+    </div>
+
+    <!-- Предупреждение -->
+    <div id="warningCard" class="warning-card hidden">
+        <div style="font-weight:bold; margin-bottom:8px;">⚠️ Внимание! Проверьте реквизиты</div>
+        <div style="font-size:13px;">Перед совершением платежа внимательно проверьте все реквизиты получателя. QR-код сформирован автоматически на основе данных системы.</div>
+        <div style="font-size:11px; margin-top:8px; color:#E65100;">⚡ Вся ответственность за правильность введённых данных и совершённый платёж лежит на плательщике.</div>
+    </div>
+
+    <!-- Инструкция по оплате -->
+    <div id="instructionCard" class="instruction-card hidden">
+        <div style="font-weight:bold; margin-bottom:12px;">💡 Как оплатить через QR-код</div>
+        <div class="instruction-step"><div class="step-number">1</div><div>Сгенерируйте QR-код — нажмите кнопку «QR для оплаты» ниже</div></div>
+        <div class="instruction-step"><div class="step-number">2</div><div>Поделитесь QR-кодом — выберите банковское приложение (СберБанк, Т-Банк, ВТБ и др.)</div></div>
+        <div class="instruction-step"><div class="step-number">3</div><div>Или сохраните и отсканируйте — в банковском приложении выберите «Оплатить по QR» → «Загрузить из галереи»</div></div>
+    </div>
+
     <div id="debtCard" class="card hidden"></div>
     <div id="electricityCard" class="card hidden"></div>
     <div id="manualPaymentCard" class="manual-card hidden"></div>
-    <div id="notFoundBlock" class="not-found hidden">🔍 Участок не найден в базе. Проверьте номер.</div>
+    <div id="notFoundBlock" class="not-found hidden">🔍 Участок не найден в базе данных.<br><br>Пример: 5, 4а, 10а</div>
     <div class="footer-note">⚡ Данные синхронизируются при каждом поиске</div>
 </div>
 
 <script>
 // ==============================================================
-// КОНСТАНТЫ
+// КОНСТАНТЫ (синхронизированы с Android-версией)
 // ==============================================================
 const API_BASE_URL = "https://wwcat.duckdns.org:12580";
 const CONSENT_VERSION = "1.0";
 const CONSENT_STORAGE_KEY = "snt_consent_accepted";
 const CONSENT_VERSION_KEY = "snt_consent_version";
-const TARIFF = 3.82;
+
 const ORGANIZATION = "СНТ «Берёзка-2»";
 const INN = "5433118499";
 const PERSONAL_ACC = "40703810644050040322";
 const BANK_NAME = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
 const BIC = "045004641";
 const CORRESP_ACC = "30101810500000000641";
+const TARIFF = 3.82;
 
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
 const EE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
@@ -110,9 +156,10 @@ const BASE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.o
 
 let cachedDebtMap = new Map();
 let cachedElectricityMap = new Map();
-let cachedBaseMap = new Map();  // Мастер-справочник участков
+let cachedBaseMap = new Map();  // Мастер-справочник (все участки)
 let currentPlotNumber = "";
-let currentMemberRecord = null;  // Данные из base.ods для текущего участка
+let currentMemberRecord = null;
+let isBankExpanded = true;
 
 // ==============================================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -160,7 +207,7 @@ function escapeHtml(str) {
 }
 
 // ==============================================================
-// ПАРСИНГ .ods
+// ПАРСИНГ .ods (синхронизирован с Android)
 // ==============================================================
 async function fetchAndParseOds(url, parserFn) {
     const response = await fetch(url);
@@ -205,21 +252,18 @@ function expandRowCells(rowElement) {
     return cells;
 }
 
-/**
- * Парсинг base.ods — мастер-справочник участков
- * Структура: col10 = номер участка, col1 = владелец, col2 = членство, col3 = телефон, col4 = email, col11 = адрес, col12 = площадь
- */
+// Парсинг base.ods (мастер-справочник)
 function parseBaseOds(xmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(xmlString, "application/xml");
     const rows = getAllTableRows(doc);
     const result = new Map();
 
-    for (let i = 8; i < rows.length; i++) {  // Пропускаем первые 8 строк (заголовки)
+    for (let i = 8; i < rows.length; i++) {
         const cells = expandRowCells(rows[i]);
         if (cells.length === 0) continue;
 
-        const plotRaw = (cells[10] || "").trim();  // col10 = номер участка
+        const plotRaw = (cells[10] || "").trim();
         if (plotRaw === "") continue;
         if (plotRaw.toLowerCase() === "итого") break;
 
@@ -446,7 +490,6 @@ async function syncAllData() {
     loadingDiv.innerHTML = "📁 Загрузка реестра участков...";
 
     try {
-        // Загружаем base.ods первым
         if (cachedBaseMap.size === 0) {
             cachedBaseMap = await fetchAndParseOds(BASE_URL, parseBaseOds);
         }
@@ -501,15 +544,24 @@ async function loadPlotData(plotNumber) {
         // Если участка нет ни в одном источнике — ошибка
         if (!debt && !ee && !member) {
             notFound.classList.remove("hidden");
+            document.getElementById("bankDetailsCard").classList.add("hidden");
+            document.getElementById("warningCard").classList.add("hidden");
+            document.getElementById("instructionCard").classList.add("hidden");
             return;
         }
 
-        // Показываем карточку долга если есть данные
+        // Показываем карточки реквизитов, предупреждения, инструкции
+        document.getElementById("bankDetailsCard").classList.remove("hidden");
+        document.getElementById("warningCard").classList.remove("hidden");
+        document.getElementById("instructionCard").classList.remove("hidden");
+        renderBankDetails();
+
+        // Карточка долга
         if (debt) {
             renderDebtCard(debt);
         }
 
-        // Показываем карточку электроэнергии если есть данные
+        // Карточка электроэнергии
         if (ee) {
             renderElectricityCard(ee);
         }
@@ -522,6 +574,44 @@ async function loadPlotData(plotNumber) {
         errorDiv.innerHTML = `❌ Ошибка: ${err.message}`;
         errorDiv.classList.remove("hidden");
     }
+}
+
+// ==============================================================
+// БАНКОВСКИЕ РЕКВИЗИТЫ (как в Android)
+// ==============================================================
+function renderBankDetails() {
+    document.getElementById("bankOrg").textContent = ORGANIZATION;
+    document.getElementById("bankInn").textContent = INN;
+    document.getElementById("bankAccount").textContent = PERSONAL_ACC;
+    document.getElementById("bankName").textContent = BANK_NAME;
+    document.getElementById("bankBic").textContent = BIC;
+    document.getElementById("bankCorresp").textContent = CORRESP_ACC;
+
+    // Копирование отдельных полей
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.onclick = () => {
+            const fieldId = btn.getAttribute('data-copy');
+            const text = document.getElementById(fieldId).textContent;
+            navigator.clipboard.writeText(text);
+            alert(`Скопировано: ${text}`);
+        };
+    });
+
+    // Копирование всех реквизитов
+    document.getElementById("copyAllRekvizityBtn").onclick = () => {
+        const text = `Получатель: ${ORGANIZATION}\nИНН: ${INN}\nР/счёт: ${PERSONAL_ACC}\nБанк: ${BANK_NAME}\nБИК: ${BIC}\nК/счёт: ${CORRESP_ACC}`;
+        navigator.clipboard.writeText(text);
+        alert("Реквизиты скопированы");
+    };
+
+    // Сворачивание/разворачивание
+    const toggleBtn = document.getElementById("toggleBankBtn");
+    const content = document.getElementById("bankDetailsContent");
+    toggleBtn.onclick = () => {
+        isBankExpanded = !isBankExpanded;
+        content.style.display = isBankExpanded ? "block" : "none";
+        toggleBtn.textContent = isBankExpanded ? "скрыть ▲" : "показать ▼";
+    };
 }
 
 // ==============================================================
@@ -698,7 +788,7 @@ function renderElectricityCard(ee) {
 }
 
 // ==============================================================
-// ФУНКЦИИ ДЛЯ ФОТО (с передачей номера участка)
+// ФУНКЦИИ ДЛЯ ФОТО (отправка на сервер)
 // ==============================================================
 async function uploadPhotoToServer(plotNumber, readingValue, photoFile) {
     const formData = new FormData();
@@ -758,7 +848,7 @@ function takePhoto(plotNumber) {
             await uploadPhotoToServer(plotNumber, readingValue, file);
             if (progress) progress.style.display = "none";
             if (success) success.style.display = "block";
-            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено";
+            if (ydStatus) ydStatus.innerHTML = "☁✓ Фото сохранено на Яндекс.Диске";
             if (takeBtn) { takeBtn.style.display = "block"; takeBtn.innerHTML = "📷 Сфотографировать ещё раз"; }
             if (actions) actions.style.display = "none";
         } catch (err) {
@@ -802,15 +892,15 @@ function showConsentScreen() {
             <div style="margin-bottom:16px;">Оператор: СНТ «Берёзка-2» (ИНН 5433118499)</div>
             <div style="background:#F1F8E9;border-radius:16px;padding:16px;margin-bottom:16px;">
                 <div style="font-weight:bold;margin-bottom:12px;">🔐 Персональные данные</div>
-                <div class="consent-check-row"><input type="checkbox" id="c1"><label>Я согласен(а) на обработку ПД в соответствии с ФЗ-152</label></div>
+                <div class="consent-check-row"><input type="checkbox" id="c1"><label> Я согласен(а) на обработку ПД в соответствии с ФЗ-152</label></div>
             </div>
             <div style="background:#F1F8E9;border-radius:16px;padding:16px;margin-bottom:16px;">
                 <div style="font-weight:bold;margin-bottom:12px;">📋 Пользовательское соглашение</div>
-                <div class="consent-check-row"><input type="checkbox" id="c2"><label>Я принимаю условия Пользовательского соглашения</label></div>
+                <div class="consent-check-row"><input type="checkbox" id="c2"><label> Я принимаю условия Пользовательского соглашения</label></div>
             </div>
             <div style="background:#F1F8E9;border-radius:16px;padding:16px;">
                 <div style="font-weight:bold;margin-bottom:12px;">👤 Подтверждение</div>
-                <div class="consent-check-row"><input type="checkbox" id="c3"><label>Мне исполнилось 18 лет, я член СНТ или его представитель</label></div>
+                <div class="consent-check-row"><input type="checkbox" id="c3"><label> Мне исполнилось 18 лет, я член СНТ или его представитель</label></div>
             </div>
         </div>
         <div style="padding:16px 20px;border-top:1px solid #E0E0E0;"><button id="acceptBtn" style="width:100%;padding:14px;background:#2E7D32;color:white;border:none;border-radius:50px;font-weight:bold;cursor:pointer;" disabled>✓ Принять</button>
@@ -846,7 +936,7 @@ function initMainApp() {
     document.getElementById("plotInput").onkeypress = (e) => { if (e.key === "Enter") document.getElementById("searchBtn").click(); };
     document.getElementById("settingsBtn").onclick = showSettingsModal;
 
-    // Предзагружаем данные после запуска (фоном)
+    // Предзагружаем данные фоном
     syncAllData().catch(console.warn);
 }
 
