@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
 <title>СНТ «Берёзка-2» — Паспорт участка</title>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
@@ -10,9 +10,10 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
   background: #f4f7fb;
   transition: background 0.2s, color 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 body.dark {
   background: #121212;
@@ -45,37 +46,45 @@ body {
 }
 .app-header {
   background: var(--primary);
-  padding: 20px;
+  padding: 16px 20px;
   color: white;
   position: sticky;
   top: 0;
   z-index: 100;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
-.app-header h1 { font-size: 1.5rem; }
+.app-header h1 { font-size: 1.3rem; }
+.app-header p { font-size: 0.75rem; opacity: 0.9; margin-top: 4px; }
 .theme-toggle {
   position: absolute;
-  right: 20px;
-  top: 18px;
+  right: 16px;
+  top: 16px;
   background: rgba(255,255,255,0.2);
   border: none;
-  border-radius: 30px;
+  border-radius: 40px;
   width: 40px;
   height: 40px;
   font-size: 20px;
   cursor: pointer;
   color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .search-card {
   background: var(--card-bg);
-  margin: -16px 20px 20px;
-  padding: 20px;
+  margin: -16px 16px 20px;
+  padding: 16px;
   border-radius: 24px;
   box-shadow: 0 6px 14px rgba(0,0,0,0.06);
 }
+.search-card > div:first-child {
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
 .search-input-group {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .search-input {
@@ -86,33 +95,41 @@ body {
   border-radius: 60px;
   background: var(--card-bg);
   color: var(--text);
+  -webkit-appearance: none;
 }
 .search-btn {
   background: var(--primary);
   color: white;
   border: none;
-  padding: 0 28px;
+  padding: 0 24px;
   border-radius: 60px;
-  font-weight: bold;
+  font-weight: 600;
   cursor: pointer;
+  font-size: 15px;
+  white-space: nowrap;
 }
 .tabs {
   display: flex;
-  gap: 8px;
-  margin: 20px 20px 0;
+  gap: 4px;
+  margin: 16px 16px 0;
   flex-wrap: wrap;
   border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 .tab-btn {
   background: transparent;
   border: none;
-  padding: 12px 20px;
-  font-size: 1rem;
+  padding: 12px 16px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   color: var(--text-muted);
   border-bottom: 3px solid transparent;
   transition: 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .tab-btn.active {
   color: var(--primary);
@@ -128,55 +145,87 @@ body {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .card {
   background: var(--card-bg);
-  border-radius: 24px;
-  margin: 0 20px 20px;
-  padding: 20px;
+  border-radius: 20px;
+  margin: 0 16px 16px;
+  padding: 16px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   border: 1px solid var(--border);
 }
 .card-title {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--primary);
 }
+/* KPI карточки - адаптивная сетка */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 .kpi-card {
   background: var(--card-bg);
-  border-radius: 20px;
-  padding: 16px;
-  border-left: 5px solid var(--primary);
+  border-radius: 16px;
+  padding: 14px;
+  border-left: 4px solid var(--primary);
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-.kpi-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); }
-.kpi-value { font-size: 1.6rem; font-weight: 800; margin-top: 6px; }
-.kpi-sub { font-size: 0.7rem; color: var(--text-muted); }
+.kpi-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin-top: 6px;
+  word-break: break-word;
+}
+.kpi-sub { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; }
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 480px) {
+  .info-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 768px) {
+  .info-grid { grid-template-columns: repeat(3, 1fr); }
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 }
 .info-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  align-items: baseline;
   border-bottom: 1px dashed var(--border);
-  padding: 8px 0;
+  padding: 10px 0;
+  gap: 8px;
 }
-.info-label { font-weight: 600; color: var(--text-muted); }
-.info-value { font-weight: 500; word-break: break-word; }
+.info-label {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  min-width: 110px;
+}
+.info-value {
+  font-weight: 500;
+  word-break: break-word;
+  text-align: right;
+  flex: 1;
+  font-size: 0.85rem;
+}
 .debt-badge {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 40px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: bold;
 }
 .debt-none { background: #e8f5e9; color: #2e7d32; }
@@ -185,11 +234,13 @@ body {
 .table-wrap {
   overflow-x: auto;
   margin-top: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  min-width: 500px;
 }
 .data-table th, .data-table td {
   padding: 10px 8px;
@@ -199,44 +250,79 @@ body {
 .data-table th {
   background: var(--primary-light);
   color: var(--primary);
+  font-weight: 600;
 }
 .hidden { display: none; }
-.loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
+.loading-state { text-align: center; padding: 40px 20px; color: var(--text-muted); }
 .error-state { background: #ffebee; color: #c62828; padding: 16px; border-radius: 16px; margin: 16px; }
-.not-found { text-align: center; padding: 60px; color: var(--text-muted); }
+.not-found { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .owner-chip {
   background: var(--primary-light);
   padding: 6px 12px;
   border-radius: 50px;
-  margin-bottom: 8px;
+  margin: 0 6px 8px 0;
   display: inline-block;
-  margin-right: 8px;
+  font-size: 0.8rem;
 }
-@media (max-width: 640px) {
+/* Результаты поиска */
+#searchResultsList {
+  margin-top: 16px;
+  max-height: 350px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.search-result-item {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--card-bg);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  transition: 0.1s;
+  font-size: 0.9rem;
+}
+/* Планшетная и десктопная оптимизация */
+@media (min-width: 768px) {
+  .app-header h1 { font-size: 1.6rem; }
+  .search-card { margin: -16px 24px 24px; padding: 24px; }
+  .card { margin: 0 24px 24px; padding: 24px; }
+  .tabs { margin: 20px 24px 0; gap: 8px; }
+  .tab-btn { padding: 14px 24px; font-size: 1rem; }
+  .kpi-value { font-size: 1.6rem; }
+}
+/* Мобильная оптимизация */
+@media (max-width: 480px) {
   .search-input-group { flex-direction: column; }
+  .search-btn { padding: 14px; width: 100%; }
+  .kpi-card { padding: 12px; }
   .kpi-value { font-size: 1.2rem; }
+  .info-row { flex-direction: column; align-items: flex-start; }
+  .info-value { text-align: left; width: 100%; }
+  .info-label { min-width: auto; }
+  .card-title { font-size: 1rem; }
 }
 </style>
 </head>
 <body>
 <div class="app-header">
-  <h1>🌿 СНТ «Берёзка-2» — Паспорт участка</h1>
+  <h1>🌿 СНТ «Берёзка-2»</h1>
+  <p>Паспорт участка</p>
   <button class="theme-toggle" id="themeToggleBtn">🌓</button>
 </div>
 
 <div class="search-card">
-  <div style="font-weight: bold; margin-bottom: 12px;">🔍 Поиск участка / владельца / телефона / адреса</div>
+  <div>🔍 Поиск участка / владельца / телефона / адреса</div>
   <div class="search-input-group">
-    <input type="text" id="globalSearchInput" class="search-input" placeholder="Номер участка, фамилия, телефон, адрес...">
+    <input type="text" id="globalSearchInput" class="search-input" placeholder="Номер участка, фамилия, телефон..." autocomplete="off">
     <button id="searchBtnGlobal" class="search-btn">Найти</button>
   </div>
-  <div id="searchResultsList" class="hidden" style="margin-top: 16px; max-height: 300px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 12px;"></div>
+  <div id="searchResultsList" class="hidden"></div>
 </div>
 
 <div class="tabs" id="tabsContainer">
-  <button class="tab-btn active" data-tab="passport">📋 Паспорт участка</button>
-  <button class="tab-btn" data-tab="finance">💰 Финансы (взносы)</button>
-  <button class="tab-btn" data-tab="electricity">⚡ Электроэнергия</button>
+  <button class="tab-btn active" data-tab="passport">📋 Паспорт</button>
+  <button class="tab-btn" data-tab="finance">💰 Взносы</button>
+  <button class="tab-btn" data-tab="electricity">⚡ Э/энергия</button>
   <button class="tab-btn" data-tab="history">📜 История</button>
 </div>
 
@@ -486,7 +572,7 @@ function renderPassport(plotKey) {
     <div class="kpi-card"><div class="kpi-label">⚡ Долг за э/э</div><div class="kpi-value ${debtEeClass}">${data.debtEe.toFixed(2)} ₽</div></div>
     <div class="kpi-card"><div class="kpi-label">🔄 Переплата</div><div class="kpi-value">${data.overpay > 0 ? data.overpay.toFixed(2)+' ₽' : '—'}</div></div>
     <div class="kpi-card"><div class="kpi-label">👥 Собственников</div><div class="kpi-value">${data.ownersCount}</div></div>
-    <div class="kpi-card"><div class="kpi-label">📐 Площадь (сот.)</div><div class="kpi-value">${base.area || '—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">📐 Площадь</div><div class="kpi-value">${base.area || '—'} <span style="font-size:0.7rem;">сот.</span></div></div>
   </div>`;
 
   html += `<div class="card"><div class="card-title">📌 Общие сведения</div><div class="info-grid">
@@ -499,11 +585,11 @@ function renderPassport(plotKey) {
     <div class="info-row"><span class="info-label">Членство:</span><span class="info-value">${base.membership || '—'}</span></div>
   </div></div>`;
 
-  let ownersHtml = `<div class="card"><div class="card-title">👤 Собственники и контакты</div>`;
+  let ownersHtml = `<div class="card"><div class="card-title">👤 Собственники и контакты</div><div>`;
   if (base.owners && base.owners.length) {
-    base.owners.forEach(owner => { ownersHtml += `<div class="owner-chip">${escapeHtml(owner)}</div>`; });
-  } else ownersHtml += `<div>${escapeHtml(base.owner || '—')}</div>`;
-  ownersHtml += `<div class="info-grid" style="margin-top:12px;">
+    base.owners.forEach(owner => { ownersHtml += `<span class="owner-chip">${escapeHtml(owner)}</span>`; });
+  } else ownersHtml += `<span>${escapeHtml(base.owner || '—')}</span>`;
+  ownersHtml += `</div><div class="info-grid" style="margin-top:12px;">
     <div class="info-row"><span class="info-label">Телефоны:</span><span class="info-value">${escapeHtml(base.phone || '—')}</span></div>
     <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${escapeHtml(base.email || '—')}</span></div>
     <div class="info-row"><span class="info-label">Почтовый адрес:</span><span class="info-value">${escapeHtml(base.mailingAddress || '—')}</span></div>
@@ -512,7 +598,7 @@ function renderPassport(plotKey) {
   html += ownersHtml;
 
   if (base.notes) {
-    html += `<div class="card"><div class="card-title">📝 Примечания</div><div style="white-space: pre-wrap;">${escapeHtml(base.notes)}</div></div>`;
+    html += `<div class="card"><div class="card-title">📝 Примечания</div><div style="white-space: pre-wrap; font-size:0.85rem;">${escapeHtml(base.notes)}</div></div>`;
   }
   container.innerHTML = html;
 }
@@ -526,12 +612,12 @@ function renderFinance(plotKey) {
   }
   let html = `<div class="card"><div class="card-title">💰 Детализация задолженности по взносам</div>
     <div class="info-grid">
-      <div class="info-row"><span>Членские взносы:</span><span class="amount-red">${debit.membershipDebt.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Целевые взносы:</span><span>${debit.targetDebt.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Задолженность прошлых лет:</span><span>${debit.arrearsDebt.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Отработка:</span><span>${debit.workDebt.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Итого долг:</span><span class="debt-badge debt-high">${debit.totalDebt.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Переплата:</span><span>${debit.overpayEnd > 0 ? debit.overpayEnd.toFixed(2)+' ₽' : '—'}</span></div>
+      <div class="info-row"><span class="info-label">Членские взносы:</span><span class="info-value debt-badge debt-high">${debit.membershipDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Целевые взносы:</span><span class="info-value">${debit.targetDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Задолженность прошлых лет:</span><span class="info-value">${debit.arrearsDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Отработка:</span><span class="info-value">${debit.workDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Итого долг:</span><span class="info-value debt-badge debt-high">${debit.totalDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Переплата:</span><span class="info-value">${debit.overpayEnd > 0 ? debit.overpayEnd.toFixed(2)+' ₽' : '—'}</span></div>
     </div>
   </div>`;
   container.innerHTML = html;
@@ -546,13 +632,13 @@ function renderElectricity(plotKey) {
   }
   let html = `<div class="card"><div class="card-title">⚡ Показания и задолженность по э/э</div>
     <div class="info-grid">
-      <div class="info-row"><span>Текущие показания:</span><span>${ee.currentReading} кВт·ч</span></div>
-      <div class="info-row"><span>Предыдущие показания:</span><span>${ee.previousReading} кВт·ч</span></div>
-      <div class="info-row"><span>Расход:</span><span>${ee.consumption} кВт·ч</span></div>
-      <div class="info-row"><span>Тариф:</span><span>${ee.tariff} ₽/кВт·ч</span></div>
-      <div class="info-row"><span>Начислено:</span><span>${ee.accrued.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Задолженность:</span><span class="debt-badge ${ee.debt>0?'debt-high':'debt-none'}">${ee.debt.toFixed(2)} ₽</span></div>
-      <div class="info-row"><span>Дата показаний:</span><span>${ee.readingDate || '—'}</span></div>
+      <div class="info-row"><span class="info-label">Текущие показания:</span><span class="info-value">${ee.currentReading} кВт·ч</span></div>
+      <div class="info-row"><span class="info-label">Предыдущие показания:</span><span class="info-value">${ee.previousReading} кВт·ч</span></div>
+      <div class="info-row"><span class="info-label">Расход:</span><span class="info-value">${ee.consumption} кВт·ч</span></div>
+      <div class="info-row"><span class="info-label">Тариф:</span><span class="info-value">${ee.tariff} ₽/кВт·ч</span></div>
+      <div class="info-row"><span class="info-label">Начислено:</span><span class="info-value">${ee.accrued.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Задолженность:</span><span class="info-value debt-badge ${ee.debt>0?'debt-high':'debt-none'}">${ee.debt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span class="info-label">Дата показаний:</span><span class="info-value">${ee.readingDate || '—'}</span></div>
     </div>
   </div>`;
   container.innerHTML = html;
@@ -560,10 +646,10 @@ function renderElectricity(plotKey) {
 
 function renderHistory(plotKey) {
   const container = document.getElementById("historyContent");
-  container.innerHTML = `<div class="card"><div class="card-title">📜 История изменений</div><div style="color: var(--text-muted);">ℹ️ В текущей версии файлов история смены владельцев и операций будет добавлена при расширении данных. Сейчас отображаются актуальные данные.</div></div>`;
+  container.innerHTML = `<div class="card"><div class="card-title">📜 История изменений</div><div style="color: var(--text-muted); font-size:0.85rem;">ℹ️ В текущей версии файлов история смены владельцев и операций будет добавлена при расширении данных. Сейчас отображаются актуальные данные.</div></div>`;
 }
 
-// ===================== ИСПРАВЛЕННЫЙ ПОИСК =====================
+// ===================== ПОИСК =====================
 function searchPlots(query) {
   if (!query.trim()) return [];
   const q = query.trim().toLowerCase();
@@ -611,7 +697,7 @@ async function performSearchAndShow() {
   const results = searchPlots(query);
 
   if (results.length === 0) {
-    resDiv.innerHTML = '<div style="padding:12px;background:var(--primary-light);border-radius:16px;">❌ Ничего не найдено</div>';
+    resDiv.innerHTML = '<div style="padding:14px;background:var(--primary-light);border-radius:16px;text-align:center;">❌ Ничего не найдено</div>';
     resDiv.classList.remove('hidden');
     return;
   }
@@ -624,10 +710,7 @@ async function performSearchAndShow() {
   }
 
   resDiv.innerHTML = results.map(r =>
-    `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--card-bg);border-radius:12px;margin-bottom:6px;transition:0.1s;"
-         onmouseenter="this.style.backgroundColor='var(--primary-light)'"
-         onmouseleave="this.style.backgroundColor='var(--card-bg)'"
-         onclick="selectPlot('${r.key}')">
+    `<div class="search-result-item" onclick="selectPlot('${r.key}')">
         🔍 ${escapeHtml(r.label)}
      </div>`
   ).join('');
@@ -718,7 +801,7 @@ async function init() {
         await performSearchAndShow();
       } else {
         const resDiv = document.getElementById('searchResultsList');
-        resDiv.innerHTML = '<div style="padding:12px;background:var(--primary-light);border-radius:16px;">❌ Ничего не найдено</div>';
+        resDiv.innerHTML = '<div style="padding:14px;background:var(--primary-light);border-radius:16px;text-align:center;">❌ Ничего не найдено</div>';
         resDiv.classList.remove('hidden');
       }
     }
