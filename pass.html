@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>СНТ «Берёзка-2» — Паспорт участка</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: #f4f7fb;
+  transition: background 0.2s, color 0.2s;
+}
+body.dark {
+  background: #121212;
+  color: #e0e0e0;
+}
+:root {
+  --bg: #f4f7fb;
+  --card-bg: #ffffff;
+  --text: #1e2a3a;
+  --text-muted: #5e6f8d;
+  --border: #e2e8f0;
+  --primary: #2e7d32;
+  --primary-light: #e8f5e9;
+  --danger: #c62828;
+  --warning: #ed6c02;
+  --success: #2e7d32;
+  --info: #1565c0;
+}
+body.dark {
+  --bg: #121212;
+  --card-bg: #1e1e2f;
+  --text: #e2e8f0;
+  --text-muted: #9aa9c1;
+  --border: #2d3748;
+  --primary-light: #1e3a2f;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+.app-header {
+  background: var(--primary);
+  padding: 20px;
+  color: white;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.app-header h1 { font-size: 1.5rem; }
+.theme-toggle {
+  position: absolute;
+  right: 20px;
+  top: 18px;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 30px;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  color: white;
+}
+.search-card {
+  background: var(--card-bg);
+  margin: -16px 20px 20px;
+  padding: 20px;
+  border-radius: 24px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+.search-input-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.search-input {
+  flex: 1;
+  padding: 14px 18px;
+  font-size: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 60px;
+  background: var(--card-bg);
+  color: var(--text);
+}
+.search-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0 28px;
+  border-radius: 60px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px 20px 0;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--border);
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-bottom: 3px solid transparent;
+  transition: 0.2s;
+}
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.page {
+  display: none;
+  animation: fadeIn 0.2s;
+}
+.page.active-page {
+  display: block;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  margin: 0 20px 20px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid var(--border);
+}
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.kpi-card {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 16px;
+  border-left: 5px solid var(--primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.kpi-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); }
+.kpi-value { font-size: 1.6rem; font-weight: 800; margin-top: 6px; }
+.kpi-sub { font-size: 0.7rem; color: var(--text-muted); }
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--border);
+  padding: 8px 0;
+}
+.info-label { font-weight: 600; color: var(--text-muted); }
+.info-value { font-weight: 500; word-break: break-word; }
+.debt-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 40px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+.debt-none { background: #e8f5e9; color: #2e7d32; }
+.debt-low { background: #fff8e1; color: #f57c00; }
+.debt-high { background: #ffebee; color: #c62828; }
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.data-table th, .data-table td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.data-table th {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+.hidden { display: none; }
+.loading-state { text-align: center; padding: 40px; color: var(--text-muted); }
+.error-state { background: #ffebee; color: #c62828; padding: 16px; border-radius: 16px; margin: 16px; }
+.not-found { text-align: center; padding: 60px; color: var(--text-muted); }
+.owner-chip {
+  background: var(--primary-light);
+  padding: 6px 12px;
+  border-radius: 50px;
+  margin-bottom: 8px;
+  display: inline-block;
+  margin-right: 8px;
+}
+@media (max-width: 640px) {
+  .search-input-group { flex-direction: column; }
+  .kpi-value { font-size: 1.2rem; }
+}
+</style>
+</head>
+<body>
+<div class="app-header">
+  <h1>🌿 СНТ «Берёзка-2» — Паспорт участка</h1>
+  <button class="theme-toggle" id="themeToggleBtn">🌓</button>
+</div>
+
+<div class="search-card">
+  <div style="font-weight: bold; margin-bottom: 12px;">🔍 Поиск участка / владельца / телефона / адреса</div>
+  <div class="search-input-group">
+    <input type="text" id="globalSearchInput" class="search-input" placeholder="Номер участка, фамилия, телефон, адрес...">
+    <button id="searchBtnGlobal" class="search-btn">Найти</button>
+  </div>
+  <div id="searchResultsList" class="hidden" style="margin-top: 16px; max-height: 300px; overflow-y: auto; border-top: 1px solid var(--border); padding-top: 12px;"></div>
+</div>
+
+<div class="tabs" id="tabsContainer">
+  <button class="tab-btn active" data-tab="passport">📋 Паспорт участка</button>
+  <button class="tab-btn" data-tab="finance">💰 Финансы (взносы)</button>
+  <button class="tab-btn" data-tab="electricity">⚡ Электроэнергия</button>
+  <button class="tab-btn" data-tab="history">📜 История</button>
+</div>
+
+<div id="passportPage" class="page active-page">
+  <div id="passportContent" class="loading-state">🔍 Выберите участок для просмотра...</div>
+</div>
+<div id="financePage" class="page">
+  <div id="financeContent" class="loading-state">📊 Данные по взносам...</div>
+</div>
+<div id="electricityPage" class="page">
+  <div id="electricityContent" class="loading-state">⚡ Данные по электроэнергии...</div>
+</div>
+<div id="historyPage" class="page">
+  <div id="historyContent" class="loading-state">📜 История изменений...</div>
+</div>
+
+<script>
+// ============================== РЕПОЗИТОРИИ ==============================
+const REPO = {
+  base: new Map(),
+  debit: new Map(),
+  electricity: new Map()
+};
+let dataLoaded = false;
+let currentPlotKey = null;
+
+const BASE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
+const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
+const EE_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
+
+async function fetchAndParseOds(url, parserFn) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${url}`);
+  const buf = await resp.arrayBuffer();
+  const zip = await JSZip.loadAsync(buf);
+  const xml = await zip.file("content.xml").async("string");
+  return parserFn(xml);
+}
+
+function getTableRows(xmlDoc) {
+  const all = xmlDoc.getElementsByTagName("*");
+  const rows = [];
+  for (let i = 0; i < all.length; i++) {
+    if (all[i].localName === "table-row") rows.push(all[i]);
+  }
+  return rows;
+}
+function getCellText(cell) {
+  let txt = "";
+  for (let i = 0; i < cell.childNodes.length; i++) {
+    if (cell.childNodes[i].localName === "p") txt += cell.childNodes[i].textContent || "";
+  }
+  return txt.trim();
+}
+function expandCells(row) {
+  const cells = [];
+  for (let i = 0; i < row.childNodes.length; i++) {
+    const node = row.childNodes[i];
+    if (node.localName !== "table-cell" && node.localName !== "covered-table-cell") continue;
+    let repeat = 1;
+    if (node.hasAttribute("table:number-columns-repeated")) repeat = parseInt(node.getAttribute("table:number-columns-repeated")) || 1;
+    const text = getCellText(node);
+    for (let r = 0; r < Math.min(repeat, 30); r++) cells.push(text);
+  }
+  return cells;
+}
+function parseNumberAny(v) {
+  if (v === undefined || v === null) return 0;
+  const s = String(v).replace(",", ".").replace(/[^\d.-]/g, "");
+  return s ? parseFloat(s) || 0 : 0;
+}
+function isPlotNumber(str) {
+  return /^\d{1,3}[а-яёa-z]?$/i.test(String(str).trim());
+}
+
+function parseBaseOds(xmlStr) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, "application/xml");
+  const rows = getTableRows(doc);
+  const map = new Map();
+  for (let i = 8; i < rows.length; i++) {
+    const cells = expandCells(rows[i]);
+    if (cells.length < 12) continue;
+    const plotRaw = (cells[10] || "").trim();
+    if (!plotRaw || plotRaw.toLowerCase() === "итого") continue;
+    const plotKey = plotRaw.toLowerCase();
+    const owner = (cells[1] || "").trim();
+    const membership = (cells[2] || "").trim();
+    const phone = (cells[3] || "").trim();
+    const email = (cells[4] || "").trim();
+    const addressFull = (cells[11] || "").trim();
+    const area = (cells[12] || "").trim();
+    const street = (cells[13] || "").trim();
+    const sector = (cells[14] || "").trim();
+    const category = (cells[15] || "").trim();
+    const status = (cells[16] || "").trim();
+    const regDate = (cells[17] || "").trim();
+    const ownersList = owner.split(/[,;]/).map(s => s.trim()).filter(s => s);
+    map.set(plotKey, {
+      plotNumber: plotRaw, plotKey,
+      owner: owner,
+      owners: ownersList,
+      membership,
+      phone,
+      email,
+      plotAddress: addressFull,
+      area,
+      street,
+      sector,
+      category,
+      status,
+      regDate,
+      additionalContacts: (cells[5] || "").trim(),
+      mailingAddress: (cells[6] || "").trim(),
+      notes: (cells[18] || cells[7] || "").trim(),
+      cadastralNumber: (cells[19] || "").trim(),
+    });
+  }
+  console.log(`Base loaded: ${map.size} участков`);
+  return map;
+}
+
+function parseDebitOds(xmlStr) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, "application/xml");
+  const rows = getTableRows(doc);
+  const map = new Map();
+  let headerIdx = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const cells = expandCells(rows[i]);
+    const joined = cells.join(" ").toLowerCase();
+    if (joined.includes("номер") && joined.includes("владельц")) { headerIdx = i; break; }
+  }
+  if (headerIdx < 0) return map;
+  let current = null;
+  for (let i = headerIdx + 1; i < rows.length; i++) {
+    const cells = expandCells(rows[i]);
+    if (cells.length === 0) continue;
+    const col0 = (cells[0] || "").trim();
+    if (col0.toLowerCase() === "итого") break;
+    const isPlot = isPlotNumber(col0) && cells[1] && cells[1].trim() !== "";
+    if (isPlot) {
+      if (current && current.totalDebt > 0.01) map.set(current.plotNumber, current);
+      const plotKey = col0.toLowerCase();
+      const owner = (cells[1] || "").trim();
+      const debtEnd = parseNumberAny(cells[7]);
+      const overpayEnd = parseNumberAny(cells[8]);
+      current = {
+        plotNumber: plotKey,
+        owner,
+        totalDebt: debtEnd,
+        overpayEnd,
+        membershipDebt: 0, targetDebt: 0, arrearsDebt: 0, workDebt: 0, electricityDebt: 0,
+      };
+    } else if (current && col0 && !isPlot && !/^\d/.test(col0)) {
+      const amount = parseNumberAny(cells[7]);
+      if (amount > 0.01) {
+        const name = col0.toLowerCase();
+        if (name.includes("членские взносы")) current.membershipDebt += amount;
+        else if (name.includes("целевые")) current.targetDebt += amount;
+        else if (name.includes("задолженность прошлых лет") && !name.includes("отработка")) current.arrearsDebt += amount;
+        else if (name.includes("отработка")) current.workDebt += amount;
+        else if (name.includes("электроэнергия")) current.electricityDebt += amount;
+      }
+    }
+  }
+  if (current && current.totalDebt > 0.01) map.set(current.plotNumber, current);
+  return map;
+}
+
+function parseElectricityOds(xmlStr) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, "application/xml");
+  const rows = getTableRows(doc);
+  const map = new Map();
+  for (let i = 0; i < rows.length; i++) {
+    const cells = expandCells(rows[i]);
+    const col0 = (cells[0] || "").trim();
+    if (!isPlotNumber(col0)) continue;
+    const plotKey = col0.toLowerCase();
+    const owner = (cells[1] || "").trim();
+    const readingDate = (cells[4] || "").trim();
+    const prevReading = parseNumberAny(cells[5]);
+    const currReading = parseNumberAny(cells[6]);
+    const consumption = parseNumberAny(cells[7]);
+    const tariff = 3.82;
+    const accrued = consumption * tariff;
+    map.set(plotKey, {
+      plotNumber: plotKey,
+      owner,
+      readingDate,
+      previousReading: prevReading,
+      currentReading: currReading,
+      consumption,
+      tariff,
+      accrued,
+      paid: 0,
+      debt: accrued
+    });
+  }
+  return map;
+}
+
+async function loadAllData(force = false) {
+  if (dataLoaded && !force) return true;
+  try {
+    const baseMap = await fetchAndParseOds(BASE_URL, parseBaseOds);
+    REPO.base = baseMap;
+    const debitMap = await fetchAndParseOds(DEBIT_URL, parseDebitOds);
+    REPO.debit = debitMap;
+    const eeMap = await fetchAndParseOds(EE_URL, parseElectricityOds);
+    REPO.electricity = eeMap;
+    dataLoaded = true;
+    return true;
+  } catch (err) {
+    console.error(err);
+    document.getElementById("passportContent").innerHTML = `<div class="error-state">❌ Ошибка загрузки: ${err.message}</div>`;
+    return false;
+  }
+}
+
+function getPlotFullData(plotKeyRaw) {
+  const key = String(plotKeyRaw).trim().toLowerCase();
+  const base = REPO.base.get(key) || null;
+  const debit = REPO.debit.get(key) || null;
+  const ee = REPO.electricity.get(key) || null;
+  const totalDebtVznos = debit ? debit.totalDebt : 0;
+  const debtEe = ee ? ee.debt : 0;
+  const overpay = debit ? debit.overpayEnd : 0;
+  const ownersCount = base ? (base.owners.length || 1) : 0;
+  const area = base ? base.area : "—";
+  return { base, debit, ee, totalDebtVznos, debtEe, overpay, ownersCount, area };
+}
+
+function renderPassport(plotKey) {
+  const container = document.getElementById("passportContent");
+  const data = getPlotFullData(plotKey);
+  if (!data.base && !data.debit && !data.ee) {
+    container.innerHTML = `<div class="not-found">🔍 Участок "${plotKey}" не найден в базах.</div>`;
+    return;
+  }
+  const base = data.base || {};
+  const debtClass = data.totalDebtVznos === 0 ? "debt-none" : (data.totalDebtVznos < 5000 ? "debt-low" : "debt-high");
+  const debtEeClass = data.debtEe === 0 ? "debt-none" : (data.debtEe < 3000 ? "debt-low" : "debt-high");
+  let html = `<div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">💸 Задолженность по взносам</div><div class="kpi-value ${debtClass}">${data.totalDebtVznos.toFixed(2)} ₽</div></div>
+    <div class="kpi-card"><div class="kpi-label">⚡ Долг за э/э</div><div class="kpi-value ${debtEeClass}">${data.debtEe.toFixed(2)} ₽</div></div>
+    <div class="kpi-card"><div class="kpi-label">🔄 Переплата</div><div class="kpi-value">${data.overpay > 0 ? data.overpay.toFixed(2)+' ₽' : '—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">👥 Собственников</div><div class="kpi-value">${data.ownersCount}</div></div>
+    <div class="kpi-card"><div class="kpi-label">📐 Площадь (сот.)</div><div class="kpi-value">${base.area || '—'}</div></div>
+  </div>`;
+
+  html += `<div class="card"><div class="card-title">📌 Общие сведения</div><div class="info-grid">
+    <div class="info-row"><span class="info-label">Номер участка:</span><span class="info-value">${base.plotNumber || plotKey}</span></div>
+    <div class="info-row"><span class="info-label">Улица / сектор:</span><span class="info-value">${base.street || '—'} / ${base.sector || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Адрес:</span><span class="info-value">${base.plotAddress || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Кадастровый номер:</span><span class="info-value">${base.cadastralNumber || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Категория / статус:</span><span class="info-value">${base.category || '—'} / ${base.status || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Дата регистрации:</span><span class="info-value">${base.regDate || '—'}</span></div>
+    <div class="info-row"><span class="info-label">Членство:</span><span class="info-value">${base.membership || '—'}</span></div>
+  </div></div>`;
+
+  let ownersHtml = `<div class="card"><div class="card-title">👤 Собственники и контакты</div>`;
+  if (base.owners && base.owners.length) {
+    base.owners.forEach(owner => { ownersHtml += `<div class="owner-chip">${escapeHtml(owner)}</div>`; });
+  } else ownersHtml += `<div>${escapeHtml(base.owner || '—')}</div>`;
+  ownersHtml += `<div class="info-grid" style="margin-top:12px;">
+    <div class="info-row"><span class="info-label">Телефоны:</span><span class="info-value">${escapeHtml(base.phone || '—')}</span></div>
+    <div class="info-row"><span class="info-label">Email:</span><span class="info-value">${escapeHtml(base.email || '—')}</span></div>
+    <div class="info-row"><span class="info-label">Почтовый адрес:</span><span class="info-value">${escapeHtml(base.mailingAddress || '—')}</span></div>
+    <div class="info-row"><span class="info-label">Доп. контакты:</span><span class="info-value">${escapeHtml(base.additionalContacts || '—')}</span></div>
+  </div></div>`;
+  html += ownersHtml;
+
+  if (base.notes) {
+    html += `<div class="card"><div class="card-title">📝 Примечания</div><div style="white-space: pre-wrap;">${escapeHtml(base.notes)}</div></div>`;
+  }
+  container.innerHTML = html;
+}
+
+function renderFinance(plotKey) {
+  const container = document.getElementById("financeContent");
+  const debit = REPO.debit.get(plotKey.toLowerCase());
+  if (!debit) {
+    container.innerHTML = `<div class="card">📭 Нет данных по финансовым взносам для участка ${plotKey}</div>`;
+    return;
+  }
+  let html = `<div class="card"><div class="card-title">💰 Детализация задолженности по взносам</div>
+    <div class="info-grid">
+      <div class="info-row"><span>Членские взносы:</span><span class="amount-red">${debit.membershipDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Целевые взносы:</span><span>${debit.targetDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Задолженность прошлых лет:</span><span>${debit.arrearsDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Отработка:</span><span>${debit.workDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Итого долг:</span><span class="debt-badge debt-high">${debit.totalDebt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Переплата:</span><span>${debit.overpayEnd > 0 ? debit.overpayEnd.toFixed(2)+' ₽' : '—'}</span></div>
+    </div>
+  </div>`;
+  container.innerHTML = html;
+}
+
+function renderElectricity(plotKey) {
+  const container = document.getElementById("electricityContent");
+  const ee = REPO.electricity.get(plotKey.toLowerCase());
+  if (!ee) {
+    container.innerHTML = `<div class="card">⚡ Нет данных по электроэнергии для участка ${plotKey}</div>`;
+    return;
+  }
+  let html = `<div class="card"><div class="card-title">⚡ Показания и задолженность по э/э</div>
+    <div class="info-grid">
+      <div class="info-row"><span>Текущие показания:</span><span>${ee.currentReading} кВт·ч</span></div>
+      <div class="info-row"><span>Предыдущие показания:</span><span>${ee.previousReading} кВт·ч</span></div>
+      <div class="info-row"><span>Расход:</span><span>${ee.consumption} кВт·ч</span></div>
+      <div class="info-row"><span>Тариф:</span><span>${ee.tariff} ₽/кВт·ч</span></div>
+      <div class="info-row"><span>Начислено:</span><span>${ee.accrued.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Задолженность:</span><span class="debt-badge ${ee.debt>0?'debt-high':'debt-none'}">${ee.debt.toFixed(2)} ₽</span></div>
+      <div class="info-row"><span>Дата показаний:</span><span>${ee.readingDate || '—'}</span></div>
+    </div>
+  </div>`;
+  container.innerHTML = html;
+}
+
+function renderHistory(plotKey) {
+  const container = document.getElementById("historyContent");
+  container.innerHTML = `<div class="card"><div class="card-title">📜 История изменений</div><div style="color: var(--text-muted);">ℹ️ В текущей версии файлов история смены владельцев и операций будет добавлена при расширении данных. Сейчас отображаются актуальные данные.</div></div>`;
+}
+
+// ===================== ИСПРАВЛЕННЫЙ ПОИСК =====================
+function searchPlots(query) {
+  if (!query.trim()) return [];
+  const q = query.trim().toLowerCase();
+  const results = [];
+
+  for (let [key, base] of REPO.base.entries()) {
+    const exactPlotMatch = (base.plotNumber && base.plotNumber.toLowerCase() === q);
+    const textMatch =
+      (base.owner && base.owner.toLowerCase().includes(q)) ||
+      (base.phone && base.phone.includes(q)) ||
+      (base.plotAddress && base.plotAddress.toLowerCase().includes(q)) ||
+      (base.cadastralNumber && base.cadastralNumber.toLowerCase().includes(q)) ||
+      (base.email && base.email.toLowerCase().includes(q));
+
+    const plotNumberMatch = (base.plotNumber && base.plotNumber.toLowerCase() === q);
+
+    if (plotNumberMatch || exactPlotMatch || textMatch) {
+      results.push({
+        key,
+        label: `Уч. ${base.plotNumber} — ${base.owner || 'Владелец'}`,
+        base,
+        matchType: plotNumberMatch || exactPlotMatch ? 'exact' : 'text'
+      });
+    }
+  }
+
+  results.sort((a, b) => {
+    if (a.matchType === 'exact' && b.matchType !== 'exact') return -1;
+    if (a.matchType !== 'exact' && b.matchType === 'exact') return 1;
+    return 0;
+  });
+
+  return results.slice(0, 50);
+}
+
+async function performSearchAndShow() {
+  const query = document.getElementById('globalSearchInput').value.trim();
+  const resDiv = document.getElementById('searchResultsList');
+
+  if (!query) {
+    resDiv.classList.add('hidden');
+    return;
+  }
+
+  const results = searchPlots(query);
+
+  if (results.length === 0) {
+    resDiv.innerHTML = '<div style="padding:12px;background:var(--primary-light);border-radius:16px;">❌ Ничего не найдено</div>';
+    resDiv.classList.remove('hidden');
+    return;
+  }
+
+  const exactMatch = results.find(r => r.matchType === 'exact');
+  if (exactMatch) {
+    selectPlot(exactMatch.key);
+    resDiv.classList.add('hidden');
+    return;
+  }
+
+  resDiv.innerHTML = results.map(r =>
+    `<div style="padding:12px;border-bottom:1px solid var(--border);cursor:pointer;background:var(--card-bg);border-radius:12px;margin-bottom:6px;transition:0.1s;"
+         onmouseenter="this.style.backgroundColor='var(--primary-light)'"
+         onmouseleave="this.style.backgroundColor='var(--card-bg)'"
+         onclick="selectPlot('${r.key}')">
+        🔍 ${escapeHtml(r.label)}
+     </div>`
+  ).join('');
+  resDiv.classList.remove('hidden');
+}
+
+async function selectPlot(plotKey) {
+  currentPlotKey = plotKey;
+  renderPassport(plotKey);
+  renderFinance(plotKey);
+  renderElectricity(plotKey);
+  renderHistory(plotKey);
+
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector('.tab-btn[data-tab="passport"]').classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+  document.getElementById('passportPage').classList.add('active-page');
+  document.getElementById('globalSearchInput').value = plotKey;
+  document.getElementById('searchResultsList').classList.add('hidden');
+}
+
+function escapeHtml(str) {
+  if(!str) return '';
+  return str.replace(/[&<>]/g, function(m){
+    if(m==='&') return '&amp;';
+    if(m==='<') return '&lt;';
+    if(m==='>') return '&gt;';
+    return m;
+  });
+}
+
+function initTheme() {
+  if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+  document.getElementById('themeToggleBtn').onclick = () => {
+    document.body.classList.toggle('dark');
+    localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+  };
+}
+
+function initTabs() {
+  const btns = document.querySelectorAll('.tab-btn');
+  const pages = {
+    passport: document.getElementById('passportPage'),
+    finance: document.getElementById('financePage'),
+    electricity: document.getElementById('electricityPage'),
+    history: document.getElementById('historyPage')
+  };
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      btns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      Object.values(pages).forEach(p => p.classList.remove('active-page'));
+      if (pages[tab]) pages[tab].classList.add('active-page');
+      if (currentPlotKey) {
+        if (tab === 'passport') renderPassport(currentPlotKey);
+        if (tab === 'finance') renderFinance(currentPlotKey);
+        if (tab === 'electricity') renderElectricity(currentPlotKey);
+        if (tab === 'history') renderHistory(currentPlotKey);
+      }
+    });
+  });
+}
+
+async function init() {
+  initTheme();
+  initTabs();
+  await loadAllData();
+
+  document.getElementById('searchBtnGlobal').addEventListener('click', performSearchAndShow);
+
+  document.getElementById('globalSearchInput').addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const query = document.getElementById('globalSearchInput').value.trim();
+      if (!query) return;
+
+      const results = searchPlots(query);
+      const exactMatch = results.find(r => r.matchType === 'exact');
+
+      if (exactMatch) {
+        selectPlot(exactMatch.key);
+        document.getElementById('searchResultsList').classList.add('hidden');
+      } else if (results.length === 1) {
+        selectPlot(results[0].key);
+        document.getElementById('searchResultsList').classList.add('hidden');
+      } else if (results.length > 0) {
+        await performSearchAndShow();
+      } else {
+        const resDiv = document.getElementById('searchResultsList');
+        resDiv.innerHTML = '<div style="padding:12px;background:var(--primary-light);border-radius:16px;">❌ Ничего не найдено</div>';
+        resDiv.classList.remove('hidden');
+      }
+    }
+  });
+
+  if (REPO.base.size > 0) {
+    const firstKey = REPO.base.keys().next().value;
+    if (firstKey) selectPlot(firstKey);
+  }
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
