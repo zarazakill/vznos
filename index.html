@@ -1102,10 +1102,10 @@ function parseElectricityOds(xml) {
 /* ================================================================
    QR
    ================================================================ */
-function sanitizePurpose(t) { return t.replace(/[|;,\n\r\t]/g,' ').replace(/\s+/g,' ').trim(); }
+function sanitizePurpose(t) { return t.replace(/[|;\n\r\t]/g,' ').replace(/\s+/g,' ').trim(); }
 function formatAmountShort(a) {
     if (a === Math.floor(a)) return Math.floor(a).toString();
-    return a.toFixed(2).replace('.', ',').replace(/0+$/, '').replace(/,$/, '');
+    return a.toFixed(2).replace('.', ',');
 }
 function buildDetailedPurpose(debt) {
     const parts = [];
@@ -1124,9 +1124,17 @@ function buildDetailedPurpose(debt) {
 function buildPaymentQR(plotNumber, amount, debtData, isElectricity) {
     const sumKop = Math.round(amount * 100);
     let purpose;
-    if (isElectricity) purpose = `Электроэнергия ${formatAmountShort(amount)}р уч.${plotNumber}`;
-    else if (debtData) purpose = buildDetailedPurpose(debtData);
-    else               purpose = `Оплата взносов уч.${plotNumber}`;
+    if (isElectricity) {
+        const ee = window.currentEeData;
+        const consumption = amount / (ee?.tariff || 3.82);
+        const consumptionInt = Math.round(consumption);
+        const amountStr = formatAmountShort(amount);
+        purpose = `Электроэнергия ${amountStr}р (${consumptionInt}кВт·ч) уч.${plotNumber}`;
+    } else if (debtData) {
+        purpose = buildDetailedPurpose(debtData);
+    } else {
+        purpose = `Оплата взносов уч.${plotNumber}`;
+    }
     return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${sanitizePurpose(purpose)}|Sum=${sumKop}`;
 }
 async function generateQR(text) {
@@ -1366,7 +1374,7 @@ function renderElectricityCard(ee) {
             return;
         }
         const amount = (newVal - ee.currentReading) * TARIFF;
-        calc.textContent = `📊 Сумма к оплате: ${formatMoney(amount)} ₽`;
+        calc.textContent = `📊 Сумма к оплате: ${formatAmountShort(amount)} ₽`;
         calc.style.display = 'block';
         genBtn.disabled = false;
         genBtn.onclick = () => generateAndShowQR('ee', genBtn, buildPaymentQR(ee.plotNumber, amount, null, true));
