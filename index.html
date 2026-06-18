@@ -326,6 +326,7 @@ body {
    ================================================================ */
 .plot-sub   { font-size: 13px; color: var(--text-secondary); }
 .plot-owner {
+    display: none !important; /* Фамилия скрыта по требованию */
     font-size: 17px;
     font-weight: 700;
     color: var(--text-primary);
@@ -1114,9 +1115,7 @@ function buildDetailedPurpose(debt) {
     if (debt.arrearsDebt > 0.01)    parts.push(`Задолженность прошлых лет: ${formatAmountShort(debt.arrearsDebt)}р`);
     if (debt.workDebt > 0.01)       parts.push(`Отработка: ${formatAmountShort(debt.workDebt)}р`);
     if (debt.electricityDebt > 0.01) parts.push(`Электроэнергия: ${formatAmountShort(debt.electricityDebt)}р`);
-    let owner = (debt.owner||"");
-    if (owner.length > 20) owner = owner.substring(0,17)+"…";
-    const suffix = owner ? ` уч.${debt.plotNumber} ${owner}` : ` уч.${debt.plotNumber}`;
+        const suffix = ` уч.${debt.plotNumber}`;  // фамилия скрыта
     let result = parts.join(", ") + suffix;
     if (result.length > 210) result = `Оплата взносов уч.${debt.plotNumber}`;
     return result;
@@ -1195,12 +1194,32 @@ function showError(msg) {
 }
 
 async function syncAllData() {
-    setLoading("📁 Загрузка реестра участков…");
-    if (cachedBaseMap.size === 0)        cachedBaseMap        = await fetchAndParseOds(BASE_URL,  parseBaseOds);
-    setLoading("💰 Загрузка долгов…");
-    if (cachedDebtMap.size === 0)        cachedDebtMap        = await fetchAndParseOds(DEBIT_URL, parseDebitOds);
-    setLoading("⚡ Загрузка электроэнергии…");
-    if (cachedElectricityMap.size === 0) cachedElectricityMap = await fetchAndParseOds(EE_URL,    parseElectricityOds);
+    const needBase  = cachedBaseMap.size === 0;
+    const needDebit = cachedDebtMap.size === 0;
+    const needEe    = cachedElectricityMap.size === 0;
+
+    if (!needBase && !needDebit && !needEe) return; // всё уже в кэше
+
+    setLoading("Загрузка данных…");
+
+    // Параллельная загрузка всех трёх файлов — втрое быстрее последовательной
+    const [baseResult, debitResult, eeResult] = await Promise.allSettled([
+        needBase  ? fetchAndParseOds(BASE_URL,  parseBaseOds)        : Promise.resolve(cachedBaseMap),
+        needDebit ? fetchAndParseOds(DEBIT_URL, parseDebitOds)       : Promise.resolve(cachedDebtMap),
+        needEe    ? fetchAndParseOds(EE_URL,    parseElectricityOds) : Promise.resolve(cachedElectricityMap),
+    ]);
+
+    // Применяем результаты — если файл загрузился, используем; иначе оставляем что было
+    if (baseResult.status  === 'fulfilled' && needBase)  cachedBaseMap        = baseResult.value;
+    if (debitResult.status === 'fulfilled' && needDebit) cachedDebtMap        = debitResult.value;
+    if (eeResult.status    === 'fulfilled' && needEe)    cachedElectricityMap = eeResult.value;
+
+    // Если хоть что-то не загрузилось — кидаем ошибку с деталями
+    const errors = [baseResult, debitResult, eeResult]
+        .filter(r => r.status === 'rejected')
+        .map(r => r.reason?.message || 'Неизвестная ошибка');
+    if (errors.length > 0) throw new Error(errors.join('; '));
+
     lastSyncTime = new Date();
 }
 
@@ -1290,7 +1309,7 @@ function renderDebtCard(debt) {
     let html = `<div class="card-body">
         <div class="card-title">💰 Задолженность</div>
         <div class="plot-sub">Участок №${escapeHtml(debt.plotNumber)}</div>
-        <div class="plot-owner">${escapeHtml(debt.owner || "Владелец не указан")}</div>`;
+        `;
 
     if (debt.hasDebt) {
         html += `<div class="debt-total">Задолженность: ${formatMoney(debt.totalDebt)} ₽</div>
@@ -1334,7 +1353,7 @@ function renderElectricityCard(ee) {
     c.innerHTML = `<div class="card-body">
         <div class="card-title blue">⚡ Электроэнергия</div>
         <div class="plot-sub">Участок №${escapeHtml(ee.plotNumber)}</div>
-        <div class="plot-owner">${escapeHtml(ee.owner || "Владелец не указан")}</div>
+
         <div class="debt-line"><span class="debt-line-label">Текущие показания</span><strong>${formatNumber(ee.currentReading)} кВт·ч</strong></div>
         <div class="debt-line"><span class="debt-line-label">Дата снятия</span><span>${escapeHtml(ee.readingDateStr || "не указана")}</span></div>
         <div class="debt-line"><span class="debt-line-label">Тариф</span><span>${TARIFF.toFixed(2)} ₽/кВт·ч</span></div>
@@ -1392,7 +1411,7 @@ function renderManualPaymentCard(member, debt, ee) {
     c.innerHTML = `<div class="card-body">
         <div class="card-title">💳 Произвольная оплата</div>
         <div class="plot-sub">Участок №${escapeHtml(currentPlotNumber)}</div>
-        <div class="plot-owner">${escapeHtml(ownerName || "Владелец не указан")}</div>
+
         <label class="manual-label">Сумма к оплате (₽)</label>
         <input type="number" id="manualAmountInput" class="manual-input"
                placeholder="0.00" step="any" inputmode="decimal">
