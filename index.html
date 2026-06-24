@@ -1194,6 +1194,7 @@ function showError(msg) {
 }
 
 async function syncAllData() {
+    // Проверяем каждый кэш отдельно — загружаем только то, чего нет
     const needBase  = cachedBaseMap.size === 0;
     const needDebit = cachedDebtMap.size === 0;
     const needEe    = cachedElectricityMap.size === 0;
@@ -1202,25 +1203,25 @@ async function syncAllData() {
 
     setLoading("Загрузка данных…");
 
-    // Параллельная загрузка всех трёх файлов — втрое быстрее последовательной
-    const [baseResult, debitResult, eeResult] = await Promise.allSettled([
-        needBase  ? fetchAndParseOds(BASE_URL,  parseBaseOds)        : Promise.resolve(cachedBaseMap),
-        needDebit ? fetchAndParseOds(DEBIT_URL, parseDebitOds)       : Promise.resolve(cachedDebtMap),
-        needEe    ? fetchAndParseOds(EE_URL,    parseElectricityOds) : Promise.resolve(cachedElectricityMap),
-    ]);
+    // Параллельная загрузка только нужных файлов
+    const promises = [];
+    if (needBase)  promises.push(fetchAndParseOds(BASE_URL,  parseBaseOds).then(r => cachedBaseMap = r));
+    if (needDebit) promises.push(fetchAndParseOds(DEBIT_URL, parseDebitOds).then(r => cachedDebtMap = r));
+    if (needEe)    promises.push(fetchAndParseOds(EE_URL,    parseElectricityOds).then(r => cachedElectricityMap = r));
 
-    // Применяем результаты — если файл загрузился, используем; иначе оставляем что было
-    if (baseResult.status  === 'fulfilled' && needBase)  cachedBaseMap        = baseResult.value;
-    if (debitResult.status === 'fulfilled' && needDebit) cachedDebtMap        = debitResult.value;
-    if (eeResult.status    === 'fulfilled' && needEe)    cachedElectricityMap = eeResult.value;
+    if (promises.length === 0) {
+        hideLoading();
+        return;
+    }
 
-    // Если хоть что-то не загрузилось — кидаем ошибку с деталями
-    const errors = [baseResult, debitResult, eeResult]
-        .filter(r => r.status === 'rejected')
-        .map(r => r.reason?.message || 'Неизвестная ошибка');
-    if (errors.length > 0) throw new Error(errors.join('; '));
-
-    lastSyncTime = new Date();
+    try {
+        await Promise.all(promises);
+        lastSyncTime = new Date();
+        hideLoading();
+    } catch (err) {
+        hideLoading();
+        throw err;
+    }
 }
 
 async function loadPlotData(plotNumber) {
@@ -1647,14 +1648,12 @@ function initMainApp() {
     const plotInput = document.getElementById('plotInput');
     searchBtn.onclick = () => {
         const v = plotInput.value.trim();
-        if (v) loadPlotData(v);
-        else { plotInput.focus(); showToast("Введите номер участка"); }
-    };
-    plotInput.onkeydown = e => { if (e.key === 'Enter') searchBtn.click(); };
-    document.getElementById('settingsBtn').onclick = showSettingsModal;
-    document.getElementById('retryBtn').onclick = () => {
-        const v = plotInput.value.trim();
-        if (v) loadPlotData(v); else syncAllData().catch(console.warn);
+        if (!v) {
+            plotInput.focus();
+            showToast("Введите номер участка");
+            return;
+        }
+        loadPlotData(v);
     };
     syncAllData().then(updateStatus).catch(console.warn);
 }
