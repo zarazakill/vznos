@@ -373,7 +373,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 
 
 <!-- РАСХОДЫ -->
-<div class="page" id="page-expenses" style="display:none;">
+<div class="page" id="page-expenses">
 
 <style>
 .exp-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
@@ -381,12 +381,12 @@ select.filter-sel:focus{border-color:var(--green-400);}
 .exp-tab.active{background:#2E7D32;color:#fff;border-color:#2E7D32;}
 .exp-section{display:none;}
 .exp-section.active{display:block;}
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
-.kpi-box{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
-.kpi-val{font-size:1.4rem;font-weight:700;color:#2E7D32;}
-.kpi-lbl{font-size:.8rem;color:#888;margin-top:4px;}
-.kpi-val.red{color:#C62828;}
-.kpi-val.blue{color:#1565C0;}
+.exp-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px;}
+.exp-kpi-box{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.exp-kpi-val{font-size:1.4rem;font-weight:700;color:#2E7D32;}
+.exp-kpi-lbl{font-size:.8rem;color:#888;margin-top:4px;}
+.exp-kpi-val.red{color:#C62828;}
+.exp-kpi-val.blue{color:#1565C0;}
 table.etable{width:100%;border-collapse:collapse;font-size:.85rem;}
 table.etable th{background:#2E7D32;color:#fff;padding:8px 10px;text-align:left;position:sticky;top:0;z-index:2;white-space:nowrap;}
 table.etable td{padding:6px 10px;border-bottom:1px solid #eee;}
@@ -727,16 +727,6 @@ window.renderDetail = function() {
     </tr>`).join('');
 };
 
-// ── ИНИЦИАЛИЗАЦИЯ ─────────────────────────────────────────────────────────
-window._expInitDone = false;
-// Запускаем при первом показе страницы
-document.addEventListener('click', function(e){
-  const t = e.target.closest('[data-page]');
-  if(t && t.dataset.page==='expenses' && !window._expInitDone){
-    window._expInitDone = true;
-    setTimeout(()=>{renderOverview();renderDetail();},50);
-  }
-});
 })();
 </script>
 </div>
@@ -1144,6 +1134,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
     if(tab.dataset.page === 'passport' && passportService) renderPassportList();
     if(tab.dataset.page === 'debtors') renderDebtorsTable();
     if(tab.dataset.page === 'receipts') renderReceiptsList();
+    if(tab.dataset.page === 'expenses') { showExpSection('overview'); renderDetail(); }
   });
 });
 
