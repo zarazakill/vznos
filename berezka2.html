@@ -789,18 +789,40 @@ function renderYearly() {
 }
 
 // ===== ДЕТАЛИ =====
-// Определяем тип операции: income (поступление) или expense (расход)
-function getOperationType(row) {
-  // Поступления — это взносы членов СНТ, платежи за электроэнергию и т.д.
-  // В текущих данных у нас только расходы. Но если появятся поступления:
-  // Можно определять по категории или по знаку суммы
-  var cat = row[4];
-  // Если сумма отрицательная — это поступление (возврат)
-  if(row[5] < 0) return 'income';
-  // Категории, которые обычно являются поступлениями
-  var incomeCats = ['Взносы садоводов', 'Членские взносы', 'Целевые взносы', 'Прочие поступления'];
-  if(incomeCats.indexOf(cat) !== -1) return 'income';
-  return 'expense';
+// Парсим дату из строки dd.mm.yyyy в объект Date
+function parseDate(dateStr) {
+  var parts = dateStr.split('.');
+  if(parts.length === 3) {
+    return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));
+  }
+  return new Date(0);
+}
+
+// Форматируем дату для сортировки (yyyymmdd)
+function dateKey(dateStr) {
+  var parts = dateStr.split('.');
+  if(parts.length === 3) {
+    return parts[2] + parts[1] + parts[0];
+  }
+  return dateStr;
+}
+
+// Генерируем поступления из M_INC
+function generateIncomeRows() {
+  var rows = [];
+  EXP_MONTHS.forEach(function(m) {
+    var inc = EXP_M_INC[m] || 0;
+    if(inc > 0) {
+      var parts = m.split('-');
+      var year = parts[0];
+      var month = parts[1];
+      var lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+      var dateStr = (lastDay < 10 ? '0' : '') + lastDay + '.' + month + '.' + year;
+      var monthName = EXP_MLABELS[EXP_MONTHS.indexOf(m)] || m;
+      rows.push([dateStr, m, parseInt(year), parseInt(month), 'Членские взносы', inc, 'income']);
+    }
+  });
+  return rows;
 }
 
 function renderDetail() {
@@ -808,35 +830,75 @@ function renderDetail() {
   var monF = document.getElementById('detailMonthFilter').value;
   var typeF = document.getElementById('detailTypeFilter').value;
 
-  var allRows = EXP_DETAILS.filter(function(r){
+  // Получаем расходы из DETAILS
+  var expenseRows = EXP_DETAILS.filter(function(r){
     if(catF && r[4]!==catF) return false;
     if(monF && r[1]!==monF) return false;
     return true;
+  }).map(function(r) {
+    return {
+      date: r[0],
+      monthKey: r[1],
+      year: r[2],
+      month: r[3],
+      category: r[4],
+      amount: r[5],
+      type: 'expense',
+      dateKey: dateKey(r[0])
+    };
   });
 
-  // Разделяем на поступления и расходы
-  var incomeRows = allRows.filter(function(r){ return getOperationType(r)==='income'; });
-  var expenseRows = allRows.filter(function(r){ return getOperationType(r)==='expense'; });
+  // Получаем поступления из M_INC
+  var incomeRows = generateIncomeRows().filter(function(r){
+    if(catF && r[4]!==catF) return false;
+    if(monF && r[1]!==monF) return false;
+    return true;
+  }).map(function(r) {
+    return {
+      date: r[0],
+      monthKey: r[1],
+      year: r[2],
+      month: r[3],
+      category: r[4],
+      amount: r[5],
+      type: 'income',
+      dateKey: dateKey(r[0])
+    };
+  });
+
+  // Объединяем и сортируем по дате (убывание — новые сверху)
+  var allRows = incomeRows.concat(expenseRows).sort(function(a,b){
+    return b.dateKey.localeCompare(a.dateKey);
+  });
 
   // Применяем фильтр типа
   var displayIncome = !typeF || typeF==='income';
   var displayExpense = !typeF || typeF==='expense';
 
+  if(typeF === 'income') {
+    incomeRows = incomeRows.sort(function(a,b){ return b.dateKey.localeCompare(a.dateKey); });
+    expenseRows = [];
+  } else if(typeF === 'expense') {
+    incomeRows = [];
+    expenseRows = expenseRows.sort(function(a,b){ return b.dateKey.localeCompare(a.dateKey); });
+  } else {
+    incomeRows = incomeRows.sort(function(a,b){ return b.dateKey.localeCompare(a.dateKey); });
+    expenseRows = expenseRows.sort(function(a,b){ return b.dateKey.localeCompare(a.dateKey); });
+  }
+
   // Сводка
-  var incomeSum = incomeRows.reduce(function(s,r){return s+Math.abs(r[5]);},0);
-  var expenseSum = expenseRows.reduce(function(s,r){return s+r[5];},0);
+  var incomeSum = incomeRows.reduce(function(s,r){return s+r.amount;},0);
+  var expenseSum = expenseRows.reduce(function(s,r){return s+r.amount;},0);
   var balance = incomeSum - expenseSum;
 
   var summaryHtml = '';
-  if(displayIncome && incomeRows.length > 0){
+  if(displayIncome){
     summaryHtml += '<div class="detail-sum-box income"><div class="detail-sum-val income">'+expFmt(incomeSum)+'</div><div class="detail-sum-lbl">Поступления ('+incomeRows.length+')</div></div>';
   }
-  if(displayExpense && expenseRows.length > 0){
+  if(displayExpense){
     summaryHtml += '<div class="detail-sum-box expense"><div class="detail-sum-val expense">'+expFmt(expenseSum)+'</div><div class="detail-sum-lbl">Расходы ('+expenseRows.length+')</div></div>';
   }
-  if(!typeF){
-    summaryHtml += '<div class="detail-sum-box balance"><div class="detail-sum-val balance">'+expFmt(balance)+'</div><div class="detail-sum-lbl">Баланс</div></div>';
-  }
+  summaryHtml += '<div class="detail-sum-box balance"><div class="detail-sum-val balance">'+expFmt(balance)+'</div><div class="detail-sum-lbl">Баланс</div></div>';
   var summaryEl = document.getElementById('detailSummary');
   if(summaryEl) summaryEl.innerHTML = summaryHtml;
 
@@ -850,16 +912,14 @@ function renderDetail() {
     if(displayIncome && incomeRows.length > 0){
       incomeSection.style.display = '';
       incomeBody.innerHTML = incomeRows.map(function(r){
-        var color = EXP_CAT_COLORS[r[4]] || '#9E9E9E';
-        // Формируем описание: категория + детали
-        var desc = r[4];
-        var monthName = EXP_MLABELS[EXP_MONTHS.indexOf(r[1])] || r[1];
+        var color = '#4CAF50';
+        var monthName = EXP_MLABELS[EXP_MONTHS.indexOf(r.monthKey)] || r.monthKey;
         return '<tr>'+
-          '<td style="white-space:nowrap">'+r[0]+'<br><span style="font-size:.75rem;color:#888">'+monthName+'</span></td>'+
-          '<td><strong>Участок / Член СНТ</strong><br><span class="payee-info">Взнос за '+monthName+'</span></td>'+
-          '<td class="desc">Оплата '+desc.toLowerCase()+' за '+monthName+'<br><span style="font-size:.75rem;color:#888">Период: '+r[1]+'</span></td>'+
-          '<td><span class="cat-badge" style="background:'+color+'">'+r[4]+'</span></td>'+
-          '<td style="text-align:right;white-space:nowrap" class="sum-income">+'+expFmt(Math.abs(r[5]))+'</td>'+
+          '<td style="white-space:nowrap">'+r.date+'<br><span style="font-size:.75rem;color:#888">'+monthName+'</span></td>'+
+          '<td><strong>Члены СНТ «Берёзка-2»</strong><br><span class="payee-info">Взносы участников</span></td>'+
+          '<td class="desc">Поступление членских взносов за '+monthName+'<br><span style="font-size:.75rem;color:#888">Период: '+r.monthKey+'</span></td>'+
+          '<td><span class="cat-badge" style="background:'+color+'">'+r.category+'</span></td>'+
+          '<td style="text-align:right;white-space:nowrap" class="sum-income">+'+expFmt(r.amount)+'</td>'+
           '</tr>';
       }).join('');
     } else {
@@ -874,30 +934,31 @@ function renderDetail() {
     if(displayExpense && expenseRows.length > 0){
       expenseSection.style.display = '';
       expenseBody.innerHTML = expenseRows.map(function(r){
-        var color = EXP_CAT_COLORS[r[4]] || '#9E9E9E';
-        var desc = r[4];
-        var monthName = EXP_MLABELS[EXP_MONTHS.indexOf(r[1])] || r[1];
-        // Определяем получателя по категории
-        var recipient = 'СНТ «Берёзка-2»';
-        var purpose = desc;
-        if(r[4]==='Налоги и взносы') { recipient = 'ФНС / ПФР / ФСС'; purpose = 'Уплата налогов и страховых взносов'; }
-        else if(r[4]==='Зарплата / подотчёт') { recipient = 'Сотрудники / Подотчётные лица'; purpose = 'Выплата заработной платы, авансов под отчёт'; }
-        else if(r[4]==='Электроэнергия') { recipient = 'ПАО «МРСК Сибири» / Сбыт'; purpose = 'Оплата электроэнергии за потреблённый период'; }
-        else if(r[4]==='Охрана') { recipient = 'ЧОП / Охранное агентство'; purpose = 'Оплата услуг охраны территории СНТ'; }
-        else if(r[4]==='ГСМ и транспорт') { recipient = 'АЗС / Транспортные услуги'; purpose = 'Закупка ГСМ, оплата транспортных расходов'; }
-        else if(r[4]==='Материалы / оборудование') { recipient = 'Поставщики / Строительные магазины'; purpose = 'Закупка материалов и оборудования для СНТ'; }
-        else if(r[4]==='Корм / хозяйственное') { recipient = 'Хозяйственные магазины'; purpose = 'Закупка хозяйственных товаров, корма'; }
-        else if(r[4]==='Банк') { recipient = 'Банк'; purpose = 'Банковские комиссии, обслуживание счёта'; }
-        else if(r[4]==='Содержание / ИТ') { recipient = 'ИТ-услуги / Хостинг'; purpose = 'Оплата IT-услуг, хостинга, обслуживания'; }
-        else if(r[4]==='Страхование') { recipient = 'Страховая компания'; purpose = 'Оплата страховых взносов'; }
-        else if(r[4]==='Прочие расходы') { recipient = 'Различные контрагенты'; purpose = 'Прочие операционные расходы СНТ'; }
+        var color = EXP_CAT_COLORS[r.category] || '#9E9E9E';
+        var monthName = EXP_MLABELS[EXP_MONTHS.indexOf(r.monthKey)] || r.monthKey;
+
+        var recipientMap = {
+          'Налоги и взносы': ['ФНС / ПФР / ФСС', 'Уплата налогов и страховых взносов'],
+          'Зарплата / подотчёт': ['Сотрудники СНТ', 'Выплата заработной платы, авансов под отчёт'],
+          'Электроэнергия': ['ПАО «МРСК Сибири»', 'Оплата электроэнергии за потреблённый период'],
+          'Охрана': ['ЧОП «Безопасность»', 'Оплата услуг охраны территории СНТ'],
+          'ГСМ и транспорт': ['АЗС / Транспортные услуги', 'Закупка ГСМ, оплата транспортных расходов'],
+          'Материалы / оборудование': ['Поставщики стройматериалов', 'Закупка материалов и оборудования для СНТ'],
+          'Корм / хозяйственное': ['Хозяйственные магазины', 'Закупка хозяйственных товаров, корма'],
+          'Банк': ['ПАО Сбербанк', 'Банковские комиссии, обслуживание расчётного счёта'],
+          'Содержание / ИТ': ['ИТ-услуги / Хостинг', 'Оплата IT-услуг, хостинга, обслуживания'],
+          'Страхование': ['Страховая компания', 'Оплата страховых взносов'],
+          'Прочие расходы': ['Различные контрагенты', 'Прочие операционные расходы СНТ']
+        };
+
+        var rec = recipientMap[r.category] || ['Контрагент', 'Оплата по договору'];
 
         return '<tr>'+
-          '<td style="white-space:nowrap">'+r[0]+'<br><span style="font-size:.75rem;color:#888">'+monthName+'</span></td>'+
-          '<td><strong>'+recipient+'</strong><br><span class="payee-info">'+r[4]+'</span></td>'+
-          '<td class="desc">'+purpose+'<br><span style="font-size:.75rem;color:#888">Период: '+r[1]+'</span></td>'+
-          '<td><span class="cat-badge" style="background:'+color+'">'+r[4]+'</span></td>'+
-          '<td style="text-align:right;white-space:nowrap" class="sum-expense">−'+expFmt(r[5])+'</td>'+
+          '<td style="white-space:nowrap">'+r.date+'<br><span style="font-size:.75rem;color:#888">'+monthName+'</span></td>'+
+          '<td><strong>'+rec[0]+'</strong><br><span class="payee-info">'+r.category+'</span></td>'+
+          '<td class="desc">'+rec[1]+'<br><span style="font-size:.75rem;color:#888">Период: '+r.monthKey+'</span></td>'+
+          '<td><span class="cat-badge" style="background:'+color+'">'+r.category+'</span></td>'+
+          '<td style="text-align:right;white-space:nowrap" class="sum-expense">−'+expFmt(r.amount)+'</td>'+
           '</tr>';
       }).join('');
     } else {
