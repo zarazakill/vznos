@@ -2604,7 +2604,7 @@ function renderFinancePage() {
 
     // Получаем остатки из файлов
     const balance51 = getBalanceFromFile('51');
-    const balance71 = getBalanceFromFile('71');
+    const balance71 = getBalanceFromFile('71.01');
     const balance50 = getBalanceFromFile('50');
 
     const totalBalance = balance51 + balance71 + balance50;
@@ -2613,7 +2613,7 @@ function renderFinancePage() {
     console.log('💰 Остатки по счетам:');
     console.log(`  Счет 50: ${balance50.toFixed(2)} ₽`);
     console.log(`  Счет 51: ${balance51.toFixed(2)} ₽`);
-    console.log(`  Счет 71: ${balance71.toFixed(2)} ₽`);
+    console.log(`  Счет 71.01: ${balance71.01.toFixed(2)} ₽`);
     console.log(`  Итого: ${totalBalance.toFixed(2)} ₽`);
 
     document.getElementById('balanceDisplay').textContent = fmt(totalBalance) + ' ₽';
