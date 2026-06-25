@@ -2402,10 +2402,11 @@ function renderFinancePage() {
     if (dateTo) {
         const parts = dateTo.split('-');
         toDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        toDate.setHours(23, 59, 59, 999); // конец дня
+        toDate.setHours(23, 59, 59, 999);
     }
 
-    // Получаем все операции (исключая внутренние перемещения)
+    // ===== ИСПОЛЬЗУЕМ ЕДИНЫЙ СПИСОК ОПЕРАЦИЙ =====
+    // Исключаем внутренние перемещения
     let allOps = financialAnalyzer.operations.filter(op => op.type !== 'internal');
 
     // Фильтр по типу
@@ -2425,6 +2426,16 @@ function renderFinancePage() {
         });
     }
 
+    // ===== УДАЛЯЕМ ДУБЛИКАТЫ по уникальным ключам =====
+    const seen = new Set();
+    allOps = allOps.filter(op => {
+        // Создаем уникальный ключ: дата_сумма_назначение_контрагент
+        const key = `${op.date}_${op.amount}_${op.purpose}_${op.counterparty}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+
     // ===== ВЫЧИСЛЯЕМ ТОТАЛЫ =====
     let filteredIncome = 0;
     let filteredExpense = 0;
@@ -2442,7 +2453,6 @@ function renderFinancePage() {
             filteredCategorySummary[op.category] += op.amount;
         }
 
-        // Собираем помесячные данные
         const monthKey = op.monthKey;
         if (monthKey) {
             if (!filteredMonthlyData[monthKey]) {
@@ -2474,6 +2484,16 @@ function renderFinancePage() {
     document.getElementById('totalBalance').textContent = fmt(totals.balance) + ' ₽';
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
+
+    // Обновляем отображение периода
+    if (dateFrom && dateTo) {
+        const from = new Date(dateFrom);
+        const to = new Date(dateTo);
+        document.getElementById('periodDisplay').textContent =
+            from.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) +
+            ' — ' +
+            to.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
 
     // === ГРАФИК ДИНАМИКИ ===
     const months = Object.keys(monthlyData).sort();
@@ -2624,7 +2644,6 @@ function renderFinancePage() {
         }).join('');
     }
 
-    // Информация о количестве
     const totalAmount = allOps.reduce((sum, op) => sum + op.amount, 0);
     document.getElementById('financeTableInfo').textContent =
         `Показано: ${allOps.length} операций на сумму ${fmt(totalAmount)} ₽`;
