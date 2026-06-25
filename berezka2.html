@@ -426,25 +426,12 @@ select.filter-sel:focus{border-color:var(--green-400);}
 
 <!-- Фильтры -->
 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-    <label style="font-weight:600;font-size:.85rem;color:var(--gray-700);">📅 Период:</label>
-    <select id="financeYearFilter" class="filter-sel">
-        <option value="2025">2025</option>
-        <option value="2026" selected>2026</option>
-    </select>
-    <select id="financeMonthFilter" class="filter-sel">
-        <option value="01">Январь</option>
-        <option value="02">Февраль</option>
-        <option value="03">Март</option>
-        <option value="04">Апрель</option>
-        <option value="05">Май</option>
-        <option value="06">Июнь</option>
-        <option value="07">Июль</option>
-        <option value="08">Август</option>
-        <option value="09">Сентябрь</option>
-        <option value="10">Октябрь</option>
-        <option value="11">Ноябрь</option>
-        <option value="12">Декабрь</option>
-    </select>
+    <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.85rem;font-weight:500;">Период:</span>
+        <input type="date" id="financeDateFrom" class="filter-sel" style="padding:6px 10px;border:1.5px solid var(--gray-300);border-radius:8px;font-size:.85rem;">
+        <span style="font-size:.85rem;">по</span>
+        <input type="date" id="financeDateTo" class="filter-sel" style="padding:6px 10px;border:1.5px solid var(--gray-300);border-radius:8px;font-size:.85rem;">
+    </div>
     <select id="financeTypeFilter" class="filter-sel">
         <option value="all">Все операции</option>
         <option value="income">Только доходы</option>
@@ -1077,31 +1064,22 @@ class FinancialAnalyzer {
 
     getFilteredOperations(yearFilter, monthFilter, typeFilter) {
         let ops = [];
-
-        // Собираем операции без внутренних перемещений
         const allOps = this.operations.filter(op => op.type !== 'internal');
-
-        // Фильтруем по типу
         if (typeFilter === 'income' || typeFilter === 'all') {
             ops = ops.concat(allOps.filter(op => op.type === 'income'));
         }
         if (typeFilter === 'expense' || typeFilter === 'all') {
             ops = ops.concat(allOps.filter(op => op.type === 'expense'));
         }
-
-        // Фильтр по году
         if (yearFilter !== 'all') {
             ops = ops.filter(op => op.year === yearFilter);
         }
-
-        // Фильтр по месяцу
         if (monthFilter !== 'all') {
             ops = ops.filter(op => {
                 const parts = op.monthKey.split('-');
                 return parts.length === 2 && parts[1] === monthFilter;
             });
         }
-
         return ops;
     }
 
@@ -1531,7 +1509,22 @@ function onDataLoaded() {
     renderDashboard();
     renderDebtorsTable();
     renderReceiptsList();
+    setDefaultDates();
     renderPassportList();
+}
+
+function setDefaultDates() {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    document.getElementById('financeDateFrom').value = formatDate(startOfYear);
+    document.getElementById('financeDateTo').value = formatDate(now);
+}
+
+function formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 // ===================== РАБОТА С ЛОКАЛЬНЫМ ФАЙЛОМ =====================
@@ -2393,32 +2386,43 @@ function renderFinancePage() {
         return;
     }
 
-    // Получаем фильтры (ОБЯЗАТЕЛЬНЫЙ ВЫБОР ГОДА И МЕСЯЦА)
-    const yearFilter = document.getElementById('financeYearFilter').value;
-    const monthFilter = document.getElementById('financeMonthFilter').value;
+    // Получаем фильтры
+    const dateFrom = document.getElementById('financeDateFrom').value;
+    const dateTo = document.getElementById('financeDateTo').value;
     const typeFilter = document.getElementById('financeTypeFilter').value;
 
-    // Если год или месяц не выбраны - показываем текущий месяц
-    let effectiveYear = yearFilter || '2026';
-    let effectiveMonth = monthFilter || new Date().toISOString().slice(5,7);
+    // Преобразуем даты в объекты для сравнения
+    let fromDate = null;
+    let toDate = null;
 
-    // Получаем все операции БЕЗ внутренних перемещений
-    const baseOps = financialAnalyzer.operations.filter(op => op.type !== 'internal');
+    if (dateFrom) {
+        const parts = dateFrom.split('-');
+        fromDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    }
+    if (dateTo) {
+        const parts = dateTo.split('-');
+        toDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        toDate.setHours(23, 59, 59, 999); // конец дня
+    }
 
-    // Фильтруем по году и месяцу (строго!)
-    let filteredOps = baseOps.filter(op => {
-        // Проверка года
-        if (op.year !== effectiveYear) return false;
-        // Проверка месяца
-        if (op.monthKey.split('-')[1] !== effectiveMonth) return false;
-        return true;
-    });
+    // Получаем все операции (исключая внутренние перемещения)
+    let allOps = financialAnalyzer.operations.filter(op => op.type !== 'internal');
 
-    // Дополнительный фильтр по типу
+    // Фильтр по типу
     if (typeFilter === 'income') {
-        filteredOps = filteredOps.filter(op => op.type === 'income');
+        allOps = allOps.filter(op => op.type === 'income');
     } else if (typeFilter === 'expense') {
-        filteredOps = filteredOps.filter(op => op.type === 'expense');
+        allOps = allOps.filter(op => op.type === 'expense');
+    }
+
+    // Фильтр по диапазону дат
+    if (fromDate || toDate) {
+        allOps = allOps.filter(op => {
+            if (!op.dateObj) return false;
+            if (fromDate && op.dateObj < fromDate) return false;
+            if (toDate && op.dateObj > toDate) return false;
+            return true;
+        });
     }
 
     // ===== ВЫЧИСЛЯЕМ ТОТАЛЫ =====
@@ -2426,31 +2430,39 @@ function renderFinancePage() {
     let filteredExpense = 0;
     const filteredMonthlyData = {};
     const filteredCategorySummary = {};
-    const monthKey = `${effectiveYear}-${effectiveMonth}`;
 
-    // Инициализируем данные для выбранного месяца
-    filteredMonthlyData[monthKey] = { income: 0, expense: 0, balance: 0 };
-
-    for (const op of filteredOps) {
+    for (const op of allOps) {
         if (op.type === 'income') {
             filteredIncome += op.amount;
-            filteredMonthlyData[monthKey].income += op.amount;
         } else if (op.type === 'expense') {
             filteredExpense += op.amount;
-            filteredMonthlyData[monthKey].expense += op.amount;
             if (!filteredCategorySummary[op.category]) {
                 filteredCategorySummary[op.category] = 0;
             }
             filteredCategorySummary[op.category] += op.amount;
         }
+
+        // Собираем помесячные данные
+        const monthKey = op.monthKey;
+        if (monthKey) {
+            if (!filteredMonthlyData[monthKey]) {
+                filteredMonthlyData[monthKey] = { income: 0, expense: 0, balance: 0 };
+            }
+            if (op.type === 'income') {
+                filteredMonthlyData[monthKey].income += op.amount;
+            } else if (op.type === 'expense') {
+                filteredMonthlyData[monthKey].expense += op.amount;
+            }
+            filteredMonthlyData[monthKey].balance =
+                filteredMonthlyData[monthKey].income - filteredMonthlyData[monthKey].expense;
+        }
     }
-    filteredMonthlyData[monthKey].balance = filteredMonthlyData[monthKey].income - filteredMonthlyData[monthKey].expense;
 
     const totals = {
         income: filteredIncome,
         expense: filteredExpense,
         balance: filteredIncome - filteredExpense,
-        totalOps: filteredOps.length
+        totalOps: allOps.length
     };
 
     const monthlyData = filteredMonthlyData;
@@ -2463,30 +2475,9 @@ function renderFinancePage() {
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
 
-    // Обновляем отображение периода и остатка
-    const monthNames = {
-        '01': 'Январь', '02': 'Февраль', '03': 'Март', '04': 'Апрель',
-        '05': 'Май', '06': 'Июнь', '07': 'Июль', '08': 'Август',
-        '09': 'Сентябрь', '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
-    };
-    document.getElementById('periodDisplay').textContent =
-        `${monthNames[effectiveMonth] || effectiveMonth} ${effectiveYear}`;
-    document.getElementById('balanceDisplay').textContent =
-        `${fmt(totals.balance)} ₽`;
-    document.getElementById('balanceDisplay').style.color =
-        totals.balance >= 0 ? 'var(--green-600)' : 'var(--red-600)';
-
-    // === ГРАФИК ДИНАМИКИ (показываем только выбранный месяц) ===
+    // === ГРАФИК ДИНАМИКИ ===
     const months = Object.keys(monthlyData).sort();
-    const labels = months.map(m => {
-        const parts = m.split('-');
-        const monthNamesShort = {
-            '01': 'Янв', '02': 'Фев', '03': 'Мар', '04': 'Апр',
-            '05': 'Май', '06': 'Июн', '07': 'Июл', '08': 'Авг',
-            '09': 'Сен', '10': 'Окт', '11': 'Ноя', '12': 'Дек'
-        };
-        return monthNamesShort[parts[1]] + ' ' + parts[0];
-    });
+    const labels = months.map(m => financialAnalyzer.getMonthLabel(m));
     const incomeData = months.map(m => monthlyData[m].income);
     const expenseData = months.map(m => monthlyData[m].expense);
 
@@ -2495,7 +2486,7 @@ function renderFinancePage() {
     financeChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels.length ? labels : ['Нет данных за период'],
+            labels: labels.length ? labels : ['Нет данных'],
             datasets: [
                 {
                     label: 'Доходы',
@@ -2603,25 +2594,25 @@ function renderFinancePage() {
     document.getElementById('topCategoriesList').innerHTML = topCategoriesHtml || '<div style="color:var(--gray-500);text-align:center;padding:20px;">Нет данных о расходах за выбранный период</div>';
 
     // === ТАБЛИЦА ОПЕРАЦИЙ ===
-    // Сортировка по дате (новые сверху)
-    filteredOps.sort((a, b) => {
+    allOps.sort((a, b) => {
         if (!a.dateObj) return 1;
         if (!b.dateObj) return -1;
         return b.dateObj - a.dateObj;
     });
 
     const tbody = document.getElementById('financeTableBody');
-    if (!filteredOps.length) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-500);">Нет операций за ${effectiveMonth}.${effectiveYear}</td></tr>`;
+    if (!allOps.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-500);">Нет операций по заданным фильтрам</td></tr>';
     } else {
-        tbody.innerHTML = filteredOps.map(op => {
+        tbody.innerHTML = allOps.map(op => {
             const isIncome = op.type === 'income';
             const sign = isIncome ? '+' : '−';
             const colorClass = isIncome ? 'income' : 'expense';
             const categoryColor = financialAnalyzer.getCategoryColor(op.category);
+            const monthLabel = financialAnalyzer.getMonthLabel(op.monthKey);
 
             return `<tr>
-                <td style="white-space:nowrap;">${op.date}</td>
+                <td style="white-space:nowrap;">${op.date}<br><span style="font-size:.7rem;color:var(--gray-500);">${monthLabel}</span></td>
                 <td>${escapeHtml(op.counterparty)}</td>
                 <td style="font-size:.82rem;">${escapeHtml(op.purpose)}</td>
                 <td><span style="display:inline-block;padding:1px 8px;border-radius:12px;font-size:.7rem;font-weight:600;color:#fff;background:${categoryColor};">${op.category}</span></td>
@@ -2634,24 +2625,19 @@ function renderFinancePage() {
     }
 
     // Информация о количестве
-    const totalAmount = filteredOps.reduce((sum, op) => sum + op.amount, 0);
+    const totalAmount = allOps.reduce((sum, op) => sum + op.amount, 0);
     document.getElementById('financeTableInfo').textContent =
-        `Показано: ${filteredOps.length} операций на сумму ${fmt(totalAmount)} ₽ за ${effectiveMonth}.${effectiveYear}`;
+        `Показано: ${allOps.length} операций на сумму ${fmt(totalAmount)} ₽`;
 }
 
 // ===================== ФИЛЬТРЫ ФИНАНСОВ =====================
-document.getElementById('financeYearFilter').addEventListener('change', renderFinancePage);
-document.getElementById('financeMonthFilter').addEventListener('change', renderFinancePage);
+document.getElementById('financeDateFrom').addEventListener('change', renderFinancePage);
+document.getElementById('financeDateTo').addEventListener('change', renderFinancePage);
 document.getElementById('financeTypeFilter').addEventListener('change', renderFinancePage);
 
 document.getElementById('resetFinanceFilters').addEventListener('click', () => {
-    // Устанавливаем текущий месяц и год по умолчанию
-    const now = new Date();
-    const defaultYear = '2026';
-    const defaultMonth = '06'; // Июнь
-
-    document.getElementById('financeYearFilter').value = defaultYear;
-    document.getElementById('financeMonthFilter').value = defaultMonth;
+    document.getElementById('financeDateFrom').value = '';
+    document.getElementById('financeDateTo').value = '';
     document.getElementById('financeTypeFilter').value = 'all';
     renderFinancePage();
 });
