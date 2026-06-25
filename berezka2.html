@@ -2470,8 +2470,8 @@ function renderFinancePage() {
     document.getElementById('totalBalance').textContent = fmt(balance) + ' ₽';
     document.getElementById('totalBalance').style.color = balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totalOps;
-    const monthlyData = financialAnalyzer.getMonthlyData(yearFilter !== 'all' ? yearFilter : null);
-    const categorySummary = financialAnalyzer.getCategorySummary(yearFilter !== 'all' ? yearFilter : null);
+    // monthlyData создается ниже из отфильтрованных операций
+    // categorySummary создается ниже из отфильтрованных операций
 
     // Обновляем KPI
     document.getElementById('totalIncome').textContent = fmt(totals.income) + ' ₽';
