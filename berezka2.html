@@ -570,7 +570,7 @@ const FILES = {
   ee: 'ee.ods',
   '50': '50.ods',
   '51': '51.ods',
-  '71': '71_01.ods'
+  '71': '71.ods'
 };
 
 // ===================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====================
@@ -1475,9 +1475,9 @@ async function loadAllData() {
 
         // Обновляем статистику в навигации
         const totals = financialAnalyzer.getTotals();
-        const balance51 = financialAnalyzer.getAccountBalance('51') || 0;
-        const balance71 = financialAnalyzer.getAccountBalance('71') || 0;
-        const balance50 = financialAnalyzer.getAccountBalance('50') || 0;
+        const balance51 = getBalanceFromFile('51');
+        const balance71 = getBalanceFromFile('71');
+        const balance50 = getBalanceFromFile('50');
         const totalBalance = balance51 + balance71 + balance50;
         fileInfo.textContent = `📊 Остаток: ${fmtShort(totalBalance)} ₽`;
 
@@ -2490,49 +2490,27 @@ function getBalanceFromFile(accountType) {
     const rows = financialAnalyzer.rawData[accountType] || [];
     if (!rows.length) return 0;
 
-    let balance = 0;
-    let found = false;
-
     for (let i = rows.length - 1; i >= 0; i--) {
         const row = rows[i];
         if (!row || row.length < 10) continue;
-        const firstCell = String(row[0] || '').trim();
-        const isTotalRow =
-            firstCell.includes('Обороты за период') ||
-            firstCell.includes('сальдо на конец') ||
-            firstCell.includes('Сальдо на конец') ||
-            firstCell.includes('Обороты за период и сальдо на конец');
-        if (isTotalRow) {
-            let val = 0;
-            if (row.length > 10) {
-                const raw = String(row[10] || '0').replace(/\s/g, '').replace(',', '.');
-                val = parseFloat(raw);
-            }
-            if (isNaN(val) || val === 0) {
-                if (row.length > 11) {
-                    const raw = String(row[11] || '0').replace(/\s/g, '').replace(',', '.');
-                    val = parseFloat(raw);
-                }
-            }
-            if (!isNaN(val) && val !== 0) { balance = val; found = true; break; }
-        }
+        const firstCell = String(row[0] || '').trim().replace(/\t/g, '');
+        if (!firstCell.includes('Обороты за период') && !firstCell.includes('сальдо на конец') && !firstCell.includes('Сальдо на конец')) continue;
+
+        // Сальдо в col[11], знак в col[10]
+        let val = parseFloat(String(row[11] || '0').replace(/\s/g, '').replace(',', '.'));
+        if (isNaN(val)) val = 0;
+
+        // Знак: Д = дебетовое сальдо, К = кредитовое
+        const sign = String(row[10] || '').replace(/\t/g, '').trim();
+        // Для активных счетов (50,51,71) Д = положительный остаток
+        if (sign === 'К') val = -val;
+
+        console.log(`✅ Счет ${accountType}: сальдо=${val}, знак=${sign}`);
+        return val;
     }
 
-    if (!found) {
-        for (let i = rows.length - 1; i >= 0; i--) {
-            const row = rows[i];
-            if (!row || row.length < 10) continue;
-            let val = 0;
-            if (row.length > 10) {
-                const raw = String(row[10] || '0').replace(/\s/g, '').replace(',', '.');
-                val = parseFloat(raw);
-            }
-            if (!isNaN(val) && val !== 0) { balance = val; found = true; break; }
-        }
-    }
-
-    if (!found) balance = financialAnalyzer.getAccountBalance(accountType);
-    return balance;
+    console.warn(`⚠️ Сальдо для счета ${accountType} не найдено`);
+    return financialAnalyzer.getAccountBalance(accountType);
 }
 
 function renderFinancePage() {
