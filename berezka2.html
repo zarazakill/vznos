@@ -185,6 +185,20 @@ select.filter-sel:focus{border-color:var(--green-400);}
 .search-input{width:100%;}
 .breakdown-label{width:100%;}
 .finance-grid{grid-template-columns:repeat(2,1fr);}
+/* Квитанции — мобильный */
+.receipt-row-main{flex-wrap:wrap;gap:4px;}
+.receipt-row-controls{flex-direction:column;align-items:stretch !important;width:100%;margin-left:0 !important;margin-top:6px;gap:4px !important;}
+.receipt-purpose-inp{width:100% !important;}
+.receipt-amount-row{display:flex;gap:6px;align-items:center;}
+.receipt-mode-sel{flex:1;}
+.receipt-amount-inp{width:90px;}
+.receipt-row-btn{width:100%;margin-top:4px;}
+.receipt-actions{flex-direction:column;}
+.receipt-actions .btn{width:100%;}
+.modal-box{border-radius:var(--radius);width:100vw;max-height:100vh;border-radius:0;}
+.modal-body{padding:12px 10px;}
+.modal-footer{flex-wrap:wrap;gap:6px;padding:10px;}
+.modal-footer .btn{flex:1;min-width:100px;}
 }
 .bar-wrap {
     width: 100%;
@@ -340,7 +354,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <span id="receiptsSelectedBadge" class="badge badge-green">Выбрано: 0</span>
 </div>
 <div class="plots-list" id="receiptPlotsList" style="max-height:380px;"></div>
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
+<div class="receipt-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
 <button class="btn btn-primary" id="printSelectedReceiptsBtn">🖨 Печать выбранных</button>
 <button class="btn btn-blue" id="printAllReceiptsBtn">🖨 Печать всех</button>
 <button class="btn btn-orange" id="downloadPdfSelectedBtn">📄 PDF выбранных</button>
@@ -578,7 +592,7 @@ let allPlots = [];
 let filteredPlots = [];
 let selectedIds = new Set();
 let receiptSelectedIds = new Set();
-const receiptCustomAmounts = new Map(); // plotId -> {amount, mode} mode: 'debt'|'advance'|'custom'
+const receiptCustomAmounts = new Map(); // plotId -> {amount, mode, purpose} mode: 'debt'|'advance'|'custom'
 let sortCol = 'totalDebt';
 let sortDir = -1;
 let currentReceiptPlot = null;
@@ -1951,25 +1965,33 @@ function renderReceiptsList() {
         if (p.arrearsSum > 0 || p.workSum > 0) typeTags.push(`<span class="badge badge-orange">Пр.г.</span>`);
         if (p.electricitySum > 0) typeTags.push(`<span class="badge badge-gray">Эл.</span>`);
 
-        const saved = receiptCustomAmounts.get(p.id) || {amount: p.totalDebt, mode: 'debt'};
-        return `<div class="plot-row" data-id="${p.id}" style="flex-wrap:wrap;gap:6px;">
-            <input type="checkbox" ${sel?'checked':''} class="receipt-row-cb" data-id="${p.id}" style="width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;">
-            <span class="plot-num-badge">Уч. ${p.plotNumber}</span>
-            <span class="plot-name">${p.payerName}</span>
-            <div class="plot-type-badges">${typeTags.join('')}</div>
-            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;" onclick="event.stopPropagation()">
-                <select class="receipt-mode-sel" data-id="${p.id}" data-debt="${p.totalDebt}"
-                    style="font-size:.8rem;padding:2px 4px;border:1px solid var(--gray-300);border-radius:4px;background:var(--gray-50);cursor:pointer;">
-                    <option value="debt" ${saved.mode==='debt'?'selected':''}>Долг (${fmt(p.totalDebt)} ₽)</option>
-                    <option value="advance" ${saved.mode==='advance'?'selected':''}>Аванс</option>
-                    <option value="custom" ${saved.mode==='custom'?'selected':''}>Вручную</option>
-                </select>
-                <input type="number" class="receipt-amount-inp" data-id="${p.id}" min="0" step="0.01"
-                    value="${saved.amount.toFixed(2)}"
-                    style="width:90px;font-size:.85rem;padding:3px 6px;border:1px solid var(--gray-300);border-radius:4px;text-align:right;
-                    ${saved.mode==='debt'?'opacity:.5;pointer-events:none;':''}">
+        const saved = receiptCustomAmounts.get(p.id) || {amount: p.totalDebt, mode: 'debt', purpose: ''};
+        return `<div class="plot-row" data-id="${p.id}" style="flex-direction:column;align-items:stretch;padding:10px 14px;gap:0;">
+            <div class="receipt-row-main" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <input type="checkbox" ${sel?'checked':''} class="receipt-row-cb" data-id="${p.id}" style="width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;flex-shrink:0;" onclick="event.stopPropagation()">
+                <span class="plot-num-badge" style="flex-shrink:0;">Уч.&nbsp;${p.plotNumber}</span>
+                <span class="plot-name" style="flex:1;min-width:80px;">${p.payerName}</span>
+                <div class="plot-type-badges" style="flex-shrink:0;">${typeTags.join('')}</div>
+                <button class="btn btn-outline btn-sm preview-receipt-btn receipt-row-btn" data-id="${p.id}" style="padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation()">👁</button>
             </div>
-            <button class="btn btn-outline btn-sm preview-receipt-btn" data-id="${p.id}" style="padding:4px 12px;">👁 Открыть</button>
+            <div class="receipt-row-controls" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;" onclick="event.stopPropagation()">
+                <input type="text" class="receipt-purpose-inp" data-id="${p.id}"
+                    value="${escapeHtml(saved.purpose || '')}"
+                    placeholder="Назначение платежа (необязательно)"
+                    style="flex:1;min-width:160px;font-size:.8rem;padding:4px 8px;border:1px solid var(--gray-300);border-radius:6px;background:var(--gray-50);color:var(--gray-800);">
+                <div class="receipt-amount-row" style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                    <select class="receipt-mode-sel" data-id="${p.id}" data-debt="${p.totalDebt}"
+                        style="font-size:.8rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;background:var(--gray-50);cursor:pointer;">
+                        <option value="debt" ${saved.mode==='debt'?'selected':''}>Долг&nbsp;(${fmt(p.totalDebt)}&nbsp;₽)</option>
+                        <option value="advance" ${saved.mode==='advance'?'selected':''}>Аванс</option>
+                        <option value="custom" ${saved.mode==='custom'?'selected':''}>Вручную</option>
+                    </select>
+                    <input type="number" class="receipt-amount-inp" data-id="${p.id}" min="0" step="0.01"
+                        value="${saved.amount.toFixed(2)}"
+                        style="width:90px;font-size:.85rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;text-align:right;
+                        ${saved.mode==='debt'?'opacity:.5;pointer-events:none;':''}">
+                </div>
+            </div>
         </div>`;
     }).join('');
 
@@ -2004,7 +2026,9 @@ function renderReceiptsList() {
                 if (mode === 'advance') inp.focus();
             }
             const amount = parseFloat(inp.value) || (mode === 'debt' ? debt : 0);
-            receiptCustomAmounts.set(id, {amount, mode});
+            const purposeInp = document.querySelector(`.receipt-purpose-inp[data-id="${id}"]`);
+            const purpose = purposeInp ? purposeInp.value : '';
+            receiptCustomAmounts.set(id, {amount, mode, purpose});
         });
     });
 
@@ -2014,7 +2038,21 @@ function renderReceiptsList() {
             const selEl = document.querySelector(`.receipt-mode-sel[data-id="${id}"]`);
             const mode = selEl ? selEl.value : 'custom';
             const amount = parseFloat(inp.value) || 0;
-            receiptCustomAmounts.set(id, {amount, mode});
+            const purposeInp = document.querySelector(`.receipt-purpose-inp[data-id="${id}"]`);
+            const purpose = purposeInp ? purposeInp.value : '';
+            receiptCustomAmounts.set(id, {amount, mode, purpose});
+        });
+        inp.addEventListener('click', e => e.stopPropagation());
+    });
+
+    document.querySelectorAll('.receipt-purpose-inp').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const id = inp.dataset.id;
+            const selEl = document.querySelector(`.receipt-mode-sel[data-id="${id}"]`);
+            const mode = selEl ? selEl.value : 'debt';
+            const amtInp = document.querySelector(`.receipt-amount-inp[data-id="${id}"]`);
+            const amount = amtInp ? (parseFloat(amtInp.value) || 0) : 0;
+            receiptCustomAmounts.set(id, {amount, mode, purpose: inp.value});
         });
         inp.addEventListener('click', e => e.stopPropagation());
     });
@@ -2053,6 +2091,11 @@ document.getElementById('receiptsSelectAll').addEventListener('change', e => {
 
 // ===================== QR И КВИТАНЦИИ =====================
 function qrPurpose(plot) {
+    // Если задано пользовательское назначение — используем его
+    if (plot.customPurpose && plot.customPurpose.trim()) {
+        let s = plot.customPurpose.trim() + `, уч. ${plot.plotNumber}`;
+        return s.slice(0, 150);
+    }
     let parts = [...(plot.qrParts || [])];
     if (parts.length === 0) {
         if (plot.membershipSum > 0) parts.push(`Членские взносы: ${plot.membershipSum.toFixed(2)} руб.`);
@@ -2211,11 +2254,12 @@ async function buildReceiptHTML(plot) {
 
 async function openReceiptModal(plot) {
     currentReceiptPlot = plot;
-    // Берём customAmount из инпута (актуальное значение из DOM или из Map)
     const saved = receiptCustomAmounts.get(plot.id);
     const effectiveAmount = (saved && saved.amount > 0) ? saved.amount : plot.totalDebt;
-    const plotForReceipt = (effectiveAmount !== plot.totalDebt)
-        ? Object.assign({}, plot, {totalDebt: effectiveAmount, _isCustomAmount: true})
+    const effectivePurpose = saved ? saved.purpose : '';
+    const needsOverride = effectiveAmount !== plot.totalDebt || effectivePurpose;
+    const plotForReceipt = needsOverride
+        ? Object.assign({}, plot, {totalDebt: effectiveAmount, customPurpose: effectivePurpose || null})
         : plot;
     document.getElementById('receiptPreviewBody').innerHTML = '<div style="text-align:center;padding:30px;color:#666;">⏳ Генерация квитанции...</div>';
     document.getElementById('receiptModal').classList.add('open');
@@ -2230,9 +2274,10 @@ document.getElementById('printReceiptModalBtn').addEventListener('click', async 
     if (!currentReceiptPlot) return;
     const saved = receiptCustomAmounts.get(currentReceiptPlot.id);
     const effectiveAmount = (saved && saved.amount > 0) ? saved.amount : currentReceiptPlot.totalDebt;
-    const plotForReceipt = (effectiveAmount !== currentReceiptPlot.totalDebt)
-        ? Object.assign({}, currentReceiptPlot, {totalDebt: effectiveAmount})
-        : currentReceiptPlot;
+    const plotForReceipt = Object.assign({}, currentReceiptPlot, {
+        totalDebt: effectiveAmount,
+        customPurpose: (saved && saved.purpose) || null
+    });
     const html = await buildReceiptHTML(plotForReceipt);
     const w = window.open('', '_blank');
     w.document.write(`<html><head><meta charset="UTF-8"><style>@page{margin:10mm;}body{margin:0;}</style></head><body>${html}</body></html>`);
@@ -2243,9 +2288,10 @@ document.getElementById('pdfReceiptModalBtn').addEventListener('click', async ()
     if (!currentReceiptPlot) return;
     const saved = receiptCustomAmounts.get(currentReceiptPlot.id);
     const effectiveAmount = (saved && saved.amount > 0) ? saved.amount : currentReceiptPlot.totalDebt;
-    const plotForReceipt = (effectiveAmount !== currentReceiptPlot.totalDebt)
-        ? Object.assign({}, currentReceiptPlot, {totalDebt: effectiveAmount})
-        : currentReceiptPlot;
+    const plotForReceipt = Object.assign({}, currentReceiptPlot, {
+        totalDebt: effectiveAmount,
+        customPurpose: (saved && saved.purpose) || null
+    });
     await generateAndSavePDF([plotForReceipt], `kvitanciya_${currentReceiptPlot.plotNumber}.pdf`);
 });
 
@@ -2253,8 +2299,13 @@ document.getElementById('pdfReceiptModalBtn').addEventListener('click', async ()
 function applyCustomAmounts(plots) {
     return plots.map(p => {
         const saved = receiptCustomAmounts.get(p.id);
-        if (saved && saved.amount > 0 && saved.amount !== p.totalDebt)
-            return Object.assign({}, p, {totalDebt: saved.amount});
+        if (!saved) return p;
+        const amountChanged = saved.amount > 0 && saved.amount !== p.totalDebt;
+        if (amountChanged || saved.purpose)
+            return Object.assign({}, p, {
+                totalDebt: amountChanged ? saved.amount : p.totalDebt,
+                customPurpose: saved.purpose || null
+            });
         return p;
     });
 }
