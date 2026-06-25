@@ -2405,11 +2405,14 @@ function renderFinancePage() {
         toDate.setHours(23, 59, 59, 999);
     }
 
-    // ===== ИСПОЛЬЗУЕМ ЕДИНЫЙ СПИСОК ОПЕРАЦИЙ =====
-    // Исключаем внутренние перемещения
-    let allOps = financialAnalyzer.operations.filter(op => op.type !== 'internal');
+    // === БЕРЕМ ВСЕ ОПЕРАЦИИ ИЗ ОДНОГО ИСТОЧНИКА ===
+    // Используем operations напрямую, а не incomeOps + expenseOps
+    let allOps = financialAnalyzer.operations;
 
-    // Фильтр по типу
+    // Исключаем внутренние перемещения
+    allOps = allOps.filter(op => op.type !== 'internal');
+
+    // Фильтр по типу (используем op.type, а не opType)
     if (typeFilter === 'income') {
         allOps = allOps.filter(op => op.type === 'income');
     } else if (typeFilter === 'expense') {
@@ -2426,13 +2429,16 @@ function renderFinancePage() {
         });
     }
 
-    // ===== УДАЛЯЕМ ДУБЛИКАТЫ по уникальным ключам =====
+    // === УНИКАЛЬНАЯ ДЕДУПЛИКАЦИЯ ===
+    // Используем комбинацию: дата + сумма + назначение + контрагент
     const seen = new Set();
     allOps = allOps.filter(op => {
-        // Создаем уникальный ключ: дата_сумма_назначение_контрагент
-        const key = `${op.date}_${op.amount}_${op.purpose}_${op.counterparty}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
+        // Для доходов/расходов по взносам добавляем аналитику для уникальности
+        let uniqueKey = `${op.date}_${op.amount.toFixed(2)}_${op.purpose}_${op.counterparty}`;
+        // Добавляем аналитику Дт/Кт для различения похожих операций
+        uniqueKey += `_${op.debitAccount}_${op.creditAccount}`;
+        if (seen.has(uniqueKey)) return false;
+        seen.add(uniqueKey);
         return true;
     });
 
@@ -2485,7 +2491,7 @@ function renderFinancePage() {
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
 
-    // Обновляем отображение периода
+    // Обновляем отображение периода и остатка
     if (dateFrom && dateTo) {
         const from = new Date(dateFrom);
         const to = new Date(dateTo);
