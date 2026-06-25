@@ -186,13 +186,25 @@ select.filter-sel:focus{border-color:var(--green-400);}
 .breakdown-label{width:100%;}
 .finance-grid{grid-template-columns:repeat(2,1fr);}
 }
+.bar-wrap {
+    width: 100%;
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 50px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: 50px;
+    transition: width .5s;
+}
 </style>
-<base target="_blank">
 <base target="_blank">
 </head>
 <body>
 <div class="navbar">
-<div class="navbar-brand">🌿 Садоводческое некоммерческое товарищество "Берёзка-2" <span>v4.0</span></div>
+<div class="navbar-brand">🌿 СНТ «Берёзка-2» <span>v4.0</span></div>
 <div class="nav-tabs">
 <div class="nav-tab active" data-page="dashboard">📊 Дашборд</div>
 <div class="nav-tab" data-page="debtors">📋 Должники</div>
@@ -402,48 +414,32 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="finance-card"><div class="label">📊 Кол-во операций</div><div class="value" id="totalOps">0</div></div>
 </div>
 
-<!-- Остатки на счетах -->
-<div class="card" style="margin-bottom:20px;">
-<div class="card-title">🏦 Остатки денежных средств</div>
-<div id="accountBalances" style="font-size:.9rem;">
-<div style="display:flex;gap:16px;flex-wrap:wrap;">
-<div style="flex:1;min-width:200px;background:var(--green-50);padding:12px 16px;border-radius:10px;border-left:4px solid var(--green-600);">
-<div style="font-size:.78rem;color:var(--gray-600);text-transform:uppercase;">Расчетный счет 40703810644050040322</div>
-<div style="font-size:1.3rem;font-weight:700;color:var(--green-700);" id="balance51">279 629.00 ₽</div>
-<div style="font-size:.75rem;color:var(--gray-500);">Сибирский Банк ПАО Сбербанк</div>
-</div>
-<div style="flex:1;min-width:200px;background:var(--blue-50);padding:12px 16px;border-radius:10px;border-left:4px solid var(--blue-600);">
-<div style="font-size:.78rem;color:var(--gray-600);text-transform:uppercase;">Подотчетные средства (71)</div>
-<div style="font-size:1.3rem;font-weight:700;color:var(--blue-700);" id="balance71">31 280.72 ₽</div>
-<div style="font-size:.75rem;color:var(--gray-500);">Чернов Владимир Борисович</div>
-</div>
-<div style="flex:1;min-width:200px;background:var(--orange-50);padding:12px 16px;border-radius:10px;border-left:4px solid var(--orange-600);">
-<div style="font-size:.78rem;color:var(--gray-600);text-transform:uppercase;">ИТОГО остатков</div>
-<div style="font-size:1.5rem;font-weight:700;color:var(--orange-700);" id="balanceTotal">310 909.72 ₽</div>
-<div style="font-size:.75rem;color:var(--gray-500);">на 25.06.2026</div>
-</div>
-</div>
-</div>
-</div>
-
 <!-- Фильтры -->
-<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
-<div style="display:flex;align-items:center;gap:6px;">
-<span style="font-size:.85rem;color:var(--gray-600);">Период с</span>
-<input type="date" id="financeDateFrom" class="filter-sel" style="padding:8px 12px;width:150px;">
-<span style="font-size:.85rem;color:var(--gray-600);">по</span>
-<input type="date" id="financeDateTo" class="filter-sel" style="padding:8px 12px;width:150px;">
-</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+<select id="financeYearFilter" class="filter-sel">
+<option value="all">Все годы</option>
+<option value="2025">2025</option>
+<option value="2026">2026</option>
+</select>
+<select id="financeMonthFilter" class="filter-sel">
+<option value="all">Все месяцы</option>
+<option value="01">Январь</option>
+<option value="02">Февраль</option>
+<option value="03">Март</option>
+<option value="04">Апрель</option>
+<option value="05">Май</option>
+<option value="06">Июнь</option>
+<option value="07">Июль</option>
+<option value="08">Август</option>
+<option value="09">Сентябрь</option>
+<option value="10">Октябрь</option>
+<option value="11">Ноябрь</option>
+<option value="12">Декабрь</option>
+</select>
 <select id="financeTypeFilter" class="filter-sel">
 <option value="all">Все операции</option>
 <option value="income">Только доходы</option>
 <option value="expense">Только расходы</option>
-</select>
-<select id="financeAccountFilter" class="filter-sel">
-<option value="all">Все счета</option>
-<option value="50">Касса (50)</option>
-<option value="51">Расчетный счет (51)</option>
-<option value="71">Подотчетные (71)</option>
 </select>
 <button class="btn btn-secondary btn-sm" id="resetFinanceFilters">✕ Сброс</button>
 </div>
@@ -598,7 +594,7 @@ let financePieInstance = null;
 
 // ===================== НАСТРОЙКИ =====================
 let REQ = {
-  Name: localStorage.getItem('snt_Name') || 'Садоводческое некоммерческое товарищество "Берёзка-2"',
+  Name: localStorage.getItem('snt_Name') || 'СНТ «Берёзка-2»',
   PayeeINN: localStorage.getItem('snt_INN') || '5433118499',
   PersonalAcc: localStorage.getItem('snt_Acc') || '40703810644050040322',
   BankName: localStorage.getItem('snt_BankName') || 'Сибирский Банк ПАО Сбербанк г. Новосибирск',
@@ -841,42 +837,18 @@ class FinancialAnalyzer {
         this.internalOps = [];
         this.advanceOps = [];
 
-        // Убираем дубли: одна и та же операция может встречаться на разных счетах
-        const seen = new Set();
-        const uniqueOps = [];
-
         for (const op of this.operations) {
-            // Уникальный ключ: дата + документ + сумма + счет дебета + счет кредита
-            const key = `${op.date}|${op.document}|${op.amount}|${op.debitAccount}|${op.creditAccount}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
-            uniqueOps.push(op);
-        }
-
-        for (const op of uniqueOps) {
-            // Пропускаем внутренние перемещения и выдачу под отчет
-            if (op.type === 'internal' || op.type === 'advance') {
-                if (op.type === 'internal') this.internalOps.push(op);
-                else this.advanceOps.push(op);
-                continue;
-            }
-
-            // Операции на 71 счете - это авансовые отчеты (фактические расходы)
-            // или выдача под отчет (уже исключено выше)
-            if (op.accountType === '71') {
-                if (op.type === 'expense') {
-                    this.expenseOps.push(op);
-                }
-                continue;
-            }
-
             switch (op.type) {
                 case 'income': this.incomeOps.push(op); break;
                 case 'expense': this.expenseOps.push(op); break;
+                case 'internal': this.internalOps.push(op); break;
+                case 'advance': this.advanceOps.push(op); break;
                 default:
-                    if (op.debitAmount > 0 && !op.document.toLowerCase().includes('внутреннее')) {
+                    if (op.debitAmount > 0 && op.creditAccount !== '71.01' &&
+                        !op.document.toLowerCase().includes('внутреннее')) {
                         this.incomeOps.push(op);
-                    } else if (op.creditAmount > 0 && !op.document.toLowerCase().includes('внутреннее')) {
+                    } else if (op.creditAmount > 0 &&
+                              !op.document.toLowerCase().includes('внутреннее')) {
                         this.expenseOps.push(op);
                     }
             }
@@ -1018,47 +990,7 @@ class FinancialAnalyzer {
         let income = 0, expense = 0;
         for (const op of this.incomeOps) income += op.amount;
         for (const op of this.expenseOps) expense += op.amount;
-        return { income, expense, balance: income - expense, totalOps: this.incomeOps.length + this.expenseOps.length };
-    }
-
-    getAccountBalances() {
-        // Расчет остатков по счетам на основе операций
-        let balance50 = 0, balance51 = 0, balance71 = 0;
-
-        for (const op of this.operations) {
-            if (op.type === 'internal' || op.type === 'advance') continue;
-
-            // Касса (50)
-            if (op.debitAccount === '50.01' || op.debitAccount === '50') {
-                balance50 += op.debitAmount;
-            }
-            if (op.creditAccount === '50.01' || op.creditAccount === '50') {
-                balance50 -= op.creditAmount;
-            }
-
-            // Расчетный счет (51)
-            if (op.debitAccount === '51') {
-                balance51 += op.debitAmount;
-            }
-            if (op.creditAccount === '51') {
-                balance51 -= op.creditAmount;
-            }
-
-            // Подотчетные (71)
-            if (op.debitAccount.startsWith('71')) {
-                balance71 += op.debitAmount;
-            }
-            if (op.creditAccount.startsWith('71')) {
-                balance71 -= op.creditAmount;
-            }
-        }
-
-        return {
-            balance50: Math.max(0, balance50),
-            balance51: Math.max(0, balance51),
-            balance71: Math.max(0, balance71),
-            total: Math.max(0, balance50 + balance51 + balance71)
-        };
+        return { income, expense, balance: income - expense, totalOps: this.operations.length };
     }
 
     getYearlyTotals(year) {
@@ -2421,57 +2353,14 @@ function renderFinancePage() {
     }
 
     // Получаем фильтры
-    const dateFrom = document.getElementById('financeDateFrom').value;
-    const dateTo = document.getElementById('financeDateTo').value;
+    const yearFilter = document.getElementById('financeYearFilter').value;
+    const monthFilter = document.getElementById('financeMonthFilter').value;
     const typeFilter = document.getElementById('financeTypeFilter').value;
-    const accountFilter = document.getElementById('financeAccountFilter').value;
 
-    // Преобразуем даты в объекты Date для сравнения
-    const fromDate = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
-    const toDate = dateTo ? new Date(dateTo + 'T23:59:59') : null;
-
-    // Получаем данные с учетом фильтров
-    let filteredIncomeOps = [...financialAnalyzer.incomeOps];
-    let filteredExpenseOps = [...financialAnalyzer.expenseOps];
-
-    // Фильтр по периоду
-    if (fromDate || toDate) {
-        const filterByDate = (ops) => ops.filter(op => {
-            if (!op.dateObj) return false;
-            if (fromDate && op.dateObj < fromDate) return false;
-            if (toDate && op.dateObj > toDate) return false;
-            return true;
-        });
-        filteredIncomeOps = filterByDate(filteredIncomeOps);
-        filteredExpenseOps = filterByDate(filteredExpenseOps);
-    }
-
-    // Фильтр по счету
-    if (accountFilter !== 'all') {
-        const filterByAccount = (ops) => ops.filter(op => {
-            return op.accountType === accountFilter || 
-                   op.debitAccount.startsWith(accountFilter) ||
-                   op.creditAccount.startsWith(accountFilter);
-        });
-        filteredIncomeOps = filterByAccount(filteredIncomeOps);
-        filteredExpenseOps = filterByAccount(filteredExpenseOps);
-    }
-
-    // Рассчитываем итоги по отфильтрованным данным
-    let income = 0, expense = 0;
-    for (const op of filteredIncomeOps) income += op.amount;
-    for (const op of filteredExpenseOps) expense += op.amount;
-    const balance = income - expense;
-    const totalOps = filteredIncomeOps.length + filteredExpenseOps.length;
-
-    // Обновляем KPI
-    document.getElementById('totalIncome').textContent = fmt(income) + ' ₽';
-    document.getElementById('totalExpense').textContent = fmt(expense) + ' ₽';
-    document.getElementById('totalBalance').textContent = fmt(balance) + ' ₽';
-    document.getElementById('totalBalance').style.color = balance >= 0 ? '#2e7d32' : '#c62828';
-    document.getElementById('totalOps').textContent = totalOps;
-    // monthlyData создается ниже из отфильтрованных операций
-    // categorySummary создается ниже из отфильтрованных операций
+    // Получаем данные
+    const totals = financialAnalyzer.getTotals();  // <-- ЭТО БЫЛО ПРОПУЩЕНО!
+    const monthlyData = financialAnalyzer.getMonthlyData(yearFilter !== 'all' ? yearFilter : null);
+    const categorySummary = financialAnalyzer.getCategorySummary(yearFilter !== 'all' ? yearFilter : null);
 
     // Обновляем KPI
     document.getElementById('totalIncome').textContent = fmt(totals.income) + ' ₽';
@@ -2481,19 +2370,6 @@ function renderFinancePage() {
     document.getElementById('totalOps').textContent = totals.totalOps;
 
     // === ГРАФИК ДИНАМИКИ ===
-    // Группируем по месяцам
-    const monthlyData = {};
-    for (const op of filteredIncomeOps) {
-        const key = op.monthKey;
-        if (!monthlyData[key]) monthlyData[key] = { income: 0, expense: 0 };
-        monthlyData[key].income += op.amount;
-    }
-    for (const op of filteredExpenseOps) {
-        const key = op.monthKey;
-        if (!monthlyData[key]) monthlyData[key] = { income: 0, expense: 0 };
-        monthlyData[key].expense += op.amount;
-    }
-
     const months = Object.keys(monthlyData).sort();
     const labels = months.map(m => financialAnalyzer.getMonthLabel(m));
     const incomeData = months.map(m => monthlyData[m].income);
@@ -2549,12 +2425,6 @@ function renderFinancePage() {
     });
 
     // === КРУГОВАЯ ДИАГРАММА РАСХОДОВ ===
-    const categorySummary = {};
-    for (const op of filteredExpenseOps) {
-        if (!categorySummary[op.category]) categorySummary[op.category] = 0;
-        categorySummary[op.category] += op.amount;
-    }
-
     const catEntries = Object.entries(categorySummary)
         .sort((a, b) => b[1] - a[1])
         .filter(([_, amount]) => amount > 0);
@@ -2605,10 +2475,12 @@ function renderFinancePage() {
         return `
             <div style="margin-bottom: 10px;">
                 <div style="display:flex;justify-content:space-between;font-size:.82rem;">
-                    <span><span class="badge" style="background:${color};color:#fff;">${index+1}</span> ${cat}</span>
+                    <span><span style="display:inline-block;padding:1px 8px;border-radius:12px;font-size:.7rem;font-weight:600;color:#fff;background:${color};">${index+1}</span> ${cat}</span>
                     <span style="font-weight:600;">${fmt(amount)} ₽</span>
                 </div>
-                <div class="breakdown-bar-wrap"><div class="breakdown-bar-fill" style="width:${percent}%;background:${color};"></div></div>
+                <div style="width:100%;height:8px;background:var(--gray-200);border-radius:50px;overflow:hidden;">
+                    <div style="width:${percent}%;height:100%;background:${color};border-radius:50px;transition:width .5s;"></div>
+                </div>
             </div>
         `;
     }).join('');
@@ -2619,11 +2491,26 @@ function renderFinancePage() {
     let allOps = [];
 
     if (typeFilter === 'income' || typeFilter === 'all') {
-        allOps = allOps.concat(filteredIncomeOps.map(op => ({ ...op, opType: 'income' })));
+        const incomeOps = financialAnalyzer.getIncomeDetails();
+        allOps = allOps.concat(incomeOps.map(op => ({ ...op, opType: 'income' })));
     }
 
     if (typeFilter === 'expense' || typeFilter === 'all') {
-        allOps = allOps.concat(filteredExpenseOps.map(op => ({ ...op, opType: 'expense' })));
+        const expenseOps = financialAnalyzer.getExpenseDetails();
+        allOps = allOps.concat(expenseOps.map(op => ({ ...op, opType: 'expense' })));
+    }
+
+    // Фильтр по месяцу
+    if (monthFilter !== 'all') {
+        allOps = allOps.filter(op => {
+            const parts = op.monthKey.split('-');
+            return parts.length === 2 && parts[1] === monthFilter;
+        });
+    }
+
+    // Фильтр по году
+    if (yearFilter !== 'all') {
+        allOps = allOps.filter(op => op.year === yearFilter);
     }
 
     // Сортировка по дате (новые сверху)
@@ -2643,13 +2530,12 @@ function renderFinancePage() {
             const colorClass = isIncome ? 'income' : 'expense';
             const categoryColor = financialAnalyzer.getCategoryColor(op.category);
             const monthLabel = financialAnalyzer.getMonthLabel(op.monthKey);
-            const accountBadge = op.accountType ? `<span style="font-size:.65rem;color:var(--gray-500);">сч.${op.accountType}</span>` : '';
 
             return `<tr>
                 <td style="white-space:nowrap;">${op.date}<br><span style="font-size:.7rem;color:var(--gray-500);">${monthLabel}</span></td>
-                <td>${escapeHtml(op.counterparty)}<br>${accountBadge}</td>
+                <td>${escapeHtml(op.counterparty)}</td>
                 <td style="font-size:.82rem;">${escapeHtml(op.purpose)}</td>
-                <td><span class="category-badge" style="background:${categoryColor};">${op.category}</span></td>
+                <td><span style="display:inline-block;padding:1px 8px;border-radius:12px;font-size:.7rem;font-weight:600;color:#fff;background:${categoryColor};">${op.category}</span></td>
                 <td class="amount ${colorClass}">${sign}${fmt(op.amount)} ₽</td>
                 <td style="text-align:center;font-size:.7rem;">
                     <span class="badge ${isIncome ? 'badge-green' : 'badge-red'}">${isIncome ? 'Доход' : 'Расход'}</span>
@@ -2665,16 +2551,14 @@ function renderFinancePage() {
 }
 
 // ===================== ФИЛЬТРЫ ФИНАНСОВ =====================
-document.getElementById('financeDateFrom').addEventListener('change', renderFinancePage);
-document.getElementById('financeDateTo').addEventListener('change', renderFinancePage);
+document.getElementById('financeYearFilter').addEventListener('change', renderFinancePage);
+document.getElementById('financeMonthFilter').addEventListener('change', renderFinancePage);
 document.getElementById('financeTypeFilter').addEventListener('change', renderFinancePage);
-document.getElementById('financeAccountFilter').addEventListener('change', renderFinancePage);
 
 document.getElementById('resetFinanceFilters').addEventListener('click', () => {
-    document.getElementById('financeDateFrom').value = '';
-    document.getElementById('financeDateTo').value = '';
+    document.getElementById('financeYearFilter').value = 'all';
+    document.getElementById('financeMonthFilter').value = 'all';
     document.getElementById('financeTypeFilter').value = 'all';
-    document.getElementById('financeAccountFilter').value = 'all';
     renderFinancePage();
 });
 
