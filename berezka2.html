@@ -201,7 +201,6 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
 <div class="navbar">
@@ -579,6 +578,7 @@ let allPlots = [];
 let filteredPlots = [];
 let selectedIds = new Set();
 let receiptSelectedIds = new Set();
+const receiptCustomAmounts = new Map(); // plotId -> {amount, mode} mode: 'debt'|'advance'|'custom'
 let sortCol = 'totalDebt';
 let sortDir = -1;
 let currentReceiptPlot = null;
@@ -1475,12 +1475,11 @@ async function loadAllData() {
 
         // Обновляем статистику в навигации
         const totals = financialAnalyzer.getTotals();
-        const balance51 = getBalanceFromFile('51') || 0;
-        const balance71 = getBalanceFromFile('71') || 0;
-        const balance50 = getBalanceFromFile('50') || 0;
+        const balance51 = financialAnalyzer.getAccountBalance('51') || 0;
+        const balance71 = financialAnalyzer.getAccountBalance('71') || 0;
+        const balance50 = financialAnalyzer.getAccountBalance('50') || 0;
         const totalBalance = balance51 + balance71 + balance50;
         fileInfo.textContent = `📊 Остаток: ${fmtShort(totalBalance)} ₽`;
-        addLog(`💰 Сальдо (GitHub): 50=${balance50.toFixed(2)}, 51=${balance51.toFixed(2)}, 71=${balance71.toFixed(2)}, Итого=${totalBalance.toFixed(2)}`, 'info');
 
         statusDiv.innerHTML = `✅ Данные успешно загружены. Доходы: ${fmt(totals.income)} ₽, Расходы: ${fmt(totals.expense)} ₽, Баланс: ${fmt(totals.balance)} ₽`;
         statusDiv.className = 'status-msg success';
@@ -1587,13 +1586,12 @@ fileInput.addEventListener('change', e => {
 
 async function handleLocalFile(file) {
     setStatus('⏳ Обработка локального файла...', 'loading');
-    addLog(`📁 Обработка локального файла: ${file.name} (${(file.size/1024).toFixed(1)} КБ)`, 'loading');
+    addLog(`📁 Обработка локального файла: ${file.name}`, 'loading');
 
     try {
         const ab = await file.arrayBuffer();
         const wb = XLSX.read(ab, {type:'array'});
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:''});
-        addLog(`📊 Прочитано ${rows.length} строк из локального файла`, 'info');
 
         // Определяем тип файла по имени
         const fileName = file.name.toLowerCase();
@@ -1601,11 +1599,9 @@ async function handleLocalFile(file) {
         if (fileName.includes('base')) fileType = 'base';
         else if (fileName.includes('debit')) fileType = 'debit';
         else if (fileName.includes('ee')) fileType = 'ee';
-        else if (fileName.includes('50') && !fileName.includes('51')) fileType = '50';
+        else if (fileName.includes('50')) fileType = '50';
         else if (fileName.includes('51')) fileType = '51';
         else if (fileName.includes('71')) fileType = '71';
-
-        addLog(`📋 Определен тип файла: ${fileType}`, 'info');
 
         // Загружаем остальные файлы с сервера
         const [debitRows, eeRows, fiftyRows, fiftyOneRows, seventyOneRows] = await Promise.all([
@@ -1615,8 +1611,6 @@ async function handleLocalFile(file) {
             fileType === '51' ? Promise.resolve(rows) : fetchAndParseFile(BASE_URL + FILES['51']),
             fileType === '71' ? Promise.resolve(rows) : fetchAndParseFile(BASE_URL + FILES['71'])
         ]);
-
-        addLog(`📥 Финансовые данные: 50=${fiftyRows.length}, 51=${fiftyOneRows.length}, 71=${seventyOneRows.length} строк`, 'info');
 
         // Обрабатываем загруженные данные
         if (fileType === 'base') {
@@ -1634,12 +1628,6 @@ async function handleLocalFile(file) {
             '51': fiftyOneRows,
             '71': seventyOneRows
         });
-
-        // Логируем сальдо после загрузки
-        const bal50 = getBalanceFromFile('50');
-        const bal51 = getBalanceFromFile('51');
-        const bal71 = getBalanceFromFile('71');
-        addLog(`💰 Сальдо после загрузки: 50=${bal50.toFixed(2)}, 51=${bal51.toFixed(2)}, 71=${bal71.toFixed(2)}`, 'success');
 
         // Пересоздаем passport service
         passportService = new PlotPassportService(baseRepo, debitRepo, eeRepo);
@@ -1963,12 +1951,24 @@ function renderReceiptsList() {
         if (p.arrearsSum > 0 || p.workSum > 0) typeTags.push(`<span class="badge badge-orange">Пр.г.</span>`);
         if (p.electricitySum > 0) typeTags.push(`<span class="badge badge-gray">Эл.</span>`);
 
-        return `<div class="plot-row" data-id="${p.id}">
+        const saved = receiptCustomAmounts.get(p.id) || {amount: p.totalDebt, mode: 'debt'};
+        return `<div class="plot-row" data-id="${p.id}" style="flex-wrap:wrap;gap:6px;">
             <input type="checkbox" ${sel?'checked':''} class="receipt-row-cb" data-id="${p.id}" style="width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;">
             <span class="plot-num-badge">Уч. ${p.plotNumber}</span>
             <span class="plot-name">${p.payerName}</span>
             <div class="plot-type-badges">${typeTags.join('')}</div>
-            <span class="plot-debt-amt">${fmt(p.totalDebt)} ₽</span>
+            <div style="display:flex;align-items:center;gap:6px;margin-left:auto;" onclick="event.stopPropagation()">
+                <select class="receipt-mode-sel" data-id="${p.id}" data-debt="${p.totalDebt}"
+                    style="font-size:.8rem;padding:2px 4px;border:1px solid var(--gray-300);border-radius:4px;background:var(--gray-50);cursor:pointer;">
+                    <option value="debt" ${saved.mode==='debt'?'selected':''}>Долг (${fmt(p.totalDebt)} ₽)</option>
+                    <option value="advance" ${saved.mode==='advance'?'selected':''}>Аванс</option>
+                    <option value="custom" ${saved.mode==='custom'?'selected':''}>Вручную</option>
+                </select>
+                <input type="number" class="receipt-amount-inp" data-id="${p.id}" min="0" step="0.01"
+                    value="${saved.amount.toFixed(2)}"
+                    style="width:90px;font-size:.85rem;padding:3px 6px;border:1px solid var(--gray-300);border-radius:4px;text-align:right;
+                    ${saved.mode==='debt'?'opacity:.5;pointer-events:none;':''}">
+            </div>
             <button class="btn btn-outline btn-sm preview-receipt-btn" data-id="${p.id}" style="padding:4px 12px;">👁 Открыть</button>
         </div>`;
     }).join('');
@@ -1986,7 +1986,40 @@ function renderReceiptsList() {
         cb.addEventListener('click', e => e.stopPropagation());
     });
 
-    // Кнопки предпросмотра
+    // Обработчики режима и суммы
+    document.querySelectorAll('.receipt-mode-sel').forEach(sel => {
+        sel.addEventListener('change', () => {
+            const id = sel.dataset.id;
+            const debt = parseFloat(sel.dataset.debt) || 0;
+            const inp = document.querySelector(`.receipt-amount-inp[data-id="${id}"]`);
+            const mode = sel.value;
+            if (mode === 'debt') {
+                inp.value = debt.toFixed(2);
+                inp.style.opacity = '.5';
+                inp.style.pointerEvents = 'none';
+            } else {
+                if (mode === 'advance') inp.value = '';
+                inp.style.opacity = '1';
+                inp.style.pointerEvents = '';
+                if (mode === 'advance') inp.focus();
+            }
+            const amount = parseFloat(inp.value) || (mode === 'debt' ? debt : 0);
+            receiptCustomAmounts.set(id, {amount, mode});
+        });
+    });
+
+    document.querySelectorAll('.receipt-amount-inp').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const id = inp.dataset.id;
+            const selEl = document.querySelector(`.receipt-mode-sel[data-id="${id}"]`);
+            const mode = selEl ? selEl.value : 'custom';
+            const amount = parseFloat(inp.value) || 0;
+            receiptCustomAmounts.set(id, {amount, mode});
+        });
+        inp.addEventListener('click', e => e.stopPropagation());
+    });
+
+
     document.querySelectorAll('.preview-receipt-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             e.stopPropagation();
@@ -2178,9 +2211,15 @@ async function buildReceiptHTML(plot) {
 
 async function openReceiptModal(plot) {
     currentReceiptPlot = plot;
+    // Берём customAmount из инпута (актуальное значение из DOM или из Map)
+    const saved = receiptCustomAmounts.get(plot.id);
+    const effectiveAmount = (saved && saved.amount > 0) ? saved.amount : plot.totalDebt;
+    const plotForReceipt = (effectiveAmount !== plot.totalDebt)
+        ? Object.assign({}, plot, {totalDebt: effectiveAmount, _isCustomAmount: true})
+        : plot;
     document.getElementById('receiptPreviewBody').innerHTML = '<div style="text-align:center;padding:30px;color:#666;">⏳ Генерация квитанции...</div>';
     document.getElementById('receiptModal').classList.add('open');
-    const html = await buildReceiptHTML(plot);
+    const html = await buildReceiptHTML(plotForReceipt);
     document.getElementById('receiptPreviewBody').innerHTML = html;
 }
 
@@ -2189,7 +2228,12 @@ document.getElementById('receiptModal').addEventListener('click', e => { if (e.t
 
 document.getElementById('printReceiptModalBtn').addEventListener('click', async () => {
     if (!currentReceiptPlot) return;
-    const html = await buildReceiptHTML(currentReceiptPlot);
+    const saved = receiptCustomAmounts.get(currentReceiptPlot.id);
+    const effectiveAmount = (saved && saved.amount > 0) ? saved.amount : currentReceiptPlot.totalDebt;
+    const plotForReceipt = (effectiveAmount !== currentReceiptPlot.totalDebt)
+        ? Object.assign({}, currentReceiptPlot, {totalDebt: effectiveAmount})
+        : currentReceiptPlot;
+    const html = await buildReceiptHTML(plotForReceipt);
     const w = window.open('', '_blank');
     w.document.write(`<html><head><meta charset="UTF-8"><style>@page{margin:10mm;}body{margin:0;}</style></head><body>${html}</body></html>`);
     w.document.close(); setTimeout(() => w.print(), 700);
@@ -2197,17 +2241,31 @@ document.getElementById('printReceiptModalBtn').addEventListener('click', async 
 
 document.getElementById('pdfReceiptModalBtn').addEventListener('click', async () => {
     if (!currentReceiptPlot) return;
-    await generateAndSavePDF([currentReceiptPlot], `kvitanciya_${currentReceiptPlot.plotNumber}.pdf`);
+    const saved = receiptCustomAmounts.get(currentReceiptPlot.id);
+    const effectiveAmount = (saved && saved.amount > 0) ? saved.amount : currentReceiptPlot.totalDebt;
+    const plotForReceipt = (effectiveAmount !== currentReceiptPlot.totalDebt)
+        ? Object.assign({}, currentReceiptPlot, {totalDebt: effectiveAmount})
+        : currentReceiptPlot;
+    await generateAndSavePDF([plotForReceipt], `kvitanciya_${currentReceiptPlot.plotNumber}.pdf`);
 });
 
 // ===================== ПЕЧАТЬ КВИТАНЦИЙ =====================
+function applyCustomAmounts(plots) {
+    return plots.map(p => {
+        const saved = receiptCustomAmounts.get(p.id);
+        if (saved && saved.amount > 0 && saved.amount !== p.totalDebt)
+            return Object.assign({}, p, {totalDebt: saved.amount});
+        return p;
+    });
+}
+
 document.getElementById('printSelectedReceiptsBtn').addEventListener('click', async () => {
-    const sel = allPlots.filter(p => receiptSelectedIds.has(p.id));
+    const sel = applyCustomAmounts(allPlots.filter(p => receiptSelectedIds.has(p.id)));
     if (!sel.length) { alert('Выберите участки'); return; }
     await printMultiple(sel);
 });
 
-document.getElementById('printAllReceiptsBtn').addEventListener('click', () => printMultiple(allPlots));
+document.getElementById('printAllReceiptsBtn').addEventListener('click', () => printMultiple(applyCustomAmounts(allPlots)));
 
 async function printMultiple(plots) {
     const parts = [];
@@ -2230,12 +2288,12 @@ async function printMultiple(plots) {
 }
 
 document.getElementById('downloadPdfSelectedBtn').addEventListener('click', async () => {
-    const sel = allPlots.filter(p => receiptSelectedIds.has(p.id));
+    const sel = applyCustomAmounts(allPlots.filter(p => receiptSelectedIds.has(p.id)));
     if (!sel.length) { alert('Выберите участки'); return; }
     await generateAndSavePDF(sel, 'kvitancii_vybrannyh.pdf');
 });
 
-document.getElementById('downloadPdfAllBtn').addEventListener('click', () => generateAndSavePDF(allPlots, 'kvitancii_vse.pdf'));
+document.getElementById('downloadPdfAllBtn').addEventListener('click', () => generateAndSavePDF(applyCustomAmounts(allPlots), 'kvitancii_vse.pdf'));
 
 async function generateAndSavePDF(plots, filename) {
     const prog = document.getElementById('receiptProgress');
@@ -2427,6 +2485,56 @@ function escapeHtml(str){
 }
 
 // ===================== ФИНАНСОВАЯ СТРАНИЦА =====================
+function getBalanceFromFile(accountType) {
+    if (!financialAnalyzer) return 0;
+    const rows = financialAnalyzer.rawData[accountType] || [];
+    if (!rows.length) return 0;
+
+    let balance = 0;
+    let found = false;
+
+    for (let i = rows.length - 1; i >= 0; i--) {
+        const row = rows[i];
+        if (!row || row.length < 10) continue;
+        const firstCell = String(row[0] || '').trim();
+        const isTotalRow =
+            firstCell.includes('Обороты за период') ||
+            firstCell.includes('сальдо на конец') ||
+            firstCell.includes('Сальдо на конец') ||
+            firstCell.includes('Обороты за период и сальдо на конец');
+        if (isTotalRow) {
+            let val = 0;
+            if (row.length > 10) {
+                const raw = String(row[10] || '0').replace(/\s/g, '').replace(',', '.');
+                val = parseFloat(raw);
+            }
+            if (isNaN(val) || val === 0) {
+                if (row.length > 11) {
+                    const raw = String(row[11] || '0').replace(/\s/g, '').replace(',', '.');
+                    val = parseFloat(raw);
+                }
+            }
+            if (!isNaN(val) && val !== 0) { balance = val; found = true; break; }
+        }
+    }
+
+    if (!found) {
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const row = rows[i];
+            if (!row || row.length < 10) continue;
+            let val = 0;
+            if (row.length > 10) {
+                const raw = String(row[10] || '0').replace(/\s/g, '').replace(',', '.');
+                val = parseFloat(raw);
+            }
+            if (!isNaN(val) && val !== 0) { balance = val; found = true; break; }
+        }
+    }
+
+    if (!found) balance = financialAnalyzer.getAccountBalance(accountType);
+    return balance;
+}
+
 function renderFinancePage() {
     if (!financialAnalyzer) {
         document.getElementById('financeTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-500);">Данные не загружены</td></tr>';
@@ -2535,81 +2643,6 @@ function renderFinancePage() {
     document.getElementById('totalBalance').textContent = fmt(totals.balance) + ' ₽';
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
-
-    // === ПРАВИЛЬНЫЙ РАСЧЕТ ОСТАТКА НА СЧЕТАХ =====
-    // Используем данные из файлов напрямую (rawData)
-    function getBalanceFromFile(accountType) {
-        const rows = financialAnalyzer.rawData[accountType] || [];
-        if (!rows.length) {
-            console.log(`⚠️ Нет данных для счета ${accountType}`);
-            return 0;
-        }
-
-        let balance = 0;
-        let found = false;
-
-        // Идем с конца, ищем строку с итоговым сальдо
-        for (let i = rows.length - 1; i >= 0; i--) {
-            const row = rows[i];
-            if (!row || row.length < 8) continue;
-
-            const firstCell = String(row[0] || '').trim();
-
-            // Проверяем разные варианты заголовков итоговой строки
-            const isTotalRow =
-                firstCell.includes('Обороты за период') ||
-                firstCell.includes('сальдо на конец') ||
-                firstCell.includes('Сальдо на конец') ||
-                firstCell.includes('Обороты за период и сальдо на конец');
-
-            if (isTotalRow) {
-                // Ищем сальдо в последних 5 колонках, пропуская текст Д/К и пустые
-                const candidates = [];
-                const startCol = Math.max(0, row.length - 5);
-                for (let c = startCol; c < row.length; c++) {
-                    const raw = String(row[c] || '').trim();
-                    // Пропускаем пустые, 'Д', 'К' и их вариации
-                    if (!raw || raw === 'Д' || raw === 'К' || raw === 'Дебет' || raw === 'Кредит') continue;
-                    const num = parseFloat(raw.replace(/\s/g, '').replace(',', '.'));
-                    if (!isNaN(num) && num !== 0) {
-                        candidates.push({ val: num, col: c, raw: raw });
-                    }
-                }
-                // Берем последнее (самое правое) числовое значение — это обычно сальдо
-                if (candidates.length > 0) {
-                    const lastCandidate = candidates[candidates.length - 1];
-                    balance = lastCandidate.val;
-                    found = true;
-                    console.log(`✅ Сальдо ${accountType}: ${balance.toFixed(2)} (строка ${i}, колонка ${lastCandidate.col}, raw: "${lastCandidate.raw}")`);
-                    break;
-                }
-            }
-        }
-
-        // Fallback: ищем последнее число в последней колонке любой строки
-        if (!found) {
-            for (let i = rows.length - 1; i >= 0; i--) {
-                const row = rows[i];
-                if (!row || row.length < 8) continue;
-                const lastCell = String(row[row.length - 1] || '').trim();
-                if (!lastCell) continue;
-                const num = parseFloat(lastCell.replace(/\s/g, '').replace(',', '.'));
-                if (!isNaN(num) && num !== 0) {
-                    balance = num;
-                    found = true;
-                    console.log(`✅ Сальдо ${accountType} (fallback): ${balance.toFixed(2)} (строка ${i}, последняя колонка)`);
-                    break;
-                }
-            }
-        }
-
-        if (!found) {
-            console.log(`⚠️ Сальдо ${accountType} не найдено в файле, используем расчет из операций`);
-            balance = financialAnalyzer.getAccountBalance(accountType);
-        }
-
-        return balance;
-    }
 
     // Получаем остатки из файлов
     const balance51 = getBalanceFromFile('51');
