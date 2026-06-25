@@ -1474,7 +1474,7 @@ async function loadAllData() {
 
         // Обновляем статистику в навигации
         const totals = financialAnalyzer.getTotals();
-        fileInfo.textContent = `📊 Доходы: ${fmtShort(totals.income)} / Расходы: ${fmtShort(totals.expense)}`;
+        fileInfo.textContent = `📊 Остаток: ${fmtShort(totalBalance)} ₽`;
 
         statusDiv.innerHTML = `✅ Данные успешно загружены. Доходы: ${fmt(totals.income)} ₽, Расходы: ${fmt(totals.expense)} ₽, Баланс: ${fmt(totals.balance)} ₽`;
         statusDiv.className = 'status-msg success';
@@ -2436,7 +2436,7 @@ function renderFinancePage() {
     }
 
     // === БЕРЕМ ВСЕ ОПЕРАЦИИ ИЗ ОДНОГО ИСТОЧНИКА ===
-    // Исключаем внутренние перемещения и выдачу под отчет
+    // Исключаем внутренние перемещения и выдачу под отчет (advance)
     let allOps = financialAnalyzer.operations.filter(op =>
         op.type !== 'internal' && op.type !== 'advance'
     );
@@ -2462,7 +2462,7 @@ function renderFinancePage() {
     const seen = new Set();
     const uniqueOps = [];
     for (const op of allOps) {
-        // Создаем уникальный ключ: дата_сумма_назначение_контрагент_счет
+        // Создаем уникальный ключ: дата_сумма_назначение_контрагент_счета
         const key = `${op.date}_${op.amount.toFixed(2)}_${op.purpose}_${op.counterparty}_${op.debitAccount}_${op.creditAccount}`;
         if (!seen.has(key)) {
             seen.add(key);
@@ -2520,13 +2520,13 @@ function renderFinancePage() {
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
 
-    // === ВЫЧИСЛЯЕМ ОСТАТОК НА СЧЕТАХ ИЗ ДАННЫХ ФАЙЛОВ ===
-    // Получаем остатки по счетам из загруженных файлов
+    // === ПРАВИЛЬНЫЙ РАСЧЕТ ОСТАТКА НА СЧЕТАХ ===
+    // Используем данные из файлов напрямую
     let balance51 = 0;
     let balance71 = 0;
     let balance50 = 0;
 
-    // Счет 51 - Расчетный счет
+    // Счет 51 - Расчетный счет (из файла 51.xlsx)
     const ops51 = financialAnalyzer.operations.filter(op =>
         op.accountType === '51' ||
         op.debitAccount === '51' ||
@@ -2537,7 +2537,7 @@ function renderFinancePage() {
         if (op.creditAccount === '51') balance51 -= op.amount;
     }
 
-    // Счет 71 - Подотчетные средства
+    // Счет 71 - Подотчетные средства (из файла 71.xlsx)
     const ops71 = financialAnalyzer.operations.filter(op =>
         op.accountType === '71' ||
         op.debitAccount === '71.01' ||
@@ -2550,7 +2550,7 @@ function renderFinancePage() {
         if (op.creditAccount === '71.01' || op.creditAccount === '71') balance71 -= op.amount;
     }
 
-    // Счет 50 - Касса
+    // Счет 50 - Касса (из файла 50.xlsx)
     const ops50 = financialAnalyzer.operations.filter(op =>
         op.accountType === '50' ||
         op.debitAccount === '50.01' ||
