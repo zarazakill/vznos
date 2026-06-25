@@ -589,6 +589,7 @@ const FILES = {
 
 // ===================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====================
 let allPlots = [];
+let allPlotsAll = []; // все участки, без фильтра по долгу — для квитанций
 let filteredPlots = [];
 let selectedIds = new Set();
 let receiptSelectedIds = new Set();
@@ -1485,6 +1486,7 @@ async function loadAllData() {
         }
 
         allPlots = plots;
+        allPlotsAll = buildAllPlotsForReceipts();
         originalPlotsBackup = [...plots];
 
         // Обновляем статистику в навигации
@@ -1544,6 +1546,71 @@ function buildPlotsFromDebit() {
         };
         plots.push(plot);
     }
+    return plots;
+}
+
+function buildAllPlotsForReceipts() {
+    // Все участки из base (191 участок), дополняем данными из debit если есть
+    const plots = [];
+    const seen = new Set();
+    const debitItems = debitRepo.getAll();
+    const debitByPlot = new Map(debitItems.map(d => [String(d.plotNumber).toLowerCase(), d]));
+
+    // Сначала все участки из base
+    const baseItems = baseRepo.getAll ? baseRepo.getAll() : [];
+    for (const base of baseItems) {
+        const key = String(base.plotNumber || base.number || '').toLowerCase();
+        if (!key) continue;
+        const d = debitByPlot.get(key) || {};
+        const plotNum = base.plotNumber || base.number || key;
+        const id = `${plotNum}_${base.owner || ''}`;
+        seen.add(key);
+        plots.push({
+            id,
+            plotNumber: String(plotNum),
+            payerName: base.owner || '—',
+            totalDebt: d.totalDebt || 0,
+            membershipSum: d.membership || 0,
+            targetSum: d.target || 0,
+            arrearsSum: d.arrears || 0,
+            workSum: d.work || 0,
+            electricitySum: d.electricity || 0,
+            details: d.details ? d.details.map(det => ({ label: det.label, cat: det.type })) : [],
+            qrParts: d.details ? d.details.map(det => {
+                const typeMap = { membership:'Членские взносы', target:'Целевые взносы', arrears:'Задолженность прошлых лет', work:'Отработка', electricity:'Электроэнергия' };
+                return `${typeMap[det.type]||det.type}: ${det.amount.toFixed(2)} руб.`;
+            }) : []
+        });
+    }
+
+    // Добавляем должников которых нет в base
+    for (const d of debitItems) {
+        const key = String(d.plotNumber).toLowerCase();
+        if (seen.has(key)) continue;
+        const base = baseRepo.get(key) || {};
+        plots.push({
+            id: `${d.plotNumber}_${d.owner}`,
+            plotNumber: String(d.plotNumber),
+            payerName: base.owner || d.owner || '—',
+            totalDebt: d.totalDebt || 0,
+            membershipSum: d.membership || 0,
+            targetSum: d.target || 0,
+            arrearsSum: d.arrears || 0,
+            workSum: d.work || 0,
+            electricitySum: d.electricity || 0,
+            details: d.details ? d.details.map(det => ({ label: det.label, cat: det.type })) : [],
+            qrParts: d.details ? d.details.map(det => {
+                const typeMap = { membership:'Членские взносы', target:'Целевые взносы', arrears:'Задолженность прошлых лет', work:'Отработка', electricity:'Электроэнергия' };
+                return `${typeMap[det.type]||det.type}: ${det.amount.toFixed(2)} руб.`;
+            }) : []
+        });
+    }
+
+    // Сортируем по номеру участка
+    plots.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0, nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || a.plotNumber.localeCompare(b.plotNumber);
+    });
     return plots;
 }
 
@@ -1654,6 +1721,7 @@ async function handleLocalFile(file) {
         }
 
         allPlots = plots;
+        allPlotsAll = buildAllPlotsForReceipts();
         originalPlotsBackup = [...plots];
 
         document.getElementById('navFileInfo').textContent = `📁 ${file.name} (локальный)`;
@@ -1955,7 +2023,8 @@ document.getElementById('printDebtorsBtn').addEventListener('click', () => {
 function renderReceiptsList() {
     const search = document.getElementById('receiptSearchInput').value.toLowerCase();
     const listEl = document.getElementById('receiptPlotsList');
-    const plots = allPlots.filter(p => !search || p.plotNumber.toLowerCase().includes(search) || p.payerName.toLowerCase().includes(search));
+    const source = allPlotsAll.length ? allPlotsAll : allPlots;
+    const plots = source.filter(p => !search || p.plotNumber.toLowerCase().includes(search) || p.payerName.toLowerCase().includes(search));
 
     listEl.innerHTML = plots.map(p => {
         const sel = receiptSelectedIds.has(p.id);
@@ -2061,7 +2130,8 @@ function renderReceiptsList() {
     document.querySelectorAll('.preview-receipt-btn').forEach(btn => {
         btn.addEventListener('click', e => {
             e.stopPropagation();
-            const plot = allPlots.find(p => p.id === btn.dataset.id);
+            const source = allPlotsAll.length ? allPlotsAll : allPlots;
+            const plot = source.find(p => p.id === btn.dataset.id);
             if (plot) openReceiptModal(plot);
         });
     });
@@ -2082,7 +2152,8 @@ function renderReceiptsList() {
 document.getElementById('receiptSearchInput').addEventListener('input', renderReceiptsList);
 
 document.getElementById('receiptsSelectAll').addEventListener('change', e => {
-    allPlots.forEach(p => {
+    const source = allPlotsAll.length ? allPlotsAll : allPlots;
+    source.forEach(p => {
         if (e.target.checked) receiptSelectedIds.add(p.id);
         else receiptSelectedIds.delete(p.id);
     });
@@ -2311,12 +2382,16 @@ function applyCustomAmounts(plots) {
 }
 
 document.getElementById('printSelectedReceiptsBtn').addEventListener('click', async () => {
-    const sel = applyCustomAmounts(allPlots.filter(p => receiptSelectedIds.has(p.id)));
+    const source = allPlotsAll.length ? allPlotsAll : allPlots;
+    const sel = applyCustomAmounts(source.filter(p => receiptSelectedIds.has(p.id)));
     if (!sel.length) { alert('Выберите участки'); return; }
     await printMultiple(sel);
 });
 
-document.getElementById('printAllReceiptsBtn').addEventListener('click', () => printMultiple(applyCustomAmounts(allPlots)));
+document.getElementById('printAllReceiptsBtn').addEventListener('click', () => {
+    const source = allPlotsAll.length ? allPlotsAll : allPlots;
+    printMultiple(applyCustomAmounts(source));
+});
 
 async function printMultiple(plots) {
     const parts = [];
@@ -2339,12 +2414,16 @@ async function printMultiple(plots) {
 }
 
 document.getElementById('downloadPdfSelectedBtn').addEventListener('click', async () => {
-    const sel = applyCustomAmounts(allPlots.filter(p => receiptSelectedIds.has(p.id)));
+    const source = allPlotsAll.length ? allPlotsAll : allPlots;
+    const sel = applyCustomAmounts(source.filter(p => receiptSelectedIds.has(p.id)));
     if (!sel.length) { alert('Выберите участки'); return; }
     await generateAndSavePDF(sel, 'kvitancii_vybrannyh.pdf');
 });
 
-document.getElementById('downloadPdfAllBtn').addEventListener('click', () => generateAndSavePDF(applyCustomAmounts(allPlots), 'kvitancii_vse.pdf'));
+document.getElementById('downloadPdfAllBtn').addEventListener('click', () => {
+    const source = allPlotsAll.length ? allPlotsAll : allPlots;
+    generateAndSavePDF(applyCustomAmounts(source), 'kvitancii_vse.pdf');
+});
 
 async function generateAndSavePDF(plots, filename) {
     const prog = document.getElementById('receiptProgress');
