@@ -2346,6 +2346,7 @@ function escapeHtml(str){
     });
 }
 // ===================== ФИНАНСОВАЯ СТРАНИЦА =====================
+// ===================== ФИНАНСОВАЯ СТРАНИЦА =====================
 function renderFinancePage() {
     if (!financialAnalyzer) {
         document.getElementById('financeTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-500);">Данные не загружены</td></tr>';
@@ -2357,10 +2358,74 @@ function renderFinancePage() {
     const monthFilter = document.getElementById('financeMonthFilter').value;
     const typeFilter = document.getElementById('financeTypeFilter').value;
 
-    // Получаем данные
-    const totals = financialAnalyzer.getTotals();  // <-- ЭТО БЫЛО ПРОПУЩЕНО!
-    const monthlyData = financialAnalyzer.getMonthlyData(yearFilter !== 'all' ? yearFilter : null);
-    const categorySummary = financialAnalyzer.getCategorySummary(yearFilter !== 'all' ? yearFilter : null);
+    // Получаем все операции
+    let allOps = [];
+
+    if (typeFilter === 'income' || typeFilter === 'all') {
+        const incomeOps = financialAnalyzer.getIncomeDetails();
+        allOps = allOps.concat(incomeOps.map(op => ({ ...op, opType: 'income' })));
+    }
+
+    if (typeFilter === 'expense' || typeFilter === 'all') {
+        const expenseOps = financialAnalyzer.getExpenseDetails();
+        allOps = allOps.concat(expenseOps.map(op => ({ ...op, opType: 'expense' })));
+    }
+
+    // Фильтр по году
+    if (yearFilter !== 'all') {
+        allOps = allOps.filter(op => op.year === yearFilter);
+    }
+
+    // Фильтр по месяцу
+    if (monthFilter !== 'all') {
+        allOps = allOps.filter(op => {
+            const parts = op.monthKey.split('-');
+            return parts.length === 2 && parts[1] === monthFilter;
+        });
+    }
+
+    // ===== ВЫЧИСЛЯЕМ ТОТАЛЫ ТОЛЬКО ЗА ОТФИЛЬТРОВАННЫЙ ПЕРИОД =====
+    let filteredIncome = 0;
+    let filteredExpense = 0;
+    const filteredMonthlyData = {};
+    const filteredCategorySummary = {};
+
+    for (const op of allOps) {
+        if (op.opType === 'income' || op.type === 'income') {
+            filteredIncome += op.amount;
+        } else if (op.opType === 'expense' || op.type === 'expense') {
+            filteredExpense += op.amount;
+            if (!filteredCategorySummary[op.category]) {
+                filteredCategorySummary[op.category] = 0;
+            }
+            filteredCategorySummary[op.category] += op.amount;
+        }
+
+        // Собираем помесячные данные только за отфильтрованный период
+        const monthKey = op.monthKey;
+        if (monthKey) {
+            if (!filteredMonthlyData[monthKey]) {
+                filteredMonthlyData[monthKey] = { income: 0, expense: 0, balance: 0 };
+            }
+            if (op.opType === 'income' || op.type === 'income') {
+                filteredMonthlyData[monthKey].income += op.amount;
+            } else if (op.opType === 'expense' || op.type === 'expense') {
+                filteredMonthlyData[monthKey].expense += op.amount;
+            }
+            filteredMonthlyData[monthKey].balance =
+                filteredMonthlyData[monthKey].income - filteredMonthlyData[monthKey].expense;
+        }
+    }
+
+    const totals = {
+        income: filteredIncome,
+        expense: filteredExpense,
+        balance: filteredIncome - filteredExpense,
+        totalOps: allOps.length
+    };
+
+    const monthlyData = filteredMonthlyData;
+    const categorySummary = filteredCategorySummary;
 
     // Обновляем KPI
     document.getElementById('totalIncome').textContent = fmt(totals.income) + ' ₽';
@@ -2380,18 +2445,18 @@ function renderFinancePage() {
     financeChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: labels,
+            labels: labels.length ? labels : ['Нет данных'],
             datasets: [
                 {
                     label: 'Доходы',
-                    data: incomeData,
+                    data: labels.length ? incomeData : [0],
                     backgroundColor: 'rgba(46, 125, 50, 0.7)',
                     borderColor: '#2e7d32',
                     borderWidth: 1
                 },
                 {
                     label: 'Расходы',
-                    data: expenseData,
+                    data: labels.length ? expenseData : [0],
                     backgroundColor: 'rgba(198, 40, 40, 0.65)',
                     borderColor: '#c62828',
                     borderWidth: 1
@@ -2438,10 +2503,10 @@ function renderFinancePage() {
     financePieInstance = new Chart(pieCtx, {
         type: 'doughnut',
         data: {
-            labels: catLabels,
+            labels: catLabels.length ? catLabels : ['Нет данных'],
             datasets: [{
-                data: catValues,
-                backgroundColor: catColors,
+                data: catLabels.length ? catValues : [1],
+                backgroundColor: catLabels.length ? catColors : ['#e0e0e0'],
                 borderWidth: 2
             }]
         },
@@ -2485,34 +2550,9 @@ function renderFinancePage() {
         `;
     }).join('');
 
-    document.getElementById('topCategoriesList').innerHTML = topCategoriesHtml || '<div style="color:var(--gray-500);text-align:center;padding:20px;">Нет данных о расходах</div>';
+    document.getElementById('topCategoriesList').innerHTML = topCategoriesHtml || '<div style="color:var(--gray-500);text-align:center;padding:20px;">Нет данных о расходах за выбранный период</div>';
 
     // === ТАБЛИЦА ОПЕРАЦИЙ ===
-    let allOps = [];
-
-    if (typeFilter === 'income' || typeFilter === 'all') {
-        const incomeOps = financialAnalyzer.getIncomeDetails();
-        allOps = allOps.concat(incomeOps.map(op => ({ ...op, opType: 'income' })));
-    }
-
-    if (typeFilter === 'expense' || typeFilter === 'all') {
-        const expenseOps = financialAnalyzer.getExpenseDetails();
-        allOps = allOps.concat(expenseOps.map(op => ({ ...op, opType: 'expense' })));
-    }
-
-    // Фильтр по месяцу
-    if (monthFilter !== 'all') {
-        allOps = allOps.filter(op => {
-            const parts = op.monthKey.split('-');
-            return parts.length === 2 && parts[1] === monthFilter;
-        });
-    }
-
-    // Фильтр по году
-    if (yearFilter !== 'all') {
-        allOps = allOps.filter(op => op.year === yearFilter);
-    }
-
     // Сортировка по дате (новые сверху)
     allOps.sort((a, b) => {
         if (!a.dateObj) return 1;
