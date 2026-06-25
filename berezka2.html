@@ -1083,6 +1083,36 @@ class FinancialAnalyzer {
         return ops;
     }
 
+    getAccountBalance(accountType) {
+        const ops = this.operations.filter(op => op.accountType === accountType);
+        let balance = 0;
+        for (const op of ops) {
+            if (op.debitAccount === accountType) balance += op.amount;
+            if (op.creditAccount === accountType) balance -= op.amount;
+        }
+        return balance;
+    }
+
+    getAccountBalanceFromFile(accountType) {
+        // Ищем последнюю строку с "Обороты за период и сальдо на конец"
+        const rows = this.rawData[accountType] || [];
+        let balance = 0;
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const row = rows[i];
+            if (!row || row.length < 11) continue;
+            const firstCell = String(row[0] || '').trim();
+            if (firstCell.includes('Обороты за период') || firstCell.includes('сальдо на конец')) {
+                // Сальдо в колонке L (индекс 10)
+                const val = this.parseAmount(row[10]);
+                if (val !== 0) {
+                    balance = val;
+                    break;
+                }
+            }
+        }
+        return balance;
+    }
+
 }
 // ===================== РЕПОЗИТОРИИ ДАННЫХ =====================
 
@@ -2406,13 +2436,12 @@ function renderFinancePage() {
     }
 
     // === БЕРЕМ ВСЕ ОПЕРАЦИИ ИЗ ОДНОГО ИСТОЧНИКА ===
-    // Используем operations напрямую, а не incomeOps + expenseOps
-    let allOps = financialAnalyzer.operations;
+    // Исключаем внутренние перемещения и выдачу под отчет
+    let allOps = financialAnalyzer.operations.filter(op =>
+        op.type !== 'internal' && op.type !== 'advance'
+    );
 
-    // Исключаем внутренние перемещения
-    allOps = allOps.filter(op => op.type !== 'internal');
-
-    // Фильтр по типу (используем op.type, а не opType)
+    // Фильтр по типу
     if (typeFilter === 'income') {
         allOps = allOps.filter(op => op.type === 'income');
     } else if (typeFilter === 'expense') {
@@ -2430,17 +2459,17 @@ function renderFinancePage() {
     }
 
     // === УНИКАЛЬНАЯ ДЕДУПЛИКАЦИЯ ===
-    // Используем комбинацию: дата + сумма + назначение + контрагент
     const seen = new Set();
-    allOps = allOps.filter(op => {
-        // Для доходов/расходов по взносам добавляем аналитику для уникальности
-        let uniqueKey = `${op.date}_${op.amount.toFixed(2)}_${op.purpose}_${op.counterparty}`;
-        // Добавляем аналитику Дт/Кт для различения похожих операций
-        uniqueKey += `_${op.debitAccount}_${op.creditAccount}`;
-        if (seen.has(uniqueKey)) return false;
-        seen.add(uniqueKey);
-        return true;
-    });
+    const uniqueOps = [];
+    for (const op of allOps) {
+        // Создаем уникальный ключ: дата_сумма_назначение_контрагент_счет
+        const key = `${op.date}_${op.amount.toFixed(2)}_${op.purpose}_${op.counterparty}_${op.debitAccount}_${op.creditAccount}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueOps.push(op);
+        }
+    }
+    allOps = uniqueOps;
 
     // ===== ВЫЧИСЛЯЕМ ТОТАЛЫ =====
     let filteredIncome = 0;
@@ -2491,7 +2520,54 @@ function renderFinancePage() {
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
 
-    // Обновляем отображение периода и остатка
+    // === ВЫЧИСЛЯЕМ ОСТАТОК НА СЧЕТАХ ИЗ ДАННЫХ ФАЙЛОВ ===
+    // Получаем остатки по счетам из загруженных файлов
+    let balance51 = 0;
+    let balance71 = 0;
+    let balance50 = 0;
+
+    // Счет 51 - Расчетный счет
+    const ops51 = financialAnalyzer.operations.filter(op =>
+        op.accountType === '51' ||
+        op.debitAccount === '51' ||
+        op.creditAccount === '51'
+    );
+    for (const op of ops51) {
+        if (op.debitAccount === '51') balance51 += op.amount;
+        if (op.creditAccount === '51') balance51 -= op.amount;
+    }
+
+    // Счет 71 - Подотчетные средства
+    const ops71 = financialAnalyzer.operations.filter(op =>
+        op.accountType === '71' ||
+        op.debitAccount === '71.01' ||
+        op.creditAccount === '71.01' ||
+        op.debitAccount === '71' ||
+        op.creditAccount === '71'
+    );
+    for (const op of ops71) {
+        if (op.debitAccount === '71.01' || op.debitAccount === '71') balance71 += op.amount;
+        if (op.creditAccount === '71.01' || op.creditAccount === '71') balance71 -= op.amount;
+    }
+
+    // Счет 50 - Касса
+    const ops50 = financialAnalyzer.operations.filter(op =>
+        op.accountType === '50' ||
+        op.debitAccount === '50.01' ||
+        op.creditAccount === '50.01' ||
+        op.debitAccount === '50' ||
+        op.creditAccount === '50'
+    );
+    for (const op of ops50) {
+        if (op.debitAccount === '50.01' || op.debitAccount === '50') balance50 += op.amount;
+        if (op.creditAccount === '50.01' || op.creditAccount === '50') balance50 -= op.amount;
+    }
+
+    const totalBalance = balance51 + balance71 + balance50;
+    document.getElementById('balanceDisplay').textContent = fmt(totalBalance) + ' ₽';
+    document.getElementById('balanceDisplay').style.color = totalBalance >= 0 ? '#2e7d32' : '#c62828';
+
+    // Обновляем отображение периода
     if (dateFrom && dateTo) {
         const from = new Date(dateFrom);
         const to = new Date(dateTo);
