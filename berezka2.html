@@ -201,6 +201,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div class="navbar">
@@ -1474,11 +1475,12 @@ async function loadAllData() {
 
         // Обновляем статистику в навигации
         const totals = financialAnalyzer.getTotals();
-        const balance51 = financialAnalyzer.getAccountBalance('51') || 0;
-        const balance71 = financialAnalyzer.getAccountBalance('71') || 0;
-        const balance50 = financialAnalyzer.getAccountBalance('50') || 0;
+        const balance51 = getBalanceFromFile('51') || 0;
+        const balance71 = getBalanceFromFile('71') || 0;
+        const balance50 = getBalanceFromFile('50') || 0;
         const totalBalance = balance51 + balance71 + balance50;
         fileInfo.textContent = `📊 Остаток: ${fmtShort(totalBalance)} ₽`;
+        addLog(`💰 Сальдо (GitHub): 50=${balance50.toFixed(2)}, 51=${balance51.toFixed(2)}, 71=${balance71.toFixed(2)}, Итого=${totalBalance.toFixed(2)}`, 'info');
 
         statusDiv.innerHTML = `✅ Данные успешно загружены. Доходы: ${fmt(totals.income)} ₽, Расходы: ${fmt(totals.expense)} ₽, Баланс: ${fmt(totals.balance)} ₽`;
         statusDiv.className = 'status-msg success';
@@ -1585,12 +1587,13 @@ fileInput.addEventListener('change', e => {
 
 async function handleLocalFile(file) {
     setStatus('⏳ Обработка локального файла...', 'loading');
-    addLog(`📁 Обработка локального файла: ${file.name}`, 'loading');
+    addLog(`📁 Обработка локального файла: ${file.name} (${(file.size/1024).toFixed(1)} КБ)`, 'loading');
 
     try {
         const ab = await file.arrayBuffer();
         const wb = XLSX.read(ab, {type:'array'});
         const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:''});
+        addLog(`📊 Прочитано ${rows.length} строк из локального файла`, 'info');
 
         // Определяем тип файла по имени
         const fileName = file.name.toLowerCase();
@@ -1598,9 +1601,11 @@ async function handleLocalFile(file) {
         if (fileName.includes('base')) fileType = 'base';
         else if (fileName.includes('debit')) fileType = 'debit';
         else if (fileName.includes('ee')) fileType = 'ee';
-        else if (fileName.includes('50')) fileType = '50';
+        else if (fileName.includes('50') && !fileName.includes('51')) fileType = '50';
         else if (fileName.includes('51')) fileType = '51';
         else if (fileName.includes('71')) fileType = '71';
+
+        addLog(`📋 Определен тип файла: ${fileType}`, 'info');
 
         // Загружаем остальные файлы с сервера
         const [debitRows, eeRows, fiftyRows, fiftyOneRows, seventyOneRows] = await Promise.all([
@@ -1610,6 +1615,8 @@ async function handleLocalFile(file) {
             fileType === '51' ? Promise.resolve(rows) : fetchAndParseFile(BASE_URL + FILES['51']),
             fileType === '71' ? Promise.resolve(rows) : fetchAndParseFile(BASE_URL + FILES['71'])
         ]);
+
+        addLog(`📥 Финансовые данные: 50=${fiftyRows.length}, 51=${fiftyOneRows.length}, 71=${seventyOneRows.length} строк`, 'info');
 
         // Обрабатываем загруженные данные
         if (fileType === 'base') {
@@ -1627,6 +1634,12 @@ async function handleLocalFile(file) {
             '51': fiftyOneRows,
             '71': seventyOneRows
         });
+
+        // Логируем сальдо после загрузки
+        const bal50 = getBalanceFromFile('50');
+        const bal51 = getBalanceFromFile('51');
+        const bal71 = getBalanceFromFile('71');
+        addLog(`💰 Сальдо после загрузки: 50=${bal50.toFixed(2)}, 51=${bal51.toFixed(2)}, 71=${bal71.toFixed(2)}`, 'success');
 
         // Пересоздаем passport service
         passportService = new PlotPassportService(baseRepo, debitRepo, eeRepo);
@@ -2538,11 +2551,11 @@ function renderFinancePage() {
         // Идем с конца, ищем строку с итоговым сальдо
         for (let i = rows.length - 1; i >= 0; i--) {
             const row = rows[i];
-            if (!row || row.length < 10) continue;
+            if (!row || row.length < 8) continue;
 
             const firstCell = String(row[0] || '').trim();
 
-            // Проверяем разные варианты заголовков
+            // Проверяем разные варианты заголовков итоговой строки
             const isTotalRow =
                 firstCell.includes('Обороты за период') ||
                 firstCell.includes('сальдо на конец') ||
@@ -2550,52 +2563,48 @@ function renderFinancePage() {
                 firstCell.includes('Обороты за период и сальдо на конец');
 
             if (isTotalRow) {
-                // Сальдо обычно в колонке K (индекс 10) или L (индекс 11)
-                // Пробуем колонку K (индекс 10) - там "Текущее сальдо"
-                let val = 0;
-                if (row.length > 10) {
-                    const raw = String(row[10] || '0').replace(/\s/g, '').replace(',', '.');
-                    val = parseFloat(raw);
-                }
-                if (isNaN(val) || val === 0) {
-                    // Пробуем колонку L (индекс 11)
-                    if (row.length > 11) {
-                        const raw = String(row[11] || '0').replace(/\s/g, '').replace(',', '.');
-                        val = parseFloat(raw);
+                // Ищем сальдо в последних 5 колонках, пропуская текст Д/К и пустые
+                const candidates = [];
+                const startCol = Math.max(0, row.length - 5);
+                for (let c = startCol; c < row.length; c++) {
+                    const raw = String(row[c] || '').trim();
+                    // Пропускаем пустые, 'Д', 'К' и их вариации
+                    if (!raw || raw === 'Д' || raw === 'К' || raw === 'Дебет' || raw === 'Кредит') continue;
+                    const num = parseFloat(raw.replace(/\s/g, '').replace(',', '.'));
+                    if (!isNaN(num) && num !== 0) {
+                        candidates.push({ val: num, col: c, raw: raw });
                     }
                 }
-                if (!isNaN(val) && val !== 0) {
-                    balance = val;
+                // Берем последнее (самое правое) числовое значение — это обычно сальдо
+                if (candidates.length > 0) {
+                    const lastCandidate = candidates[candidates.length - 1];
+                    balance = lastCandidate.val;
                     found = true;
-                    console.log(`✅ Найдено сальдо для ${accountType}: ${balance} в строке ${i} (колонка K/L)`);
+                    console.log(`✅ Сальдо ${accountType}: ${balance.toFixed(2)} (строка ${i}, колонка ${lastCandidate.col}, raw: "${lastCandidate.raw}")`);
                     break;
                 }
             }
         }
 
-        // Если не нашли по заголовку, ищем последнее число в колонке K (индекс 10)
+        // Fallback: ищем последнее число в последней колонке любой строки
         if (!found) {
             for (let i = rows.length - 1; i >= 0; i--) {
                 const row = rows[i];
-                if (!row || row.length < 10) continue;
-
-                let val = 0;
-                if (row.length > 10) {
-                    const raw = String(row[10] || '0').replace(/\s/g, '').replace(',', '.');
-                    val = parseFloat(raw);
-                }
-                if (!isNaN(val) && val !== 0) {
-                    balance = val;
+                if (!row || row.length < 8) continue;
+                const lastCell = String(row[row.length - 1] || '').trim();
+                if (!lastCell) continue;
+                const num = parseFloat(lastCell.replace(/\s/g, '').replace(',', '.'));
+                if (!isNaN(num) && num !== 0) {
+                    balance = num;
                     found = true;
-                    console.log(`✅ Найдено сальдо для ${accountType} (поиск в колонке K): ${balance} в строке ${i}`);
+                    console.log(`✅ Сальдо ${accountType} (fallback): ${balance.toFixed(2)} (строка ${i}, последняя колонка)`);
                     break;
                 }
             }
         }
 
-        // Если всё равно не нашли, используем метод расчета из операций
         if (!found) {
-            console.log(`⚠️ Сальдо для ${accountType} не найдено в файле, используем расчет из операций`);
+            console.log(`⚠️ Сальдо ${accountType} не найдено в файле, используем расчет из операций`);
             balance = financialAnalyzer.getAccountBalance(accountType);
         }
 
