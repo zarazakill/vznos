@@ -2527,42 +2527,93 @@ function renderFinancePage() {
     // Используем данные из файлов напрямую (rawData)
     function getBalanceFromFile(accountType) {
         const rows = financialAnalyzer.rawData[accountType] || [];
+        if (!rows.length) return 0;
+
         let balance = 0;
+        let found = false;
+
         // Идем с конца, ищем строку с итоговым сальдо
         for (let i = rows.length - 1; i >= 0; i--) {
             const row = rows[i];
             if (!row || row.length < 11) continue;
+
             const firstCell = String(row[0] || '').trim();
-            // Ищем строку "Обороты за период и сальдо на конец"
-            if (firstCell.includes('Обороты за период') || firstCell.includes('сальдо на конец')) {
-                const val = parseFloat(String(row[10] || '0').replace(/\s/g, '').replace(',', '.'));
+
+            // Проверяем разные варианты заголовков
+            const isTotalRow =
+                firstCell.includes('Обороты за период') ||
+                firstCell.includes('сальдо на конец') ||
+                firstCell.includes('Сальдо на конец') ||
+                firstCell.includes('Обороты за период и сальдо на конец') ||
+                firstCell.includes('Итого');
+
+            if (isTotalRow) {
+                // Пробуем получить сальдо из колонки L (индекс 11) или K (индекс 10)
+                let val = 0;
+                // Сначала пробуем колонку L (индекс 11) - сальдо конечное
+                if (row.length > 11) {
+                    val = parseFloat(String(row[11] || '0').replace(/\s/g, '').replace(',', '.'));
+                }
+                // Если не нашли, пробуем колонку K (индекс 10)
+                if (val === 0 && row.length > 10) {
+                    val = parseFloat(String(row[10] || '0').replace(/\s/g, '').replace(',', '.'));
+                }
                 if (!isNaN(val) && val !== 0) {
                     balance = val;
+                    found = true;
+                    console.log(`✅ Найдено сальдо для ${accountType}: ${balance} в строке ${i}`);
                     break;
                 }
             }
         }
-        // Если не нашли, пробуем найти последнее сальдо в колонке L
-        if (balance === 0) {
+
+        // Если не нашли по заголовку, ищем последнее ненулевое значение в колонке L или K
+        if (!found) {
             for (let i = rows.length - 1; i >= 0; i--) {
                 const row = rows[i];
-                if (!row || row.length < 11) continue;
-                const val = parseFloat(String(row[10] || '0').replace(/\s/g, '').replace(',', '.'));
+                if (!row || row.length < 10) continue;
+
+                // Пробуем колонку L (индекс 11)
+                let val = 0;
+                if (row.length > 11) {
+                    val = parseFloat(String(row[11] || '0').replace(/\s/g, '').replace(',', '.'));
+                }
+                // Если не нашли, пробуем колонку K (индекс 10)
+                if (val === 0 && row.length > 10) {
+                    val = parseFloat(String(row[10] || '0').replace(/\s/g, '').replace(',', '.'));
+                }
+
                 if (!isNaN(val) && val !== 0) {
                     balance = val;
+                    found = true;
+                    console.log(`✅ Найдено сальдо для ${accountType} (поиск по значению): ${balance} в строке ${i}`);
                     break;
                 }
             }
         }
+
+        // Если всё равно не нашли, используем метод расчета из операций
+        if (!found) {
+            console.log(`⚠️ Сальдо для ${accountType} не найдено в файле, используем расчет из операций`);
+            balance = financialAnalyzer.getAccountBalance(accountType);
+        }
+
         return balance;
     }
 
     // Получаем остатки из файлов
-    const balance51 = getBalanceFromFile('51'); // 279 629.00
-    const balance71 = getBalanceFromFile('71'); // 31 280.72
-    const balance50 = getBalanceFromFile('50'); // 0
+    const balance51 = getBalanceFromFile('51'); // должно быть 279 629.00
+    const balance71 = getBalanceFromFile('71'); // должно быть 31 280.72
+    const balance50 = getBalanceFromFile('50'); // должно быть 0
 
     const totalBalance = balance51 + balance71 + balance50;
+
+    // Для отладки - выводим в консоль
+    console.log('💰 Остатки по счетам:');
+    console.log(`  Счет 51: ${balance51.toFixed(2)} ₽`);
+    console.log(`  Счет 71: ${balance71.toFixed(2)} ₽`);
+    console.log(`  Счет 50: ${balance50.toFixed(2)} ₽`);
+    console.log(`  Итого: ${totalBalance.toFixed(2)} ₽`);
 
     document.getElementById('balanceDisplay').textContent = fmt(totalBalance) + ' ₽';
     document.getElementById('balanceDisplay').style.color = totalBalance >= 0 ? '#2e7d32' : '#c62828';
