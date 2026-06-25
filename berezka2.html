@@ -1474,6 +1474,10 @@ async function loadAllData() {
 
         // Обновляем статистику в навигации
         const totals = financialAnalyzer.getTotals();
+        const balance51 = financialAnalyzer.getAccountBalance('51') || 0;
+        const balance71 = financialAnalyzer.getAccountBalance('71') || 0;
+        const balance50 = financialAnalyzer.getAccountBalance('50') || 0;
+        const totalBalance = balance51 + balance71 + balance50;
         fileInfo.textContent = `📊 Остаток: ${fmtShort(totalBalance)} ₽`;
 
         statusDiv.innerHTML = `✅ Данные успешно загружены. Доходы: ${fmt(totals.income)} ₽, Расходы: ${fmt(totals.expense)} ₽, Баланс: ${fmt(totals.balance)} ₽`;
@@ -2462,7 +2466,6 @@ function renderFinancePage() {
     const seen = new Set();
     const uniqueOps = [];
     for (const op of allOps) {
-        // Создаем уникальный ключ: дата_сумма_назначение_контрагент_счета
         const key = `${op.date}_${op.amount.toFixed(2)}_${op.purpose}_${op.counterparty}_${op.debitAccount}_${op.creditAccount}`;
         if (!seen.has(key)) {
             seen.add(key);
@@ -2520,48 +2523,53 @@ function renderFinancePage() {
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
 
-    // === ПРАВИЛЬНЫЙ РАСЧЕТ ОСТАТКА НА СЧЕТАХ ===
-    // Используем данные из файлов напрямую
+    // === ПРАВИЛЬНЫЙ РАСЧЕТ ОСТАТКА НА СЧЕТАХ =====
+    // Вычисляем сальдо по счетам на КОНЕЦ выбранного периода
+    // Для этого берем все операции по счетам до dateTo (включительно)
+
     let balance51 = 0;
     let balance71 = 0;
     let balance50 = 0;
 
-    // Счет 51 - Расчетный счет (из файла 51.xlsx)
-    const ops51 = financialAnalyzer.operations.filter(op =>
-        op.accountType === '51' ||
-        op.debitAccount === '51' ||
-        op.creditAccount === '51'
-    );
-    for (const op of ops51) {
-        if (op.debitAccount === '51') balance51 += op.amount;
-        if (op.creditAccount === '51') balance51 -= op.amount;
+    // Функция для расчета сальдо по счету на конец периода
+    function calculateBalanceForAccount(accountNumbers, targetDate) {
+        let balance = 0;
+        const ops = financialAnalyzer.operations.filter(op => {
+            // Проверяем, что операция относится к нужному счету
+            const isRelevant = accountNumbers.some(acc =>
+                op.debitAccount === acc || op.creditAccount === acc || op.accountType === acc
+            );
+            if (!isRelevant) return false;
+            // Проверяем дату
+            if (!op.dateObj) return false;
+            if (targetDate && op.dateObj > targetDate) return false;
+            return true;
+        });
+
+        for (const op of ops) {
+            // Для дебетовых операций (поступление) - увеличиваем баланс
+            if (accountNumbers.some(acc => op.debitAccount === acc)) {
+                balance += op.amount;
+            }
+            // Для кредитовых операций (списание) - уменьшаем баланс
+            if (accountNumbers.some(acc => op.creditAccount === acc)) {
+                balance -= op.amount;
+            }
+        }
+        return balance;
     }
 
-    // Счет 71 - Подотчетные средства (из файла 71.xlsx)
-    const ops71 = financialAnalyzer.operations.filter(op =>
-        op.accountType === '71' ||
-        op.debitAccount === '71.01' ||
-        op.creditAccount === '71.01' ||
-        op.debitAccount === '71' ||
-        op.creditAccount === '71'
-    );
-    for (const op of ops71) {
-        if (op.debitAccount === '71.01' || op.debitAccount === '71') balance71 += op.amount;
-        if (op.creditAccount === '71.01' || op.creditAccount === '71') balance71 -= op.amount;
-    }
+    // Определяем конечную дату для расчета остатка
+    const endDate = toDate || new Date(); // если не выбрана - сегодня
 
-    // Счет 50 - Касса (из файла 50.xlsx)
-    const ops50 = financialAnalyzer.operations.filter(op =>
-        op.accountType === '50' ||
-        op.debitAccount === '50.01' ||
-        op.creditAccount === '50.01' ||
-        op.debitAccount === '50' ||
-        op.creditAccount === '50'
-    );
-    for (const op of ops50) {
-        if (op.debitAccount === '50.01' || op.debitAccount === '50') balance50 += op.amount;
-        if (op.creditAccount === '50.01' || op.creditAccount === '50') balance50 -= op.amount;
-    }
+    // Счет 51 - Расчетный счет
+    balance51 = calculateBalanceForAccount(['51'], endDate);
+
+    // Счет 71 - Подотчетные средства
+    balance71 = calculateBalanceForAccount(['71', '71.01'], endDate);
+
+    // Счет 50 - Касса
+    balance50 = calculateBalanceForAccount(['50', '50.01'], endDate);
 
     const totalBalance = balance51 + balance71 + balance50;
     document.getElementById('balanceDisplay').textContent = fmt(totalBalance) + ' ₽';
