@@ -215,6 +215,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div class="navbar">
@@ -431,7 +432,8 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <!-- Добавьте после finance-grid -->
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px;padding:8px 16px;background:var(--green-50);border-radius:var(--radius);">
     <span style="font-size:.85rem;color:var(--green-700);">
-        📅 Период: <strong id="periodDisplay">Июнь 2026</strong>
+        📅 Период: <strong id="periodDisplay">Все периоды</strong>
+        <span id="categoryDisplay" style="margin-left:8px;color:var(--blue-600);"></span>
     </span>
     <span style="font-size:.85rem;color:var(--gray-600);">
         🏦 Остаток на счетах: <strong id="balanceDisplay" style="color:var(--green-600);">0 ₽</strong>
@@ -450,6 +452,28 @@ select.filter-sel:focus{border-color:var(--green-400);}
         <option value="all">Все операции</option>
         <option value="income">Только доходы</option>
         <option value="expense">Только расходы</option>
+    </select>
+    <select id="financeCategoryFilter" class="filter-sel">
+        <option value="all">Все категории</option>
+        <option value="Заработная плата">💼 Заработная плата</option>
+        <option value="Налоги и сборы">🏛 Налоги и сборы</option>
+        <option value="Банковские услуги">🏦 Банковские услуги</option>
+        <option value="Электроэнергия">⚡ Электроэнергия</option>
+        <option value="ГСМ и транспорт">⛽ ГСМ и транспорт</option>
+        <option value="Материалы и оборудование">🔧 Материалы и оборудование</option>
+        <option value="Охрана">🛡 Охрана</option>
+        <option value="Содержание и ИТ">💻 Содержание и ИТ</option>
+        <option value="Хозяйственные нужды">🏠 Хозяйственные нужды</option>
+        <option value="Ремонт и услуги">🔨 Ремонт и услуги</option>
+        <option value="Выдача под отчет">📋 Выдача под отчет</option>
+        <option value="Прочие расходы">📦 Прочие расходы</option>
+        <option value="Членские взносы">🌿 Членские взносы</option>
+        <option value="Плата за электроэнергию">⚡ Плата за электроэнергию</option>
+        <option value="Целевые взносы">🎯 Целевые взносы</option>
+        <option value="Погашение задолженности">💰 Погашение задолженности</option>
+        <option value="Авансовые взносы">💳 Авансовые взносы</option>
+        <option value="Возврат подотчетных">📥 Возврат подотчетных</option>
+        <option value="Внутренние перемещения">🔄 Внутренние перемещения</option>
     </select>
     <button class="btn btn-secondary btn-sm" id="resetFinanceFilters">✕ Сброс</button>
 </div>
@@ -2653,6 +2677,7 @@ function renderFinancePage() {
     const dateFrom = document.getElementById('financeDateFrom').value;
     const dateTo = document.getElementById('financeDateTo').value;
     const typeFilter = document.getElementById('financeTypeFilter').value;
+    const categoryFilter = document.getElementById('financeCategoryFilter').value;
 
     // Преобразуем даты в объекты для сравнения
     let fromDate = null;
@@ -2679,6 +2704,11 @@ function renderFinancePage() {
         allOps = allOps.filter(op => op.type === 'income');
     } else if (typeFilter === 'expense') {
         allOps = allOps.filter(op => op.type === 'expense');
+    }
+
+    // Фильтр по категории
+    if (categoryFilter !== 'all') {
+        allOps = allOps.filter(op => op.category === categoryFilter);
     }
 
     // Фильтр по диапазону дат
@@ -2748,6 +2778,12 @@ function renderFinancePage() {
     // Обновляем KPI
     document.getElementById('totalIncome').textContent = fmt(totals.income) + ' ₽';
     document.getElementById('totalExpense').textContent = fmt(totals.expense) + ' ₽';
+
+    // Отображаем выбранную категорию
+    const catDisplay = document.getElementById('categoryDisplay');
+    if (catDisplay) {
+        catDisplay.textContent = categoryFilter !== 'all' ? '| Категория: ' + categoryFilter : '';
+    }
     document.getElementById('totalBalance').textContent = fmt(totals.balance) + ' ₽';
     document.getElementById('totalBalance').style.color = totals.balance >= 0 ? '#2e7d32' : '#c62828';
     document.getElementById('totalOps').textContent = totals.totalOps;
@@ -2777,6 +2813,8 @@ function renderFinancePage() {
             from.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) +
             ' — ' +
             to.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    } else {
+        document.getElementById('periodDisplay').textContent = 'Все периоды';
     }
 
     // === ГРАФИК ДИНАМИКИ ===
@@ -2937,11 +2975,13 @@ function renderFinancePage() {
 document.getElementById('financeDateFrom').addEventListener('change', renderFinancePage);
 document.getElementById('financeDateTo').addEventListener('change', renderFinancePage);
 document.getElementById('financeTypeFilter').addEventListener('change', renderFinancePage);
+document.getElementById('financeCategoryFilter').addEventListener('change', renderFinancePage);
 
 document.getElementById('resetFinanceFilters').addEventListener('click', () => {
     document.getElementById('financeDateFrom').value = '';
     document.getElementById('financeDateTo').value = '';
     document.getElementById('financeTypeFilter').value = 'all';
+    document.getElementById('financeCategoryFilter').value = 'all';
     renderFinancePage();
 });
 
