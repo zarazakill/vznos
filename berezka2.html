@@ -215,6 +215,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div class="navbar">
@@ -366,6 +367,93 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 </div>
+
+<!-- Блок оплаты по соткам -->
+<div class="card" style="margin-top:20px;">
+<div class="card-title">🌿 Оплата по площади участка</div>
+<div id="sotkaPaymentBlock" style="display:none;">
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px;">
+<div style="flex:1;min-width:200px;">
+<div style="font-size:.85rem;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Выберите участки для оплаты по соткам:</div>
+<div id="sotkaPlotsList" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px;">
+<div style="color:var(--gray-500);font-size:.85rem;">Загрузите данные...</div>
+</div>
+</div>
+<div style="min-width:220px;">
+<div style="background:var(--green-50);border-radius:var(--radius);padding:12px;margin-bottom:10px;">
+<div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;">💰 Стоимость за сотку</div>
+<div style="font-size:1.4rem;font-weight:700;color:var(--green-700);" id="sotkaPriceDisplay">1748.26 ₽</div>
+<div style="font-size:.75rem;color:var(--gray-500);margin-top:2px;">Изменить в настройках</div>
+</div>
+<div style="background:var(--blue-50);border-radius:var(--radius);padding:12px;">
+<div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;">📊 Итого к оплате</div>
+<div style="font-size:1.6rem;font-weight:700;color:var(--blue-700);" id="sotkaTotalDisplay">0.00 ₽</div>
+<div style="font-size:.75rem;color:var(--gray-500);margin-top:4px;" id="sotkaDetailDisplay">0 соток × 0 ₽</div>
+</div>
+</div>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;">
+<button class="btn btn-primary" id="addSotkaToReceiptsBtn">➕ Добавить в квитанции</button>
+<button class="btn btn-secondary btn-sm" id="clearSotkaSelectionBtn">✕ Сбросить выбор</button>
+</div>
+</div>
+<div id="sotkaNoData" class="empty-state" style="padding:30px;">
+<div class="icon">📭</div>
+<p>Загрузите данные на вкладке «Дашборд»</p>
+</div>
+</div>
+
+<!-- Блок оплаты электроэнергии -->
+<div class="card" style="margin-top:20px;">
+<div class="card-title">⚡ Оплата электроэнергии</div>
+<div id="eePaymentBlock" style="display:none;">
+<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px;">
+<div style="flex:1;min-width:200px;">
+<div style="font-size:.85rem;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Выберите участок для ввода показаний:</div>
+<div id="eePlotsList" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px;">
+<div style="color:var(--gray-500);font-size:.85rem;">Загрузите данные...</div>
+</div>
+</div>
+<div style="min-width:260px;">
+<div style="background:var(--orange-50);border-radius:var(--radius);padding:12px;margin-bottom:10px;">
+<div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;">⚡ Тариф за кВт·ч</div>
+<div style="font-size:1.4rem;font-weight:700;color:var(--orange-700);" id="eePriceDisplay">3.82 ₽</div>
+<div style="font-size:.75rem;color:var(--gray-500);margin-top:2px;">Изменить в настройках</div>
+</div>
+<div id="eeCalcPanel" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:none;">
+<div style="font-size:.85rem;font-weight:600;color:var(--gray-800);margin-bottom:8px;">Расчёт для участка <span id="eeCalcPlotNum"></span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+<div>
+<div style="font-size:.75rem;color:var(--gray-500);margin-bottom:2px;">Последние оплаченные</div>
+<input type="number" id="eePrevReading" class="setting-input" style="width:100%;" step="0.01" placeholder="0.00">
+</div>
+<div>
+<div style="font-size:.75rem;color:var(--gray-500);margin-bottom:2px;">Текущие показания</div>
+<input type="number" id="eeCurrReading" class="setting-input" style="width:100%;" step="0.01" placeholder="0.00">
+</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+<div style="flex:1;">
+<div style="font-size:.75rem;color:var(--gray-500);">Расход кВт·ч</div>
+<div style="font-size:1.2rem;font-weight:700;color:var(--gray-800);" id="eeConsumptionDisplay">0.00</div>
+</div>
+<div style="flex:1;">
+<div style="font-size:.75rem;color:var(--gray-500);">Сумма к оплате</div>
+<div style="font-size:1.4rem;font-weight:700;color:var(--green-700);" id="eeAmountDisplay">0.00 ₽</div>
+</div>
+</div>
+<button class="btn btn-primary btn-sm" id="addEeToReceiptsBtn" style="width:100%;">➕ Добавить в квитанцию</button>
+</div>
+</div>
+</div>
+</div>
+<div id="eeNoData" class="empty-state" style="padding:30px;">
+<div class="icon">📭</div>
+<p>Загрузите данные на вкладке «Дашборд»</p>
+</div>
+</div>
+
+</div>
 <div class="modal-overlay" id="receiptModal">
 <div class="modal-box">
 <div class="modal-header">
@@ -513,7 +601,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 <div style="display:flex;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;">
 <span id="financeTableInfo" style="font-size:.85rem;color:var(--gray-600);"></span>
-<button class="btn btn-secondary btn-sm" id="exportFinanceCsv">📄 Экспорт CSV</button>
+<button class="btn btn-blue btn-sm" id="exportFinanceCsv">📊 Экспорт Excel</button>
 </div>
 </div>
 </div>
@@ -571,6 +659,19 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="setting-row">
 <div class="setting-label"><p>Минимальная сумма для отображения</p><small>Участки с долгом ниже этой суммы скрываются</small></div>
 <input class="setting-input" id="setMinDebt" value="0.01" style="width:120px;"> руб.
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">⚙️ Тарифы и расчёты</div>
+<div class="settings-section">
+<div class="setting-row">
+<div class="setting-label"><p>Стоимость за сотку участка</p><small>Используется для расчёта платы по площади в квитанциях</small></div>
+<input class="setting-input" id="setPricePerSotka" value="1748.26" style="width:140px;"> руб.
+</div>
+<div class="setting-row">
+<div class="setting-label"><p>Стоимость за кВт·ч электроэнергии</p><small>Тариф для расчёта оплаты электроэнергии</small></div>
+<input class="setting-input" id="setPricePerKwt" value="3.82" style="width:140px;"> руб.
 </div>
 </div>
 </div>
@@ -641,6 +742,8 @@ let CFG = {
   showQr: localStorage.getItem('snt_QR') !== '0',
   duplicate: localStorage.getItem('snt_Dup') !== '0',
   minDebt: parseFloat(localStorage.getItem('snt_MinDebt') || '0.01'),
+  pricePerSotka: parseFloat(localStorage.getItem('snt_PricePerSotka') || '1748.26'),
+  pricePerKwt: parseFloat(localStorage.getItem('snt_PricePerKwt') || '3.82'),
 };
 
 // ===================== ФИНАНСОВЫЙ АНАЛИЗАТОР =====================
@@ -1648,6 +1751,8 @@ function onDataLoaded() {
     renderDashboard();
     renderDebtorsTable();
     renderReceiptsList();
+    renderSotkaBlock();
+    renderEeBlock();
     setDefaultDates();
     renderPassportList();
 }
@@ -2993,25 +3098,50 @@ document.getElementById('exportFinanceCsv').addEventListener('click', () => {
         return;
     }
 
-    let csv = 'Дата,Контрагент,Назначение,Категория,Сумма,Тип\n';
+    // Собираем данные как в таблице
+    const data = [['Дата', 'Месяц', 'Контрагент', 'Назначение', 'Категория', 'Сумма', 'Тип']];
+
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 6) {
-            const date = cells[0].textContent.trim().split('\n')[0];
+            const dateParts = cells[0].innerHTML.split('<br>');
+            const date = dateParts[0] ? dateParts[0].trim() : '';
+            const month = dateParts[1] ? dateParts[1].replace(/<[^>]*>/g, '').trim() : '';
             const counterparty = cells[1].textContent.trim();
             const purpose = cells[2].textContent.trim();
             const category = cells[3].textContent.trim();
-            const amount = cells[4].textContent.trim();
+            const amountText = cells[4].textContent.trim().replace(/[+\−\s]/g, '').replace('₽', '').trim();
+            const amount = parseFloat(amountText.replace(/\s/g, '').replace(',', '.')) || 0;
             const type = cells[5].textContent.trim();
-            csv += `"${date}","${counterparty}","${purpose}","${category}","${amount}","${type}"\n`;
+
+            data.push([date, month, counterparty, purpose, category, amount, type]);
         }
     });
 
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'finansy_snt.csv';
-    a.click();
+    // Создаём workbook с форматированием
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Задаём ширину колонок
+    ws['!cols'] = [
+        {wch: 12},  // Дата
+        {wch: 10},  // Месяц
+        {wch: 25},  // Контрагент
+        {wch: 45},  // Назначение
+        {wch: 22},  // Категория
+        {wch: 14},  // Сумма
+        {wch: 10}   // Тип
+    ];
+
+    // Фиксируем заголовок
+    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+    // Добавляем автофильтр
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    ws['!autofilter'] = { ref: ws['!ref'] };
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Финансы');
+    XLSX.writeFile(wb, `finansy_snt_${new Date().toISOString().slice(0,10)}.xlsx`);
 });
 // ===================== НАСТРОЙКИ =====================
 function initSettings() {
@@ -3025,6 +3155,8 @@ function initSettings() {
     document.getElementById('setQrToggle').checked = CFG.showQr;
     document.getElementById('setDuplicateToggle').checked = CFG.duplicate;
     document.getElementById('setMinDebt').value = CFG.minDebt;
+    document.getElementById('setPricePerSotka').value = CFG.pricePerSotka;
+    document.getElementById('setPricePerKwt').value = CFG.pricePerKwt;
 }
 
 document.getElementById('saveSettingsBtn').onclick = () => {
@@ -3046,6 +3178,9 @@ document.getElementById('saveSettingsBtn').onclick = () => {
         document.getElementById('setMinDebt').value = CFG.minDebt;
     }
 
+    CFG.pricePerSotka = parseFloat(document.getElementById('setPricePerSotka').value) || 1748.26;
+    CFG.pricePerKwt = parseFloat(document.getElementById('setPricePerKwt').value) || 3.82;
+
     localStorage.setItem('snt_Name', REQ.Name);
     localStorage.setItem('snt_INN', REQ.PayeeINN);
     localStorage.setItem('snt_Acc', REQ.PersonalAcc);
@@ -3056,6 +3191,8 @@ document.getElementById('saveSettingsBtn').onclick = () => {
     localStorage.setItem('snt_QR', CFG.showQr ? '1' : '0');
     localStorage.setItem('snt_Dup', CFG.duplicate ? '1' : '0');
     localStorage.setItem('snt_MinDebt', CFG.minDebt);
+    localStorage.setItem('snt_PricePerSotka', CFG.pricePerSotka);
+    localStorage.setItem('snt_PricePerKwt', CFG.pricePerKwt);
 
     // Применяем фильтр минимального долга
     if (allPlots.length > 0) {
@@ -3108,6 +3245,216 @@ document.getElementById('clearDataBtn').onclick = () => {
     setStatus('🗑 Данные очищены. Загрузите файл снова.', 'info');
     addLog('🗑 Данные очищены пользователем', 'info');
 };
+
+// ===================== ОПЛАТА ПО СОТКАМ =====================
+function renderSotkaBlock() {
+    const block = document.getElementById('sotkaPaymentBlock');
+    const noData = document.getElementById('sotkaNoData');
+    const list = document.getElementById('sotkaPlotsList');
+    const priceDisplay = document.getElementById('sotkaPriceDisplay');
+
+    if (!allPlotsAll.length) {
+        block.style.display = 'none';
+        noData.style.display = '';
+        return;
+    }
+
+    block.style.display = '';
+    noData.style.display = 'none';
+    priceDisplay.textContent = CFG.pricePerSotka.toFixed(2) + ' ₽';
+
+    // Получаем участки с площадью из base
+    const plotsWithArea = allPlotsAll.map(p => {
+        const base = baseRepo.get(String(p.plotNumber).toLowerCase());
+        const areaStr = base ? base.area : '';
+        const area = parseFloat(areaStr) || 0;
+        return { ...p, area, areaStr };
+    }).filter(p => p.area > 0);
+
+    if (!plotsWithArea.length) {
+        list.innerHTML = '<div style="color:var(--gray-500);font-size:.85rem;">Нет данных о площади участков</div>';
+        return;
+    }
+
+    list.innerHTML = plotsWithArea.map(p => `
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--gray-100);transition:.15s;" onmouseover="this.style.background='var(--green-50)'" onmouseout="this.style.background=''">
+            <input type="checkbox" class="sotka-plot-cb" data-plot="${p.plotNumber}" data-area="${p.area}" style="width:16px;height:16px;accent-color:var(--green-600);flex-shrink:0;">
+            <span style="flex:1;font-size:.85rem;min-width:60px;">Уч. ${p.plotNumber}</span>
+            <span style="font-size:.82rem;color:var(--gray-600);flex:1;min-width:80px;">${p.payerName}</span>
+            <span style="font-size:.82rem;color:var(--gray-500);min-width:50px;text-align:right;">${p.areaStr} сот.</span>
+            <span style="font-size:.85rem;font-weight:600;color:var(--green-700);min-width:85px;text-align:right;">${(p.area * CFG.pricePerSotka).toFixed(2)} ₽</span>
+        </label>
+    `).join('');
+
+    updateSotkaTotal();
+
+    document.querySelectorAll('.sotka-plot-cb').forEach(cb => {
+        cb.addEventListener('change', updateSotkaTotal);
+    });
+}
+
+function updateSotkaTotal() {
+    const checked = document.querySelectorAll('.sotka-plot-cb:checked');
+    let totalSotok = 0;
+    let totalSum = 0;
+    checked.forEach(cb => {
+        const area = parseFloat(cb.dataset.area) || 0;
+        totalSotok += area;
+        totalSum += area * CFG.pricePerSotka;
+    });
+    document.getElementById('sotkaTotalDisplay').textContent = totalSum.toFixed(2) + ' ₽';
+    document.getElementById('sotkaDetailDisplay').textContent = `${totalSotok.toFixed(2)} сот. × ${CFG.pricePerSotka.toFixed(2)} ₽`;
+}
+
+document.getElementById('clearSotkaSelectionBtn').addEventListener('click', () => {
+    document.querySelectorAll('.sotka-plot-cb').forEach(cb => cb.checked = false);
+    updateSotkaTotal();
+});
+
+document.getElementById('addSotkaToReceiptsBtn').addEventListener('click', () => {
+    const checked = document.querySelectorAll('.sotka-plot-cb:checked');
+    if (!checked.length) {
+        alert('Выберите участки');
+        return;
+    }
+
+    let added = 0;
+    checked.forEach(cb => {
+        const plotNum = cb.dataset.plot;
+        const area = parseFloat(cb.dataset.area) || 0;
+        const amount = area * CFG.pricePerSotka;
+
+        const plot = allPlotsAll.find(p => p.plotNumber === plotNum);
+        if (!plot) return;
+
+        const purpose = `Оплата по площади: ${area} сот. × ${CFG.pricePerSotka} ₽ = ${amount.toFixed(2)} ₽`;
+
+        const existing = receiptCustomAmounts.get(plot.id) || { amount: plot.totalDebt, mode: 'debt', purpose: '' };
+        const newAmount = existing.mode === 'debt' ? amount : existing.amount + amount;
+        const newPurpose = existing.purpose ? existing.purpose + '; ' + purpose : purpose;
+
+        receiptCustomAmounts.set(plot.id, {
+            amount: newAmount,
+            mode: newAmount === plot.totalDebt ? 'debt' : 'custom',
+            purpose: newPurpose
+        });
+        added++;
+    });
+
+    renderReceiptsList();
+    alert(`Добавлено ${added} участков для оплаты по соткам`);
+});
+
+// ===================== ОПЛАТА ЭЛЕКТРОЭНЕРГИИ =====================
+let selectedEePlot = null;
+let eePlotData = new Map(); // plotNumber -> {prevReading, currReading}
+
+function renderEeBlock() {
+    const block = document.getElementById('eePaymentBlock');
+    const noData = document.getElementById('eeNoData');
+    const list = document.getElementById('eePlotsList');
+    const priceDisplay = document.getElementById('eePriceDisplay');
+
+    if (!allPlotsAll.length) {
+        block.style.display = 'none';
+        noData.style.display = '';
+        return;
+    }
+
+    block.style.display = '';
+    noData.style.display = 'none';
+    priceDisplay.textContent = CFG.pricePerKwt.toFixed(2) + ' ₽';
+
+    list.innerHTML = allPlotsAll.map(p => {
+        const ee = eeRepo.get(String(p.plotNumber).toLowerCase());
+        const lastReading = ee ? (ee.currReading || 0) : 0;
+        const lastDate = ee ? (ee.readingDate || '') : '';
+        const isSelected = selectedEePlot === p.plotNumber;
+        return `
+        <div class="ee-plot-row" data-plot="${p.plotNumber}" style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--gray-100);cursor:pointer;transition:.15s;background:${isSelected ? 'var(--green-50)' : ''};" onmouseover="if(!this.style.background)this.style.background='var(--gray-50)'" onmouseout="if(this.style.background!=='rgb(240, 247, 240)')this.style.background=''">
+            <span class="plot-num-badge" style="min-width:55px;flex-shrink:0;">Уч. ${p.plotNumber}</span>
+            <span style="flex:1;font-size:.85rem;min-width:80px;">${p.payerName}</span>
+            <span style="font-size:.78rem;color:var(--gray-500);min-width:90px;text-align:right;">${lastDate ? lastDate : '—'}</span>
+            <span style="font-size:.85rem;font-weight:600;color:var(--blue-600);min-width:85px;text-align:right;">${lastReading > 0 ? lastReading.toFixed(2) + ' кВт' : '—'}</span>
+        </div>`;
+    }).join('');
+
+    document.querySelectorAll('.ee-plot-row').forEach(row => {
+        row.addEventListener('click', () => selectEePlot(row.dataset.plot));
+    });
+}
+
+function selectEePlot(plotNumber) {
+    selectedEePlot = plotNumber;
+
+    // Подсвечиваем выбранный
+    document.querySelectorAll('.ee-plot-row').forEach(r => {
+        r.style.background = r.dataset.plot === plotNumber ? 'var(--green-50)' : '';
+    });
+
+    // Получаем данные
+    const ee = eeRepo.get(String(plotNumber).toLowerCase());
+
+    // Последние оплаченные показания — из ee или 0
+    const lastPaid = ee ? (ee.currReading || 0) : 0;
+
+    document.getElementById('eeCalcPanel').style.display = '';
+    document.getElementById('eeCalcPlotNum').textContent = plotNumber;
+    document.getElementById('eePrevReading').value = lastPaid.toFixed(2);
+    document.getElementById('eeCurrReading').value = '';
+    document.getElementById('eeConsumptionDisplay').textContent = '0.00';
+    document.getElementById('eeAmountDisplay').textContent = '0.00 ₽';
+
+    eePlotData.set(plotNumber, { prevReading: lastPaid, currReading: 0 });
+}
+
+function calculateEe() {
+    const prev = parseFloat(document.getElementById('eePrevReading').value) || 0;
+    const curr = parseFloat(document.getElementById('eeCurrReading').value) || 0;
+    const consumption = Math.max(0, curr - prev);
+    const amount = consumption * CFG.pricePerKwt;
+
+    document.getElementById('eeConsumptionDisplay').textContent = consumption.toFixed(2);
+    document.getElementById('eeAmountDisplay').textContent = amount.toFixed(2) + ' ₽';
+
+    if (selectedEePlot) {
+        eePlotData.set(selectedEePlot, { prevReading: prev, currReading: curr });
+    }
+}
+
+document.getElementById('eePrevReading').addEventListener('input', calculateEe);
+document.getElementById('eeCurrReading').addEventListener('input', calculateEe);
+
+document.getElementById('addEeToReceiptsBtn').addEventListener('click', () => {
+    if (!selectedEePlot) return;
+    const prev = parseFloat(document.getElementById('eePrevReading').value) || 0;
+    const curr = parseFloat(document.getElementById('eeCurrReading').value) || 0;
+    const consumption = Math.max(0, curr - prev);
+    const amount = consumption * CFG.pricePerKwt;
+
+    if (amount <= 0) {
+        alert('Введите корректные показания');
+        return;
+    }
+
+    const plot = allPlotsAll.find(p => p.plotNumber === selectedEePlot);
+    if (!plot) return;
+
+    const purpose = `Электроэнергия: ${consumption.toFixed(2)} кВт·ч × ${CFG.pricePerKwt} ₽ = ${amount.toFixed(2)} ₽`;
+
+    const existing = receiptCustomAmounts.get(plot.id) || { amount: plot.totalDebt, mode: 'debt', purpose: '' };
+    const newAmount = existing.mode === 'debt' ? amount : existing.amount + amount;
+    const newPurpose = existing.purpose ? existing.purpose + '; ' + purpose : purpose;
+
+    receiptCustomAmounts.set(plot.id, {
+        amount: newAmount,
+        mode: newAmount === plot.totalDebt ? 'debt' : 'custom',
+        purpose: newPurpose
+    });
+
+    renderReceiptsList();
+    alert(`Добавлено ${amount.toFixed(2)} ₽ за электроэнергию для участка ${selectedEePlot}`);
+});
 
 // ===================== ФОРМАТИРОВАНИЕ =====================
 function fmt(n) {
