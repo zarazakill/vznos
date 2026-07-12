@@ -227,10 +227,12 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div style="font-size:2.4rem;margin-bottom:6px;">🌿</div>
 <div class="card-title" style="justify-content:center;font-size:1.15rem;" id="authTitle">Вход в систему</div>
 <p id="authSubtitle" style="color:var(--gray-600);font-size:.85rem;margin-bottom:16px;">Доступ к данным СНТ «Берёзка-2» только для правления.</p>
+<form id="authForm" onsubmit="return false;">
 <input type="password" id="authPasswordInput" class="search-input" placeholder="Введите пароль" style="text-align:center;margin-bottom:10px;" autocomplete="current-password">
 <input type="password" id="authPasswordConfirm" class="search-input" placeholder="Повторите пароль" style="text-align:center;margin-bottom:10px;display:none;" autocomplete="new-password">
 <div id="authError" style="color:var(--red-600);font-size:.82rem;margin-bottom:8px;display:none;"></div>
-<button class="btn btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center;">Войти</button>
+<button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center;">Войти</button>
+</form>
 <p style="color:var(--gray-500);font-size:.72rem;margin-top:14px;">Пароль хранится только в этом браузере. Для полноценной защиты рекомендуется размещать приложение за серверной авторизацией (например, Basic Auth на хостинге или закрытый доступ к репозиторию с данными).</p>
 </div>
 </div>
@@ -1268,6 +1270,44 @@ class FinancialAnalyzer {
     }
 
 }
+// ===================== ЗАГРУЗКА С ТАЙМАУТОМ И РЕЗЕРВНЫМ CDN =====================
+// raw.githubusercontent.com у некоторых провайдеров блокируется/недоступен —
+// в этом случае автоматически пробуем тот же файл через jsDelivr CDN (cdn.jsdelivr.net),
+// который отдаёт содержимое GitHub-репозитория через другую инфраструктуру.
+const CDN_BASE_URL = 'https://cdn.jsdelivr.net/gh/zarazakill/vznos@main/';
+
+function toCdnUrl(url) {
+    if (url.indexOf(BASE_URL) === 0) return CDN_BASE_URL + url.slice(BASE_URL.length);
+    return null;
+}
+
+async function fetchWithTimeout(url, ms = 10000) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), ms);
+    try {
+        return await fetch(url, { signal: ctrl.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function fetchArrayBufferSmart(url) {
+    try {
+        addLog(`📥 Загрузка: ${url}`, 'loading');
+        const resp = await fetchWithTimeout(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        return await resp.arrayBuffer();
+    } catch (e) {
+        const cdnUrl = toCdnUrl(url);
+        if (!cdnUrl) throw e;
+        addLog(`⚠️ ${url} недоступен (${e.message || e.name}), пробуем через CDN...`, 'warning');
+        const resp2 = await fetchWithTimeout(cdnUrl);
+        if (!resp2.ok) throw new Error(`HTTP ${resp2.status} (CDN тоже недоступен)`);
+        addLog(`✅ Загружено через резервный CDN`, 'success');
+        return await resp2.arrayBuffer();
+    }
+}
+
 // ===================== РЕПОЗИТОРИИ ДАННЫХ =====================
 
 class BaseRepository {
@@ -1282,9 +1322,7 @@ class BaseRepository {
     }
 
     async fetchOdsRows(url) {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
-        const ab = await resp.arrayBuffer();
+        const ab = await fetchArrayBufferSmart(url);
         const wb = XLSX.read(ab, {type:'array'});
         const ws = wb.Sheets[wb.SheetNames[0]];
         return XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
@@ -1392,9 +1430,7 @@ class DebitRepository {
     }
 
     async fetchOdsRows(url){
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
-        const ab = await resp.arrayBuffer();
+        const ab = await fetchArrayBufferSmart(url);
         const wb = XLSX.read(ab,{type:'array'});
         return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
     }
@@ -1483,9 +1519,7 @@ class ElectricityRepository {
     }
 
     async fetchOdsRows(url){
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
-        const ab = await resp.arrayBuffer();
+        const ab = await fetchArrayBufferSmart(url);
         const wb = XLSX.read(ab,{type:'array'});
         return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
     }
@@ -1584,13 +1618,7 @@ class PlotPassportService {
 // ===================== ЗАГРУЗКА ДАННЫХ =====================
 async function fetchAndParseFile(url) {
     try {
-        addLog(`📥 Загрузка: ${url}`, 'loading');
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            addLog(`⚠️ Файл ${url} не найден (${resp.status})`, 'warning');
-            return [];
-        }
-        const ab = await resp.arrayBuffer();
+        const ab = await fetchArrayBufferSmart(url);
         const wb = XLSX.read(ab, {type:'array'});
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
