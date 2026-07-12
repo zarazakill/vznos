@@ -189,6 +189,9 @@ select.filter-sel:focus{border-color:var(--green-400);}
 .receipt-row-main{flex-wrap:wrap;gap:4px;}
 .receipt-row-controls{flex-direction:column;align-items:stretch !important;width:100%;margin-left:0 !important;margin-top:6px;gap:4px !important;}
 .receipt-purpose-inp{width:100% !important;}
+.receipt-category-sel{width:100% !important;}
+#receiptGroupFilters{gap:6px !important;}
+#receiptGroupFilters .btn{padding:6px 10px;font-size:.78rem;flex:1 1 auto;}
 .receipt-amount-row{display:flex;gap:6px;align-items:center;}
 .receipt-mode-sel{flex:1;}
 .receipt-amount-inp{width:90px;}
@@ -200,6 +203,8 @@ select.filter-sel:focus{border-color:var(--green-400);}
 .modal-footer{flex-wrap:wrap;gap:6px;padding:10px;}
 .modal-footer .btn{flex:1;min-width:100px;}
 }
+.receipt-filter-btn{background:var(--gray-100);color:var(--gray-700);}
+.receipt-filter-btn.active{background:var(--green-600);color:#fff;}
 .bar-wrap {
     width: 100%;
     height: 8px;
@@ -215,9 +220,20 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
+<div id="authOverlay" style="position:fixed;inset:0;background:linear-gradient(135deg,var(--green-700),var(--green-800));z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
+<div class="card" style="max-width:380px;width:100%;text-align:center;">
+<div style="font-size:2.4rem;margin-bottom:6px;">🌿</div>
+<div class="card-title" style="justify-content:center;font-size:1.15rem;" id="authTitle">Вход в систему</div>
+<p id="authSubtitle" style="color:var(--gray-600);font-size:.85rem;margin-bottom:16px;">Доступ к данным СНТ «Берёзка-2» только для правления.</p>
+<input type="password" id="authPasswordInput" class="search-input" placeholder="Введите пароль" style="text-align:center;margin-bottom:10px;" autocomplete="current-password">
+<input type="password" id="authPasswordConfirm" class="search-input" placeholder="Повторите пароль" style="text-align:center;margin-bottom:10px;display:none;" autocomplete="new-password">
+<div id="authError" style="color:var(--red-600);font-size:.82rem;margin-bottom:8px;display:none;"></div>
+<button class="btn btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center;">Войти</button>
+<p style="color:var(--gray-500);font-size:.72rem;margin-top:14px;">Пароль хранится только в этом браузере. Для полноценной защиты рекомендуется размещать приложение за серверной авторизацией (например, Basic Auth на хостинге или закрытый доступ к репозиторию с данными).</p>
+</div>
+</div>
 <div class="navbar">
 <div class="navbar-brand">🌿 СНТ «Берёзка-2» <span>v4.0</span></div>
 <div class="nav-tabs">
@@ -231,6 +247,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="navbar-right">
 <span id="navFileInfo" style="font-size:.78rem;color:rgba(255,255,255,.6);">⏳ Загрузка...</span>
 <button id="btnReloadData" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);">🔄 Обновить</button>
+<button id="btnLogout" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);">🔒 Выйти</button>
 </div>
 </div>
 
@@ -354,6 +371,14 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </label>
 <span id="receiptsSelectedBadge" class="badge badge-green">Выбрано: 0</span>
 </div>
+<div id="receiptGroupFilters" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+<button class="btn btn-sm receipt-filter-btn active" data-filter="all">Все участки</button>
+<button class="btn btn-sm receipt-filter-btn" data-filter="debt">💸 С долгом</button>
+<button class="btn btn-sm receipt-filter-btn" data-filter="nodebt">✅ Без долга</button>
+<button class="btn btn-sm receipt-filter-btn" data-filter="electricity">⚡ Долг по э/э</button>
+<button class="btn btn-sm receipt-filter-btn" data-filter="member">👥 Члены СНТ</button>
+<button class="btn btn-sm receipt-filter-btn" data-filter="nonmember">🚫 Не члены</button>
+</div>
 <div class="plots-list" id="receiptPlotsList" style="max-height:380px;"></div>
 <div class="receipt-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center;">
 <button class="btn btn-primary" id="printSelectedReceiptsBtn">🖨 Печать выбранных</button>
@@ -366,93 +391,6 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 </div>
-</div>
-
-<!-- Блок оплаты по соткам -->
-<div class="card" style="margin-top:20px;">
-<div class="card-title">🌿 Оплата по площади участка</div>
-<div id="sotkaPaymentBlock" style="display:none;">
-<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px;">
-<div style="flex:1;min-width:200px;">
-<div style="font-size:.85rem;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Выберите участки для оплаты по соткам:</div>
-<div id="sotkaPlotsList" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px;">
-<div style="color:var(--gray-500);font-size:.85rem;">Загрузите данные...</div>
-</div>
-</div>
-<div style="min-width:220px;">
-<div style="background:var(--green-50);border-radius:var(--radius);padding:12px;margin-bottom:10px;">
-<div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;">💰 Стоимость за сотку</div>
-<div style="font-size:1.4rem;font-weight:700;color:var(--green-700);" id="sotkaPriceDisplay">1748.26 ₽</div>
-<div style="font-size:.75rem;color:var(--gray-500);margin-top:2px;">Изменить в настройках</div>
-</div>
-<div style="background:var(--blue-50);border-radius:var(--radius);padding:12px;">
-<div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;">📊 Итого к оплате</div>
-<div style="font-size:1.6rem;font-weight:700;color:var(--blue-700);" id="sotkaTotalDisplay">0.00 ₽</div>
-<div style="font-size:.75rem;color:var(--gray-500);margin-top:4px;" id="sotkaDetailDisplay">0 соток × 0 ₽</div>
-</div>
-</div>
-</div>
-<div style="display:flex;gap:8px;flex-wrap:wrap;">
-<button class="btn btn-primary" id="addSotkaToReceiptsBtn">➕ Добавить в квитанции</button>
-<button class="btn btn-secondary btn-sm" id="clearSotkaSelectionBtn">✕ Сбросить выбор</button>
-</div>
-</div>
-<div id="sotkaNoData" class="empty-state" style="padding:30px;">
-<div class="icon">📭</div>
-<p>Загрузите данные на вкладке «Дашборд»</p>
-</div>
-</div>
-
-<!-- Блок оплаты электроэнергии -->
-<div class="card" style="margin-top:20px;">
-<div class="card-title">⚡ Оплата электроэнергии</div>
-<div id="eePaymentBlock" style="display:none;">
-<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start;margin-bottom:12px;">
-<div style="flex:1;min-width:200px;">
-<div style="font-size:.85rem;font-weight:600;color:var(--gray-700);margin-bottom:8px;">Выберите участок для ввода показаний:</div>
-<div id="eePlotsList" style="max-height:200px;overflow-y:auto;border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px;">
-<div style="color:var(--gray-500);font-size:.85rem;">Загрузите данные...</div>
-</div>
-</div>
-<div style="min-width:260px;">
-<div style="background:var(--orange-50);border-radius:var(--radius);padding:12px;margin-bottom:10px;">
-<div style="font-size:.8rem;color:var(--gray-600);margin-bottom:4px;">⚡ Тариф за кВт·ч</div>
-<div style="font-size:1.4rem;font-weight:700;color:var(--orange-700);" id="eePriceDisplay">3.82 ₽</div>
-<div style="font-size:.75rem;color:var(--gray-500);margin-top:2px;">Изменить в настройках</div>
-</div>
-<div id="eeCalcPanel" style="background:var(--gray-50);border-radius:var(--radius);padding:12px;display:none;">
-<div style="font-size:.85rem;font-weight:600;color:var(--gray-800);margin-bottom:8px;">Расчёт для участка <span id="eeCalcPlotNum"></span></div>
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-<div>
-<div style="font-size:.75rem;color:var(--gray-500);margin-bottom:2px;">Последние оплаченные</div>
-<input type="number" id="eePrevReading" class="setting-input" style="width:100%;" step="0.01" placeholder="0.00">
-</div>
-<div>
-<div style="font-size:.75rem;color:var(--gray-500);margin-bottom:2px;">Текущие показания</div>
-<input type="number" id="eeCurrReading" class="setting-input" style="width:100%;" step="0.01" placeholder="0.00">
-</div>
-</div>
-<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-<div style="flex:1;">
-<div style="font-size:.75rem;color:var(--gray-500);">Расход кВт·ч</div>
-<div style="font-size:1.2rem;font-weight:700;color:var(--gray-800);" id="eeConsumptionDisplay">0.00</div>
-</div>
-<div style="flex:1;">
-<div style="font-size:.75rem;color:var(--gray-500);">Сумма к оплате</div>
-<div style="font-size:1.4rem;font-weight:700;color:var(--green-700);" id="eeAmountDisplay">0.00 ₽</div>
-</div>
-</div>
-<button class="btn btn-primary btn-sm" id="addEeToReceiptsBtn" style="width:100%;">➕ Добавить в квитанцию</button>
-</div>
-</div>
-</div>
-</div>
-<div id="eeNoData" class="empty-state" style="padding:30px;">
-<div class="icon">📭</div>
-<p>Загрузите данные на вкладке «Дашборд»</p>
-</div>
-</div>
-
 </div>
 <div class="modal-overlay" id="receiptModal">
 <div class="modal-box">
@@ -601,7 +539,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 <div style="display:flex;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;">
 <span id="financeTableInfo" style="font-size:.85rem;color:var(--gray-600);"></span>
-<button class="btn btn-blue btn-sm" id="exportFinanceCsv">📊 Экспорт Excel</button>
+<button class="btn btn-secondary btn-sm" id="exportFinanceCsv">📄 Экспорт CSV</button>
 </div>
 </div>
 </div>
@@ -663,15 +601,11 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 <div class="card">
-<div class="card-title">⚙️ Тарифы и расчёты</div>
+<div class="card-title">🔒 Безопасность</div>
 <div class="settings-section">
 <div class="setting-row">
-<div class="setting-label"><p>Стоимость за сотку участка</p><small>Используется для расчёта платы по площади в квитанциях</small></div>
-<input class="setting-input" id="setPricePerSotka" value="1748.26" style="width:140px;"> руб.
-</div>
-<div class="setting-row">
-<div class="setting-label"><p>Стоимость за кВт·ч электроэнергии</p><small>Тариф для расчёта оплаты электроэнергии</small></div>
-<input class="setting-input" id="setPricePerKwt" value="3.82" style="width:140px;"> руб.
+<div class="setting-label"><p>Пароль доступа</p><small>Требуется при входе в приложение в этом браузере</small></div>
+<button class="btn btn-secondary btn-sm" id="changePasswordBtn">🔑 Сменить пароль</button>
 </div>
 </div>
 </div>
@@ -687,6 +621,85 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 <script>
+// ===================== ПРОСТАЯ АВТОРИЗАЦИЯ =====================
+// ВНИМАНИЕ: это клиентская защита от случайного просмотра посторонними
+// (ссылку не открыть без пароля), а не полноценная серверная авторизация —
+// сам файл и код всё равно можно скачать и посмотреть в исходниках.
+// Для более надёжной защиты рекомендуется закрыть доступ на уровне хостинга
+// (Basic Auth, приватный репозиторий/прокси и т.п.).
+async function sha256Hex(text) {
+    const enc = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function showAuthError(msg) {
+    const el = document.getElementById('authError');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+function hideAuthOverlay() {
+    document.getElementById('authOverlay').style.display = 'none';
+}
+
+function initAuthGate() {
+    const overlay = document.getElementById('authOverlay');
+    const hasPass = !!localStorage.getItem('snt_pass_hash');
+    const authed = sessionStorage.getItem('snt_authed') === '1';
+
+    if (authed) {
+        overlay.style.display = 'none';
+        startApp();
+        return;
+    }
+
+    const titleEl = document.getElementById('authTitle');
+    const subEl = document.getElementById('authSubtitle');
+    const confirmInp = document.getElementById('authPasswordConfirm');
+    const submitBtn = document.getElementById('authSubmitBtn');
+    const passInp = document.getElementById('authPasswordInput');
+
+    if (!hasPass) {
+        titleEl.textContent = 'Установите пароль доступа';
+        subEl.textContent = 'Пароль ещё не задан. Придумайте его — он понадобится при следующих входах в этом браузере.';
+        confirmInp.style.display = 'block';
+        submitBtn.textContent = 'Задать пароль и войти';
+    } else {
+        titleEl.textContent = 'Вход в систему';
+        subEl.textContent = 'Доступ к данным СНТ «Берёзка-2» только для правления.';
+        confirmInp.style.display = 'none';
+        submitBtn.textContent = 'Войти';
+    }
+
+    submitBtn.onclick = async () => {
+        const pass = passInp.value;
+        document.getElementById('authError').style.display = 'none';
+        if (!pass || pass.length < 4) { showAuthError('Пароль должен быть не короче 4 символов'); return; }
+
+        if (!localStorage.getItem('snt_pass_hash')) {
+            if (pass !== confirmInp.value) { showAuthError('Пароли не совпадают'); return; }
+            localStorage.setItem('snt_pass_hash', await sha256Hex(pass));
+            sessionStorage.setItem('snt_authed', '1');
+            hideAuthOverlay();
+            startApp();
+            return;
+        }
+
+        const hash = await sha256Hex(pass);
+        if (hash === localStorage.getItem('snt_pass_hash')) {
+            sessionStorage.setItem('snt_authed', '1');
+            hideAuthOverlay();
+            startApp();
+        } else {
+            showAuthError('Неверный пароль');
+        }
+    };
+
+    passInp.onkeydown = (e) => { if (e.key === 'Enter' && confirmInp.style.display === 'none') submitBtn.click(); };
+    confirmInp.onkeydown = (e) => { if (e.key === 'Enter') submitBtn.click(); };
+}
+
 // ===================== ЛОГГЕР =====================
 const logContainer = document.getElementById('logContainer');
 function addLog(msg, type='info') {
@@ -717,6 +730,7 @@ let allPlotsAll = []; // все участки, без фильтра по до�
 let filteredPlots = [];
 let selectedIds = new Set();
 let receiptSelectedIds = new Set();
+let receiptGroupFilter = 'all'; // all | debt | nodebt | electricity | member | nonmember
 const receiptCustomAmounts = new Map(); // plotId -> {amount, mode, purpose} mode: 'debt'|'advance'|'custom'
 let sortCol = 'totalDebt';
 let sortDir = -1;
@@ -742,8 +756,6 @@ let CFG = {
   showQr: localStorage.getItem('snt_QR') !== '0',
   duplicate: localStorage.getItem('snt_Dup') !== '0',
   minDebt: parseFloat(localStorage.getItem('snt_MinDebt') || '0.01'),
-  pricePerSotka: parseFloat(localStorage.getItem('snt_PricePerSotka') || '1748.26'),
-  pricePerKwt: parseFloat(localStorage.getItem('snt_PricePerKwt') || '3.82'),
 };
 
 // ===================== ФИНАНСОВЫЙ АНАЛИЗАТОР =====================
@@ -1310,17 +1322,28 @@ class BaseRepository {
         const headerRow = rows[headerIdx] || [];
         addLog(`📋 Заголовок: ${headerRow.join(' | ')}`, 'info');
 
+        // ВАЖНО: порядок проверок имеет значение — сначала самые специфичные заголовки
+        // (кадастровый номер, площадь участка), иначе общее правило "содержит 'участок'"
+        // перехватывает их и ломает определение колонки с номером участка.
         const colMap = { plotNumber: 0, owner: 1 };
         headerRow.forEach((cell, idx) => {
             const val = String(cell || '').toLowerCase().trim();
-            if (val.includes('номер') || val === '№' || val.includes('участок')) colMap.plotNumber = idx;
-            else if (val.includes('владелец') || val.includes('фио')) colMap.owner = idx;
-            else if (val.includes('телефон')) colMap.phone = idx;
-            else if (val.includes('email')) colMap.email = idx;
-            else if (val.includes('адрес')) colMap.plotAddress = idx;
-            else if (val.includes('площадь')) colMap.area = idx;
+            if (!val) return;
+            if (val.includes('кадастров')) { colMap.cadastral = idx; return; }
+            if (val.includes('площадь')) { colMap.area = idx; return; }
+            if (val.includes('членств')) { colMap.membership = idx; return; }
+            if (val.includes('вид собственност')) { colMap.ownershipType = idx; return; }
+            if (val.includes('доля')) { colMap.share = idx; return; }
+            if (val.includes('дата приобретен')) { colMap.acquisitionDate = idx; return; }
+            if (val.includes('юридический адрес')) { colMap.legalAddress = idx; return; }
+            if (val.includes('почтовый адрес')) { colMap.postalAddress = idx; return; }
+            if (val.includes('адрес участка') || (val.includes('адрес') && val.includes('участ'))) { colMap.plotAddress = idx; return; }
+            if (val.includes('номер') || val === '№' || val.includes('участок')) { colMap.plotNumber = idx; return; }
+            if (val.includes('владелец') || val.includes('фио')) { colMap.owner = idx; return; }
+            if (val.includes('телефон')) { colMap.phone = idx; return; }
+            if (val.includes('почта') || val.includes('e-mail') || val.includes('email')) { colMap.email = idx; return; }
         });
-        addLog(`📌 Колонки: номер=${colMap.plotNumber}, владелец=${colMap.owner}`, 'info');
+        addLog(`📌 Колонки: номер=${colMap.plotNumber}, владелец=${colMap.owner}, членство=${colMap.membership}, площадь=${colMap.area}, кадастр=${colMap.cadastral}`, 'info');
 
         let count = 0;
         for(let i = headerIdx + 1; i < rows.length; i++) {
@@ -1330,6 +1353,8 @@ class BaseRepository {
             if (!plotRaw) continue;
             if (plotRaw.toLowerCase() === 'итого' || plotRaw.toLowerCase() === 'всего') continue;
             const key = plotRaw.toLowerCase();
+            const membershipRaw = colMap.membership !== undefined ? String(row[colMap.membership] || '').trim() : '';
+            const isMember = !!membershipRaw && !membershipRaw.toLowerCase().includes('не является');
             this.data.set(key, {
                 plotNumber: String(plotRaw),
                 owner: String(row[colMap.owner] || ''),
@@ -1337,6 +1362,14 @@ class BaseRepository {
                 email: colMap.email !== undefined ? String(row[colMap.email] || '') : '',
                 plotAddress: colMap.plotAddress !== undefined ? String(row[colMap.plotAddress] || '') : '',
                 area: colMap.area !== undefined ? String(row[colMap.area] || '') : '',
+                cadastral: colMap.cadastral !== undefined ? String(row[colMap.cadastral] || '') : '',
+                membershipRaw: membershipRaw,
+                isMember: isMember,
+                ownershipType: colMap.ownershipType !== undefined ? String(row[colMap.ownershipType] || '') : '',
+                share: colMap.share !== undefined ? String(row[colMap.share] || '') : '',
+                acquisitionDate: colMap.acquisitionDate !== undefined ? String(row[colMap.acquisitionDate] || '') : '',
+                legalAddress: colMap.legalAddress !== undefined ? String(row[colMap.legalAddress] || '') : '',
+                postalAddress: colMap.postalAddress !== undefined ? String(row[colMap.postalAddress] || '') : '',
             });
             count++;
         }
@@ -1695,6 +1728,8 @@ function buildAllPlotsForReceipts() {
             id,
             plotNumber: String(plotNum),
             payerName: base.owner || '—',
+            isMember: !!base.isMember,
+            hasMembershipInfo: !!base.membershipRaw,
             totalDebt: d.totalDebt || 0,
             membershipSum: d.membership || 0,
             targetSum: d.target || 0,
@@ -1718,6 +1753,8 @@ function buildAllPlotsForReceipts() {
             id: `${d.plotNumber}_${d.owner}`,
             plotNumber: String(d.plotNumber),
             payerName: base.owner || d.owner || '—',
+            isMember: !!base.isMember,
+            hasMembershipInfo: !!base.membershipRaw,
             totalDebt: d.totalDebt || 0,
             membershipSum: d.membership || 0,
             targetSum: d.target || 0,
@@ -1751,8 +1788,6 @@ function onDataLoaded() {
     renderDashboard();
     renderDebtorsTable();
     renderReceiptsList();
-    renderSotkaBlock();
-    renderEeBlock();
     setDefaultDates();
     renderPassportList();
 }
@@ -2152,7 +2187,15 @@ function renderReceiptsList() {
     const search = document.getElementById('receiptSearchInput').value.toLowerCase();
     const listEl = document.getElementById('receiptPlotsList');
     const source = allPlotsAll.length ? allPlotsAll : allPlots;
-    const plots = source.filter(p => !search || p.plotNumber.toLowerCase().includes(search) || p.payerName.toLowerCase().includes(search));
+    let plots = source.filter(p => !search || p.plotNumber.toLowerCase().includes(search) || p.payerName.toLowerCase().includes(search));
+    switch (receiptGroupFilter) {
+        case 'debt': plots = plots.filter(p => p.totalDebt > 0); break;
+        case 'nodebt': plots = plots.filter(p => !(p.totalDebt > 0)); break;
+        case 'electricity': plots = plots.filter(p => p.electricitySum > 0); break;
+        case 'member': plots = plots.filter(p => p.isMember); break;
+        case 'nonmember': plots = plots.filter(p => p.hasMembershipInfo && !p.isMember); break;
+        default: break;
+    }
 
     listEl.innerHTML = plots.map(p => {
         const sel = receiptSelectedIds.has(p.id);
@@ -2172,6 +2215,16 @@ function renderReceiptsList() {
                 <button class="btn btn-outline btn-sm preview-receipt-btn receipt-row-btn" data-id="${p.id}" style="padding:4px 10px;flex-shrink:0;" onclick="event.stopPropagation()">👁</button>
             </div>
             <div class="receipt-row-controls" style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap;" onclick="event.stopPropagation()">
+                <select class="receipt-category-sel" data-id="${p.id}"
+                    style="font-size:.8rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;background:var(--gray-50);cursor:pointer;flex-shrink:0;">
+                    <option value="">Назначение…</option>
+                    <option value="Членские взносы">Членские взносы</option>
+                    <option value="Целевые взносы">Целевые взносы</option>
+                    <option value="Электроэнергия">⚡ Электроэнергия</option>
+                    <option value="Задолженность прошлых лет">Задолж. прошлых лет</option>
+                    <option value="Отработка">Отработка</option>
+                    <option value="Авансовый платёж">Авансовый платёж</option>
+                </select>
                 <input type="text" class="receipt-purpose-inp" data-id="${p.id}"
                     value="${escapeHtml(saved.purpose || '')}"
                     placeholder="Назначение платежа (необязательно)"
@@ -2242,6 +2295,19 @@ function renderReceiptsList() {
         inp.addEventListener('click', e => e.stopPropagation());
     });
 
+    document.querySelectorAll('.receipt-category-sel').forEach(sel => {
+        sel.addEventListener('change', () => {
+            if (!sel.value) return;
+            const id = sel.dataset.id;
+            const purposeInp = document.querySelector(`.receipt-purpose-inp[data-id="${id}"]`);
+            if (purposeInp) {
+                purposeInp.value = sel.value;
+                purposeInp.dispatchEvent(new Event('input'));
+            }
+        });
+        sel.addEventListener('click', e => e.stopPropagation());
+    });
+
     document.querySelectorAll('.receipt-purpose-inp').forEach(inp => {
         inp.addEventListener('input', () => {
             const id = inp.dataset.id;
@@ -2278,6 +2344,15 @@ function renderReceiptsList() {
 }
 
 document.getElementById('receiptSearchInput').addEventListener('input', renderReceiptsList);
+
+document.querySelectorAll('.receipt-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.receipt-filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        receiptGroupFilter = btn.dataset.filter;
+        renderReceiptsList();
+    });
+});
 
 document.getElementById('receiptsSelectAll').addEventListener('change', e => {
     const source = allPlotsAll.length ? allPlotsAll : allPlots;
@@ -2636,9 +2711,13 @@ function renderPassportList() {
         const ownerName = String((base && base.owner) || (p.debit && p.debit.owner) || (p.ee && p.ee.owner) || '—');
         const debtAmt = p.debit ? p.debit.totalDebt : 0;
         const debtClass = debtAmt === 0 ? 'none' : (debtAmt < 1000 ? 'low' : 'high');
+        const memberBadge = base && base.membershipRaw
+            ? `<span class="badge ${base.isMember ? 'badge-green' : 'badge-gray'}" style="margin-right:6px;">${base.isMember ? 'Член СНТ' : 'Не член'}</span>`
+            : '';
         return `<div class="plot-row" data-plot="${p.plotNumber}">
             <span class="plot-num-badge">Уч. ${p.plotNumber}</span>
             <span style="flex:1;">${escapeHtml(ownerName)}</span>
+            ${memberBadge}
             <span class="debt-badge ${debtClass}">${debtAmt > 0 ? debtAmt.toFixed(2) + ' ₽' : 'нет долга'}</span>
         </div>`;
     }).join('');
@@ -2664,23 +2743,34 @@ function renderPassportDetail(pass) {
     const overpay = debit.overpayEnd || 0;
     const area = base.area || '—';
 
+    const memberBadgeHtml = base.membershipRaw
+        ? `<span class="badge ${base.isMember ? 'badge-green' : 'badge-gray'}">${base.isMember ? '✅ Член СНТ' : '⛔ Не является членом'}</span>`
+        : `<span class="badge badge-gray">Нет данных о членстве</span>`;
+
     document.getElementById('kpiRow').innerHTML = `
         <div class="kpi-card ${debtTotal > 0 ? 'debt' : ''}"><div class="kpi-label">💸 Общая задолженность</div><div class="kpi-value">${debtTotal.toFixed(2)} ₽</div></div>
         <div class="kpi-card ${electricityDebt > 0 ? 'debt' : ''}"><div class="kpi-label">⚡ Задолженность э/э</div><div class="kpi-value">${electricityDebt.toFixed(2)} ₽</div></div>
         <div class="kpi-card"><div class="kpi-label">🔄 Переплата</div><div class="kpi-value">${overpay > 0 ? overpay.toFixed(2) + ' ₽' : '—'}</div></div>
-        <div class="kpi-card"><div class="kpi-label">📐 Площадь</div><div class="kpi-value">${area}</div></div>
+        <div class="kpi-card"><div class="kpi-label">📐 Площадь</div><div class="kpi-value">${area}${base.area ? ' сот.' : ''}</div></div>
     `;
 
     document.getElementById('tabGeneral').innerHTML = `
         <div class="info-row"><div class="info-label">Номер участка:</div><div class="info-value">${escapeHtml(String(base.plotNumber || pass.plotNumber))}</div></div>
         <div class="info-row"><div class="info-label">Владелец:</div><div class="info-value">${escapeHtml(String(base.owner || '—'))}</div></div>
-        <div class="info-row"><div class="info-label">Адрес:</div><div class="info-value">${escapeHtml(String(base.plotAddress || '—'))}</div></div>
-        <div class="info-row"><div class="info-label">Площадь:</div><div class="info-value">${escapeHtml(String(base.area || '—'))}</div></div>
+        <div class="info-row"><div class="info-label">Членство в СНТ:</div><div class="info-value">${memberBadgeHtml}${base.membershipRaw ? ' <span style="color:var(--gray-500);font-size:.85rem;">('+escapeHtml(base.membershipRaw)+')</span>' : ''}</div></div>
+        <div class="info-row"><div class="info-label">Адрес участка:</div><div class="info-value">${escapeHtml(String(base.plotAddress || '—'))}</div></div>
+        <div class="info-row"><div class="info-label">Площадь:</div><div class="info-value">${escapeHtml(String(base.area || '—'))}${base.area ? ' сот.' : ''}</div></div>
+        <div class="info-row"><div class="info-label">Кадастровый номер:</div><div class="info-value">${escapeHtml(String(base.cadastral || '—'))}</div></div>
+        <div class="info-row"><div class="info-label">Вид собственности:</div><div class="info-value">${escapeHtml(String(base.ownershipType || '—'))}${base.share ? ' (доля: '+escapeHtml(String(base.share))+')' : ''}</div></div>
+        <div class="info-row"><div class="info-label">Дата приобретения:</div><div class="info-value">${escapeHtml(String(base.acquisitionDate || '—'))}</div></div>
     `;
 
     let ownersHtml = `<div class="info-row"><div class="info-label">Основной владелец:</div><div class="info-value">${escapeHtml(String(base.owner || '—'))}</div></div>`;
+    ownersHtml += `<div class="info-row"><div class="info-label">Членство в СНТ:</div><div class="info-value">${memberBadgeHtml}</div></div>`;
     if(base.phone) ownersHtml += `<div class="info-row"><div class="info-label">Телефон:</div><div class="info-value">${escapeHtml(String(base.phone))}</div></div>`;
     if(base.email) ownersHtml += `<div class="info-row"><div class="info-label">E-mail:</div><div class="info-value">${escapeHtml(String(base.email))}</div></div>`;
+    if(base.legalAddress) ownersHtml += `<div class="info-row"><div class="info-label">Юридический адрес:</div><div class="info-value">${escapeHtml(String(base.legalAddress))}</div></div>`;
+    if(base.postalAddress) ownersHtml += `<div class="info-row"><div class="info-label">Почтовый адрес:</div><div class="info-value">${escapeHtml(String(base.postalAddress))}</div></div>`;
     document.getElementById('tabOwners').innerHTML = ownersHtml || '<div>Нет данных</div>';
 
     let financeHtml = `
@@ -3098,50 +3188,25 @@ document.getElementById('exportFinanceCsv').addEventListener('click', () => {
         return;
     }
 
-    // Собираем данные как в таблице
-    const data = [['Дата', 'Месяц', 'Контрагент', 'Назначение', 'Категория', 'Сумма', 'Тип']];
-
+    let csv = 'Дата,Контрагент,Назначение,Категория,Сумма,Тип\n';
     rows.forEach(row => {
         const cells = row.querySelectorAll('td');
         if (cells.length >= 6) {
-            const dateParts = cells[0].innerHTML.split('<br>');
-            const date = dateParts[0] ? dateParts[0].trim() : '';
-            const month = dateParts[1] ? dateParts[1].replace(/<[^>]*>/g, '').trim() : '';
+            const date = cells[0].textContent.trim().split('\n')[0];
             const counterparty = cells[1].textContent.trim();
             const purpose = cells[2].textContent.trim();
             const category = cells[3].textContent.trim();
-            const amountText = cells[4].textContent.trim().replace(/[+\−\s]/g, '').replace('₽', '').trim();
-            const amount = parseFloat(amountText.replace(/\s/g, '').replace(',', '.')) || 0;
+            const amount = cells[4].textContent.trim();
             const type = cells[5].textContent.trim();
-
-            data.push([date, month, counterparty, purpose, category, amount, type]);
+            csv += `"${date}","${counterparty}","${purpose}","${category}","${amount}","${type}"\n`;
         }
     });
 
-    // Создаём workbook с форматированием
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(data);
-
-    // Задаём ширину колонок
-    ws['!cols'] = [
-        {wch: 12},  // Дата
-        {wch: 10},  // Месяц
-        {wch: 25},  // Контрагент
-        {wch: 45},  // Назначение
-        {wch: 22},  // Категория
-        {wch: 14},  // Сумма
-        {wch: 10}   // Тип
-    ];
-
-    // Фиксируем заголовок
-    ws['!freeze'] = { xSplit: 0, ySplit: 1 };
-
-    // Добавляем автофильтр
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    ws['!autofilter'] = { ref: ws['!ref'] };
-
-    XLSX.utils.book_append_sheet(wb, ws, 'Финансы');
-    XLSX.writeFile(wb, `finansy_snt_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'finansy_snt.csv';
+    a.click();
 });
 // ===================== НАСТРОЙКИ =====================
 function initSettings() {
@@ -3155,8 +3220,6 @@ function initSettings() {
     document.getElementById('setQrToggle').checked = CFG.showQr;
     document.getElementById('setDuplicateToggle').checked = CFG.duplicate;
     document.getElementById('setMinDebt').value = CFG.minDebt;
-    document.getElementById('setPricePerSotka').value = CFG.pricePerSotka;
-    document.getElementById('setPricePerKwt').value = CFG.pricePerKwt;
 }
 
 document.getElementById('saveSettingsBtn').onclick = () => {
@@ -3178,9 +3241,6 @@ document.getElementById('saveSettingsBtn').onclick = () => {
         document.getElementById('setMinDebt').value = CFG.minDebt;
     }
 
-    CFG.pricePerSotka = parseFloat(document.getElementById('setPricePerSotka').value) || 1748.26;
-    CFG.pricePerKwt = parseFloat(document.getElementById('setPricePerKwt').value) || 3.82;
-
     localStorage.setItem('snt_Name', REQ.Name);
     localStorage.setItem('snt_INN', REQ.PayeeINN);
     localStorage.setItem('snt_Acc', REQ.PersonalAcc);
@@ -3191,8 +3251,6 @@ document.getElementById('saveSettingsBtn').onclick = () => {
     localStorage.setItem('snt_QR', CFG.showQr ? '1' : '0');
     localStorage.setItem('snt_Dup', CFG.duplicate ? '1' : '0');
     localStorage.setItem('snt_MinDebt', CFG.minDebt);
-    localStorage.setItem('snt_PricePerSotka', CFG.pricePerSotka);
-    localStorage.setItem('snt_PricePerKwt', CFG.pricePerKwt);
 
     // Применяем фильтр минимального долга
     if (allPlots.length > 0) {
@@ -3246,216 +3304,6 @@ document.getElementById('clearDataBtn').onclick = () => {
     addLog('🗑 Данные очищены пользователем', 'info');
 };
 
-// ===================== ОПЛАТА ПО СОТКАМ =====================
-function renderSotkaBlock() {
-    const block = document.getElementById('sotkaPaymentBlock');
-    const noData = document.getElementById('sotkaNoData');
-    const list = document.getElementById('sotkaPlotsList');
-    const priceDisplay = document.getElementById('sotkaPriceDisplay');
-
-    if (!allPlotsAll.length) {
-        block.style.display = 'none';
-        noData.style.display = '';
-        return;
-    }
-
-    block.style.display = '';
-    noData.style.display = 'none';
-    priceDisplay.textContent = CFG.pricePerSotka.toFixed(2) + ' ₽';
-
-    // Получаем участки с площадью из base
-    const plotsWithArea = allPlotsAll.map(p => {
-        const base = baseRepo.get(String(p.plotNumber).toLowerCase());
-        const areaStr = base ? base.area : '';
-        const area = parseFloat(areaStr) || 0;
-        return { ...p, area, areaStr };
-    }).filter(p => p.area > 0);
-
-    if (!plotsWithArea.length) {
-        list.innerHTML = '<div style="color:var(--gray-500);font-size:.85rem;">Нет данных о площади участков</div>';
-        return;
-    }
-
-    list.innerHTML = plotsWithArea.map(p => `
-        <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--gray-100);transition:.15s;" onmouseover="this.style.background='var(--green-50)'" onmouseout="this.style.background=''">
-            <input type="checkbox" class="sotka-plot-cb" data-plot="${p.plotNumber}" data-area="${p.area}" style="width:16px;height:16px;accent-color:var(--green-600);flex-shrink:0;">
-            <span style="flex:1;font-size:.85rem;min-width:60px;">Уч. ${p.plotNumber}</span>
-            <span style="font-size:.82rem;color:var(--gray-600);flex:1;min-width:80px;">${p.payerName}</span>
-            <span style="font-size:.82rem;color:var(--gray-500);min-width:50px;text-align:right;">${p.areaStr} сот.</span>
-            <span style="font-size:.85rem;font-weight:600;color:var(--green-700);min-width:85px;text-align:right;">${(p.area * CFG.pricePerSotka).toFixed(2)} ₽</span>
-        </label>
-    `).join('');
-
-    updateSotkaTotal();
-
-    document.querySelectorAll('.sotka-plot-cb').forEach(cb => {
-        cb.addEventListener('change', updateSotkaTotal);
-    });
-}
-
-function updateSotkaTotal() {
-    const checked = document.querySelectorAll('.sotka-plot-cb:checked');
-    let totalSotok = 0;
-    let totalSum = 0;
-    checked.forEach(cb => {
-        const area = parseFloat(cb.dataset.area) || 0;
-        totalSotok += area;
-        totalSum += area * CFG.pricePerSotka;
-    });
-    document.getElementById('sotkaTotalDisplay').textContent = totalSum.toFixed(2) + ' ₽';
-    document.getElementById('sotkaDetailDisplay').textContent = `${totalSotok.toFixed(2)} сот. × ${CFG.pricePerSotka.toFixed(2)} ₽`;
-}
-
-document.getElementById('clearSotkaSelectionBtn').addEventListener('click', () => {
-    document.querySelectorAll('.sotka-plot-cb').forEach(cb => cb.checked = false);
-    updateSotkaTotal();
-});
-
-document.getElementById('addSotkaToReceiptsBtn').addEventListener('click', () => {
-    const checked = document.querySelectorAll('.sotka-plot-cb:checked');
-    if (!checked.length) {
-        alert('Выберите участки');
-        return;
-    }
-
-    let added = 0;
-    checked.forEach(cb => {
-        const plotNum = cb.dataset.plot;
-        const area = parseFloat(cb.dataset.area) || 0;
-        const amount = area * CFG.pricePerSotka;
-
-        const plot = allPlotsAll.find(p => p.plotNumber === plotNum);
-        if (!plot) return;
-
-        const purpose = `Оплата по площади: ${area} сот. × ${CFG.pricePerSotka} ₽ = ${amount.toFixed(2)} ₽`;
-
-        const existing = receiptCustomAmounts.get(plot.id) || { amount: plot.totalDebt, mode: 'debt', purpose: '' };
-        const newAmount = existing.mode === 'debt' ? amount : existing.amount + amount;
-        const newPurpose = existing.purpose ? existing.purpose + '; ' + purpose : purpose;
-
-        receiptCustomAmounts.set(plot.id, {
-            amount: newAmount,
-            mode: newAmount === plot.totalDebt ? 'debt' : 'custom',
-            purpose: newPurpose
-        });
-        added++;
-    });
-
-    renderReceiptsList();
-    alert(`Добавлено ${added} участков для оплаты по соткам`);
-});
-
-// ===================== ОПЛАТА ЭЛЕКТРОЭНЕРГИИ =====================
-let selectedEePlot = null;
-let eePlotData = new Map(); // plotNumber -> {prevReading, currReading}
-
-function renderEeBlock() {
-    const block = document.getElementById('eePaymentBlock');
-    const noData = document.getElementById('eeNoData');
-    const list = document.getElementById('eePlotsList');
-    const priceDisplay = document.getElementById('eePriceDisplay');
-
-    if (!allPlotsAll.length) {
-        block.style.display = 'none';
-        noData.style.display = '';
-        return;
-    }
-
-    block.style.display = '';
-    noData.style.display = 'none';
-    priceDisplay.textContent = CFG.pricePerKwt.toFixed(2) + ' ₽';
-
-    list.innerHTML = allPlotsAll.map(p => {
-        const ee = eeRepo.get(String(p.plotNumber).toLowerCase());
-        const lastReading = ee ? (ee.currReading || 0) : 0;
-        const lastDate = ee ? (ee.readingDate || '') : '';
-        const isSelected = selectedEePlot === p.plotNumber;
-        return `
-        <div class="ee-plot-row" data-plot="${p.plotNumber}" style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid var(--gray-100);cursor:pointer;transition:.15s;background:${isSelected ? 'var(--green-50)' : ''};" onmouseover="if(!this.style.background)this.style.background='var(--gray-50)'" onmouseout="if(this.style.background!=='rgb(240, 247, 240)')this.style.background=''">
-            <span class="plot-num-badge" style="min-width:55px;flex-shrink:0;">Уч. ${p.plotNumber}</span>
-            <span style="flex:1;font-size:.85rem;min-width:80px;">${p.payerName}</span>
-            <span style="font-size:.78rem;color:var(--gray-500);min-width:90px;text-align:right;">${lastDate ? lastDate : '—'}</span>
-            <span style="font-size:.85rem;font-weight:600;color:var(--blue-600);min-width:85px;text-align:right;">${lastReading > 0 ? lastReading.toFixed(2) + ' кВт' : '—'}</span>
-        </div>`;
-    }).join('');
-
-    document.querySelectorAll('.ee-plot-row').forEach(row => {
-        row.addEventListener('click', () => selectEePlot(row.dataset.plot));
-    });
-}
-
-function selectEePlot(plotNumber) {
-    selectedEePlot = plotNumber;
-
-    // Подсвечиваем выбранный
-    document.querySelectorAll('.ee-plot-row').forEach(r => {
-        r.style.background = r.dataset.plot === plotNumber ? 'var(--green-50)' : '';
-    });
-
-    // Получаем данные
-    const ee = eeRepo.get(String(plotNumber).toLowerCase());
-
-    // Последние оплаченные показания — из ee или 0
-    const lastPaid = ee ? (ee.currReading || 0) : 0;
-
-    document.getElementById('eeCalcPanel').style.display = '';
-    document.getElementById('eeCalcPlotNum').textContent = plotNumber;
-    document.getElementById('eePrevReading').value = lastPaid.toFixed(2);
-    document.getElementById('eeCurrReading').value = '';
-    document.getElementById('eeConsumptionDisplay').textContent = '0.00';
-    document.getElementById('eeAmountDisplay').textContent = '0.00 ₽';
-
-    eePlotData.set(plotNumber, { prevReading: lastPaid, currReading: 0 });
-}
-
-function calculateEe() {
-    const prev = parseFloat(document.getElementById('eePrevReading').value) || 0;
-    const curr = parseFloat(document.getElementById('eeCurrReading').value) || 0;
-    const consumption = Math.max(0, curr - prev);
-    const amount = consumption * CFG.pricePerKwt;
-
-    document.getElementById('eeConsumptionDisplay').textContent = consumption.toFixed(2);
-    document.getElementById('eeAmountDisplay').textContent = amount.toFixed(2) + ' ₽';
-
-    if (selectedEePlot) {
-        eePlotData.set(selectedEePlot, { prevReading: prev, currReading: curr });
-    }
-}
-
-document.getElementById('eePrevReading').addEventListener('input', calculateEe);
-document.getElementById('eeCurrReading').addEventListener('input', calculateEe);
-
-document.getElementById('addEeToReceiptsBtn').addEventListener('click', () => {
-    if (!selectedEePlot) return;
-    const prev = parseFloat(document.getElementById('eePrevReading').value) || 0;
-    const curr = parseFloat(document.getElementById('eeCurrReading').value) || 0;
-    const consumption = Math.max(0, curr - prev);
-    const amount = consumption * CFG.pricePerKwt;
-
-    if (amount <= 0) {
-        alert('Введите корректные показания');
-        return;
-    }
-
-    const plot = allPlotsAll.find(p => p.plotNumber === selectedEePlot);
-    if (!plot) return;
-
-    const purpose = `Электроэнергия: ${consumption.toFixed(2)} кВт·ч × ${CFG.pricePerKwt} ₽ = ${amount.toFixed(2)} ₽`;
-
-    const existing = receiptCustomAmounts.get(plot.id) || { amount: plot.totalDebt, mode: 'debt', purpose: '' };
-    const newAmount = existing.mode === 'debt' ? amount : existing.amount + amount;
-    const newPurpose = existing.purpose ? existing.purpose + '; ' + purpose : purpose;
-
-    receiptCustomAmounts.set(plot.id, {
-        amount: newAmount,
-        mode: newAmount === plot.totalDebt ? 'debt' : 'custom',
-        purpose: newPurpose
-    });
-
-    renderReceiptsList();
-    alert(`Добавлено ${amount.toFixed(2)} ₽ за электроэнергию для участка ${selectedEePlot}`);
-});
-
 // ===================== ФОРМАТИРОВАНИЕ =====================
 function fmt(n) {
     const num = typeof n === 'number' ? n : parseFloat(n);
@@ -3480,9 +3328,34 @@ document.getElementById('btnReloadData').addEventListener('click', () => {
 // ===================== ИНИЦИАЛИЗАЦИЯ =====================
 initSettings();
 
-// Автозагрузка при старте
-addLog('🚀 Инициализация приложения...', 'info');
-loadAllData();
+function startApp() {
+    addLog('🚀 Инициализация приложения...', 'info');
+    loadAllData();
+}
+
+initAuthGate();
+
+document.getElementById('btnLogout').addEventListener('click', () => {
+    if (confirm('Выйти из системы? Потребуется снова ввести пароль.')) {
+        sessionStorage.removeItem('snt_authed');
+        location.reload();
+    }
+});
+
+document.getElementById('changePasswordBtn').addEventListener('click', async () => {
+    const current = localStorage.getItem('snt_pass_hash');
+    if (current) {
+        const oldPass = prompt('Введите текущий пароль:');
+        if (oldPass === null) return;
+        if (await sha256Hex(oldPass) !== current) { alert('Неверный текущий пароль'); return; }
+    }
+    const newPass = prompt('Новый пароль (минимум 4 символа):');
+    if (!newPass || newPass.length < 4) { if(newPass !== null) alert('Пароль слишком короткий'); return; }
+    const confirmPass = prompt('Повторите новый пароль:');
+    if (newPass !== confirmPass) { alert('Пароли не совпадают'); return; }
+    localStorage.setItem('snt_pass_hash', await sha256Hex(newPass));
+    alert('Пароль обновлён');
+});
 
 // Обработка ошибок в глобальном контексте
 window.addEventListener('error', function(e) {
