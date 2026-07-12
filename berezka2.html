@@ -689,6 +689,18 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 <script>
+// Список вкладок приложения — используется для назначения прав пользователям.
+// Объявлено в самом начале script, т.к. блок авторизации ниже уже использует ALL_TAB_IDS.
+const ALL_TABS = [
+    { id: 'dashboard', label: '📊 Дашборд' },
+    { id: 'debtors',   label: '📋 Должники' },
+    { id: 'receipts',  label: '🧾 Квитанции' },
+    { id: 'passport',  label: '🏠 Паспорт участка' },
+    { id: 'finance',   label: '💰 Финансы' },
+    { id: 'settings',  label: '⚙️ Настройки' }
+];
+const ALL_TAB_IDS = ALL_TABS.map(t => t.id);
+
 // ===================== ПРОСТАЯ АВТОРИЗАЦИЯ =====================
 // ВНИМАНИЕ: это клиентская защита от случайного просмотра посторонними
 // (ссылку не открыть без пароля), а не полноценная серверная авторизация —
@@ -864,17 +876,6 @@ const GH_MATCH = BASE_URL.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)
 const GH_OWNER = GH_MATCH ? GH_MATCH[1] : '';
 const GH_REPO = GH_MATCH ? GH_MATCH[2] : '';
 const GH_BRANCH = GH_MATCH ? GH_MATCH[3] : 'main';
-
-// Список вкладок приложения — используется для назначения прав пользователям
-const ALL_TABS = [
-    { id: 'dashboard', label: '📊 Дашборд' },
-    { id: 'debtors',   label: '📋 Должники' },
-    { id: 'receipts',  label: '🧾 Квитанции' },
-    { id: 'passport',  label: '🏠 Паспорт участка' },
-    { id: 'finance',   label: '💰 Финансы' },
-    { id: 'settings',  label: '⚙️ Настройки' }
-];
-const ALL_TAB_IDS = ALL_TABS.map(t => t.id);
 
 // ===================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====================
 let allPlots = [];
