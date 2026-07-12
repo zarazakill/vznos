@@ -612,8 +612,10 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
 <div class="setting-label"><p>Получить хеш нового резервного пароля</p><small>Этот пароль используется только если файл users.json недоступен — не путайте с обычными учётными записями.</small></div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+<form id="genPassHashForm" onsubmit="return false;" style="display:contents;">
 <input type="password" id="newPassGenInput" placeholder="Новый пароль" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:.85rem;">
-<button class="btn btn-secondary btn-sm" id="genPassHashBtn">🔑 Получить хеш</button>
+<button type="submit" class="btn btn-secondary btn-sm" id="genPassHashBtn">🔑 Получить хеш</button>
+</form>
 </div>
 <div id="genPassHashResult" style="display:none;font-size:.78rem;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:6px;padding:8px;word-break:break-all;"></div>
 </div>
@@ -646,8 +648,10 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="card-title">🔑 GitHub-токен для сохранения</div>
 <p style="color:var(--gray-600);font-size:.85rem;">Нужен только для сохранения списка пользователей на GitHub (чтение данных участков токена не требует). Создайте fine-grained personal access token на github.com → Settings → Developer settings, с доступом только к репозиторию <code id="ghRepoLabel">…</code> и правом <code>Contents: Read and write</code>. Токен хранится только в этом браузере (localStorage) и никуда, кроме api.github.com, не отправляется.</p>
 <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+<form id="ghTokenForm" onsubmit="return false;" style="display:contents;">
 <input type="password" id="ghTokenInput" placeholder="ghp_… или github_pat_…" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:.85rem;">
-<button class="btn btn-secondary btn-sm" id="saveGhTokenBtn">Сохранить токен</button>
+<button type="submit" class="btn btn-secondary btn-sm" id="saveGhTokenBtn">Сохранить токен</button>
+</form>
 </div>
 </div>
 </div>
@@ -660,6 +664,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <button class="close-btn" id="closeUserModalBtn">×</button>
 </div>
 <div class="modal-body">
+<form id="userModalForm" onsubmit="return false;">
 <input type="hidden" id="userModalOriginalUsername">
 <div style="margin-bottom:10px;">
 <label style="font-size:.82rem;color:var(--gray-600);display:block;margin-bottom:4px;">Логин</label>
@@ -680,6 +685,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <label style="font-size:.82rem;color:var(--gray-600);display:block;margin-bottom:4px;">Разрешённые вкладки</label>
 <div id="userModalTabsList" style="display:flex;flex-direction:column;gap:4px;"></div>
 </div>
+</form>
 </div>
 <div class="modal-footer">
 <button class="btn btn-secondary btn-sm" id="cancelUserModalBtn">Отмена</button>
