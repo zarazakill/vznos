@@ -226,12 +226,12 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="card-title" style="justify-content:center;font-size:1.15rem;" id="authTitle">Вход в систему</div>
 <p id="authSubtitle" style="color:var(--gray-600);font-size:.85rem;margin-bottom:16px;">Доступ к данным СНТ «Берёзка-2» только для правления.</p>
 <form id="authForm" onsubmit="return false;">
-<input type="password" id="authPasswordInput" class="search-input" placeholder="Введите пароль" style="text-align:center;margin-bottom:10px;" autocomplete="current-password">
-<input type="password" id="authPasswordConfirm" class="search-input" placeholder="Повторите пароль" style="text-align:center;margin-bottom:10px;display:none;" autocomplete="new-password">
+<input type="text" id="authUsernameInput" class="search-input" placeholder="Логин" style="text-align:center;margin-bottom:10px;" autocomplete="username">
+<input type="password" id="authPasswordInput" class="search-input" placeholder="Пароль" style="text-align:center;margin-bottom:10px;" autocomplete="current-password">
 <div id="authError" style="color:var(--red-600);font-size:.82rem;margin-bottom:8px;display:none;"></div>
 <button type="submit" class="btn btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center;">Войти</button>
 </form>
-<p style="color:var(--gray-500);font-size:.72rem;margin-top:14px;">Пароль общий для всех, кто открывает эту страницу. Это клиентская защита от случайных посетителей, а не полноценная серверная авторизация — для более надёжной защиты рекомендуется закрыть доступ на уровне хостинга (например, Basic Auth или закрытый доступ к репозиторию с данными).</p>
+<p style="color:var(--gray-500);font-size:.72rem;margin-top:14px;">У каждого пользователя свой логин, пароль и набор доступных вкладок — их назначает администратор. Это клиентская защита от случайных посетителей, а не полноценная серверная авторизация.</p>
 </div>
 </div>
 <div class="navbar">
@@ -243,8 +243,10 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="nav-tab" data-page="passport">🏠 Паспорт участка</div>
 <div class="nav-tab" data-page="finance">💰 Финансы</div>
 <div class="nav-tab" data-page="settings">⚙️ Настройки</div>
+<div class="nav-tab" id="navTabUsers" data-page="users" style="display:none;">👥 Пользователи</div>
 </div>
 <div class="navbar-right">
+<span id="currentUserBadge" style="font-size:.78rem;color:rgba(255,255,255,.85);"></span>
 <span id="navFileInfo" style="font-size:.78rem;color:rgba(255,255,255,.6);">⏳ Загрузка...</span>
 <button id="btnReloadData" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);">🔄 Обновить</button>
 <button id="btnLogout" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);">🔒 Выйти</button>
@@ -604,7 +606,11 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="card-title">🔒 Безопасность</div>
 <div class="settings-section">
 <div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
-<div class="setting-label"><p>Пароль доступа — общий для всех, кто открывает эту страницу</p><small>Файл статичный, без сервера, поэтому пароль хранится прямо в коде (в виде хеша). Чтобы сменить пароль для всех, его нужно поменять в коде и заново разместить файл — просто «нажать кнопку» тут не получится, это техническое ограничение статичного HTML.</small></div>
+<div class="setting-label"><p>Резервный пароль администратора (на случай, если users.json недоступен)</p><small>Обычные пользователи заходят по логину/паролю, которые вы задаёте на вкладке «Пользователи». Этот пароль — аварийный вход под admin, зашит прямо в код (в виде хеша). Чтобы сменить его, нужно поменять значение в коде и заново разместить файл.</small></div>
+<button class="btn btn-secondary btn-sm" onclick="document.getElementById('navTabUsers').click()" style="flex-shrink:0;">👥 К пользователям</button>
+</div>
+<div class="setting-row" style="flex-direction:column;align-items:stretch;gap:8px;">
+<div class="setting-label"><p>Получить хеш нового резервного пароля</p><small>Этот пароль используется только если файл users.json недоступен — не путайте с обычными учётными записями.</small></div>
 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
 <input type="password" id="newPassGenInput" placeholder="Новый пароль" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:.85rem;">
 <button class="btn btn-secondary btn-sm" id="genPassHashBtn">🔑 Получить хеш</button>
@@ -623,6 +629,64 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 </div>
+
+<!-- ПОЛЬЗОВАТЕЛИ (только для admin) -->
+<div class="page" id="page-users">
+<div class="card">
+<div class="card-title">👥 Пользователи и права доступа</div>
+<p style="color:var(--gray-600);font-size:.85rem;margin-bottom:12px;">Список хранится в файле <code>users.json</code> в том же репозитории, что и остальные данные. Изменения нужно сохранить на GitHub кнопкой ниже — иначе они останутся только в этой вкладке браузера и пропадут при обновлении страницы.</p>
+<div id="usersSourceNotice" style="font-size:.8rem;padding:8px 10px;border-radius:8px;margin-bottom:12px;"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+<button class="btn btn-primary btn-sm" id="addUserBtn">➕ Добавить пользователя</button>
+<button class="btn btn-secondary btn-sm" id="saveUsersToGhBtn">💾 Сохранить на GitHub</button>
+</div>
+<div id="usersTableWrap"></div>
+</div>
+<div class="card">
+<div class="card-title">🔑 GitHub-токен для сохранения</div>
+<p style="color:var(--gray-600);font-size:.85rem;">Нужен только для сохранения списка пользователей на GitHub (чтение данных участков токена не требует). Создайте fine-grained personal access token на github.com → Settings → Developer settings, с доступом только к репозиторию <code id="ghRepoLabel">…</code> и правом <code>Contents: Read and write</code>. Токен хранится только в этом браузере (localStorage) и никуда, кроме api.github.com, не отправляется.</p>
+<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+<input type="password" id="ghTokenInput" placeholder="ghp_… или github_pat_…" style="flex:1;min-width:220px;padding:7px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:.85rem;">
+<button class="btn btn-secondary btn-sm" id="saveGhTokenBtn">Сохранить токен</button>
+</div>
+</div>
+</div>
+
+<!-- Модалка добавления/редактирования пользователя -->
+<div class="modal-overlay" id="userModal">
+<div class="modal-box" style="max-width:440px;">
+<div class="modal-header">
+<h3 id="userModalTitle">Новый пользователь</h3>
+<button class="close-btn" id="closeUserModalBtn">×</button>
+</div>
+<div class="modal-body">
+<input type="hidden" id="userModalOriginalUsername">
+<div style="margin-bottom:10px;">
+<label style="font-size:.82rem;color:var(--gray-600);display:block;margin-bottom:4px;">Логин</label>
+<input type="text" id="userModalUsername" style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:6px;">
+</div>
+<div style="margin-bottom:10px;">
+<label style="font-size:.82rem;color:var(--gray-600);display:block;margin-bottom:4px;">Пароль <span id="userModalPassHint" style="font-weight:400;"></span></label>
+<input type="password" id="userModalPassword" style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:6px;">
+</div>
+<div style="margin-bottom:10px;">
+<label style="font-size:.82rem;color:var(--gray-600);display:block;margin-bottom:4px;">Роль</label>
+<select id="userModalRole" style="width:100%;padding:7px 10px;border:1px solid var(--gray-300);border-radius:6px;">
+<option value="user">Пользователь (доступ только к отмеченным вкладкам)</option>
+<option value="admin">Администратор (доступ ко всему + управление пользователями)</option>
+</select>
+</div>
+<div id="userModalTabsWrap" style="margin-bottom:6px;">
+<label style="font-size:.82rem;color:var(--gray-600);display:block;margin-bottom:4px;">Разрешённые вкладки</label>
+<div id="userModalTabsList" style="display:flex;flex-direction:column;gap:4px;"></div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-secondary btn-sm" id="cancelUserModalBtn">Отмена</button>
+<button class="btn btn-primary btn-sm" id="saveUserModalBtn">Сохранить</button>
+</div>
+</div>
+</div>
 </div>
 <script>
 // ===================== ПРОСТАЯ АВТОРИЗАЦИЯ =====================
@@ -632,17 +696,22 @@ select.filter-sel:focus{border-color:var(--green-400);}
 // Для более надёжной защиты рекомендуется закрыть доступ на уровне хостинга
 // (Basic Auth, приватный репозиторий/прокси и т.п.).
 //
-// ВАЖНО: пароль по умолчанию задаётся здесь одним хешем на ВСЕХ посетителей.
-// Раньше при первом визите (пока в браузере ещё не было сохранённого пароля)
-// приложение предлагало посетителю самому придумать пароль — то есть НЕ защищало
-// вообще ничего, если ссылку получил кто угодно. Теперь так делать нельзя:
-// войти может только тот, кто знает актуальный пароль (по умолчанию — тот, что
-// задан ниже). Сменить пароль можно только уже находясь внутри (Настройки →
-// Безопасность), и новый пароль действует одинаково для всех, кто его узнает.
+// Пользователи и права хранятся в файле users.json в том же репозитории,
+// что и данные (base.ods и т.п.) — читаются так же, как остальные файлы.
+// Если users.json недоступен или пуст (например, самый первый запуск,
+// пока администратор ещё не завёл ни одного пользователя), используется
+// встроенная резервная учётная запись администратора — её пароль задан
+// ниже как хеш и НЕ позволяет постороннему создать себе доступ самостоятельно
+// (в отличие от прежней схемы, где первый посетитель мог сам придумать пароль).
 //
-// Пароль по умолчанию: Berezka2-2026!  — обязательно смените его сразу после
-// первого входа через Настройки → Безопасность → Сменить пароль.
+// Резервный логин: admin / Berezka2-2026!  — войдите под ним и заведите
+// настоящих пользователей на вкладке «Пользователи» (доступна только admin).
 const DEFAULT_PASS_HASH = 'ca9ae49aa19e7665b5cc7674bb9fff10533a4936794969bde31cbceda73faf01';
+const FALLBACK_ADMIN = { username: 'admin', passHash: DEFAULT_PASS_HASH, role: 'admin', allowedTabs: ALL_TAB_IDS.slice() };
+
+let usersList = [];
+let usersSource = 'fallback'; // 'remote' | 'fallback'
+let currentUser = null; // {username, role, allowedTabs}
 
 async function sha256Hex(text) {
     const enc = new TextEncoder().encode(text);
@@ -650,8 +719,30 @@ async function sha256Hex(text) {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function getActivePassHash() {
-    return DEFAULT_PASS_HASH;
+async function fetchJsonSmart(url) {
+    const ab = await fetchArrayBufferSmart(url);
+    const text = new TextDecoder('utf-8').decode(ab);
+    return JSON.parse(text);
+}
+
+async function loadUsers() {
+    try {
+        const data = await fetchJsonSmart(BASE_URL + FILES.users);
+        if (data && Array.isArray(data.users) && data.users.some(u => u.role === 'admin')) {
+            usersList = data.users;
+            usersSource = 'remote';
+            return;
+        }
+        throw new Error('users.json пуст или без администратора');
+    } catch (e) {
+        usersList = [FALLBACK_ADMIN];
+        usersSource = 'fallback';
+    }
+}
+
+function findUser(username) {
+    const u = String(username || '').trim().toLowerCase();
+    return usersList.find(x => String(x.username || '').trim().toLowerCase() === u) || null;
 }
 
 function showAuthError(msg) {
@@ -664,39 +755,82 @@ function hideAuthOverlay() {
     document.getElementById('authOverlay').style.display = 'none';
 }
 
-function initAuthGate() {
+async function initAuthGate() {
     const overlay = document.getElementById('authOverlay');
-    const authed = sessionStorage.getItem('snt_authed') === '1';
+    const savedUser = sessionStorage.getItem('snt_current_user');
 
-    if (authed) {
-        overlay.style.display = 'none';
-        startApp();
-        return;
+    document.getElementById('authSubtitle').textContent = 'Загрузка списка пользователей…';
+    document.getElementById('authForm').style.display = 'none';
+    await loadUsers();
+    document.getElementById('authForm').style.display = '';
+
+    if (savedUser) {
+        try {
+            const parsed = JSON.parse(savedUser);
+            // Подтверждаем, что пользователь всё ещё существует и не был удалён/изменён
+            const fresh = findUser(parsed.username);
+            if (fresh) {
+                currentUser = { username: fresh.username, role: fresh.role, allowedTabs: fresh.allowedTabs || [] };
+                overlay.style.display = 'none';
+                startApp();
+                return;
+            }
+        } catch (e) { /* ignore, покажем экран входа */ }
     }
 
     document.getElementById('authTitle').textContent = 'Вход в систему';
     document.getElementById('authSubtitle').textContent = 'Доступ к данным СНТ «Берёзка-2» только для правления.';
-    document.getElementById('authPasswordConfirm').style.display = 'none';
     const submitBtn = document.getElementById('authSubmitBtn');
+    const userInp = document.getElementById('authUsernameInput');
     const passInp = document.getElementById('authPasswordInput');
     submitBtn.textContent = 'Войти';
 
     submitBtn.onclick = async () => {
-        const pass = passInp.value;
         document.getElementById('authError').style.display = 'none';
-        if (!pass) { showAuthError('Введите пароль'); return; }
+        const username = userInp.value.trim();
+        const pass = passInp.value;
+        if (!username || !pass) { showAuthError('Введите логин и пароль'); return; }
 
+        const user = findUser(username);
+        if (!user) { showAuthError('Пользователь не найден'); return; }
         const hash = await sha256Hex(pass);
-        if (hash === getActivePassHash()) {
-            sessionStorage.setItem('snt_authed', '1');
-            hideAuthOverlay();
-            startApp();
-        } else {
-            showAuthError('Неверный пароль');
-        }
+        if (hash !== user.passHash) { showAuthError('Неверный пароль'); return; }
+
+        currentUser = { username: user.username, role: user.role, allowedTabs: user.allowedTabs || [] };
+        sessionStorage.setItem('snt_current_user', JSON.stringify(currentUser));
+        hideAuthOverlay();
+        startApp();
     };
 
+    userInp.onkeydown = (e) => { if (e.key === 'Enter') passInp.focus(); };
     passInp.onkeydown = (e) => { if (e.key === 'Enter') submitBtn.click(); };
+}
+
+// Показывает только те вкладки/страницы, которые разрешены текущему пользователю;
+// у admin есть доступ ко всем вкладкам плюс отдельная вкладка «Пользователи».
+function applyRolePermissions() {
+    if (!currentUser) return;
+    const isAdmin = currentUser.role === 'admin';
+    const allowed = new Set(isAdmin ? ALL_TAB_IDS : (currentUser.allowedTabs || []));
+
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        const page = tab.dataset.page;
+        if (page === 'users') return; // управляется отдельно ниже
+        tab.style.display = allowed.has(page) ? '' : 'none';
+    });
+
+    const usersTab = document.getElementById('navTabUsers');
+    if (usersTab) usersTab.style.display = isAdmin ? '' : 'none';
+
+    // Если активная вкладка недоступна — переключаемся на первую разрешённую
+    const activeTab = document.querySelector('.nav-tab.active');
+    if (activeTab && activeTab.style.display === 'none') {
+        const firstAllowed = document.querySelector('.nav-tab:not([style*="display: none"])');
+        if (firstAllowed) firstAllowed.click();
+    }
+
+    const userBadge = document.getElementById('currentUserBadge');
+    if (userBadge) userBadge.textContent = `👤 ${currentUser.username}${isAdmin ? ' (админ)' : ''}`;
 }
 
 // ===================== ЛОГГЕР =====================
@@ -720,8 +854,27 @@ const FILES = {
   ee: 'ee.ods',
   '50': '50.ods',
   '51': '51.ods',
-  '71': '71.ods'
+  '71': '71.ods',
+  users: 'users.json'
 };
+
+// Разбираем владельца/репозиторий/ветку из BASE_URL — нужно для записи users.json
+// через GitHub Contents API (чтение всегда идёт через raw/CDN, запись — только через API с токеном).
+const GH_MATCH = BASE_URL.match(/raw\.githubusercontent\.com\/([^\/]+)\/([^\/]+)\/([^\/]+)\//);
+const GH_OWNER = GH_MATCH ? GH_MATCH[1] : '';
+const GH_REPO = GH_MATCH ? GH_MATCH[2] : '';
+const GH_BRANCH = GH_MATCH ? GH_MATCH[3] : 'main';
+
+// Список вкладок приложения — используется для назначения прав пользователям
+const ALL_TABS = [
+    { id: 'dashboard', label: '📊 Дашборд' },
+    { id: 'debtors',   label: '📋 Должники' },
+    { id: 'receipts',  label: '🧾 Квитанции' },
+    { id: 'passport',  label: '🏠 Паспорт участка' },
+    { id: 'finance',   label: '💰 Финансы' },
+    { id: 'settings',  label: '⚙️ Настройки' }
+];
+const ALL_TAB_IDS = ALL_TABS.map(t => t.id);
 
 // ===================== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====================
 let allPlots = [];
@@ -2307,6 +2460,14 @@ function recalcRow(p, st, updateDom) {
         if (totalText) totalText.textContent = `${fmt(total)} ₽`;
         const calcText = document.querySelector(`.receipt-ee-calc-text[data-id="${CSS.escape(p.id)}"]`);
         if (calcText) calcText.textContent = st.electricity.consumption > 0 ? `= ${st.electricity.consumption} кВт·ч` : '';
+        const eeAmtInp = document.querySelector(`.receipt-item-amount-inp[data-id="${CSS.escape(p.id)}"][data-key="electricity"]`);
+        if (eeAmtInp && document.activeElement !== eeAmtInp) eeAmtInp.value = st.electricity.amount.toFixed(2);
+        const counter = document.querySelector(`.receipt-purpose-counter[data-id="${CSS.escape(p.id)}"]`);
+        if (counter) {
+            const overLimit = purpose.length > PURPOSE_MAX_LEN;
+            counter.textContent = `${purpose.length} / ${PURPOSE_MAX_LEN} символов (лимит банка на назначение платежа)`;
+            counter.style.color = overLimit ? 'var(--red-600)' : 'var(--gray-500)';
+        }
     }
     return total;
 }
@@ -2353,122 +2514,6 @@ function renderCompositionExtra(p, item) {
     </div>`;
 }
 
-// ===================== СОСТАВ ПЛАТЕЖА (несколько назначений одновременно) =====================
-function getOrInitItemsState(p) {
-    if (receiptItemsState.has(p.id)) return receiptItemsState.get(p.id);
-    const hasDebt = p.totalDebt > 0;
-    const st = {
-        membership: { checked: hasDebt && p.membershipSum > 0, amount: p.membershipSum || 0 },
-        target: { checked: hasDebt && p.targetSum > 0, amount: p.targetSum || 0 },
-        arrears: { checked: hasDebt && p.arrearsSum > 0, amount: p.arrearsSum || 0 },
-        work: { checked: hasDebt && p.workSum > 0, amount: p.workSum || 0 },
-        electricity: {
-            checked: hasDebt && p.electricitySum > 0,
-            amount: p.electricitySum || 0,
-            prevReading: (p.ee && p.ee.prevReading !== undefined) ? p.ee.prevReading : null,
-            currReading: '',
-            consumption: 0
-        },
-        extra: { checked: false, amount: 0, label: '' },
-        manualPurpose: ''
-    };
-    receiptItemsState.set(p.id, st);
-    return st;
-}
-
-// Пересчитывает сумму эл-энергии по показаниям (если введено текущее показание),
-// собирает общую сумму и назначение платежа из всех отмеченных пунктов,
-// и сохраняет результат в receiptCustomAmounts (используется при печати/QR — без изменений там).
-function recalcRow(p, st, updateDom) {
-    const ee = st.electricity;
-    if (ee.checked && ee.prevReading !== null && ee.currReading !== '' && ee.currReading !== null) {
-        const cur = parseFloat(ee.currReading);
-        if (!isNaN(cur) && cur >= ee.prevReading) {
-            ee.consumption = Math.round((cur - ee.prevReading) * 100) / 100;
-            const tariff = (p.ee && p.ee.tariff) || 3.82;
-            ee.amount = Math.round(ee.consumption * tariff * 100) / 100;
-        } else {
-            ee.consumption = 0;
-        }
-    }
-
-    let total = 0;
-    const parts = [];
-    if (st.membership.checked && st.membership.amount > 0) { total += st.membership.amount; parts.push(`Членские взносы: ${st.membership.amount.toFixed(2)} руб.`); }
-    if (st.target.checked && st.target.amount > 0) { total += st.target.amount; parts.push(`Целевые взносы: ${st.target.amount.toFixed(2)} руб.`); }
-    if (st.arrears.checked && st.arrears.amount > 0) { total += st.arrears.amount; parts.push(`Задолженность прошлых лет: ${st.arrears.amount.toFixed(2)} руб.`); }
-    if (st.work.checked && st.work.amount > 0) { total += st.work.amount; parts.push(`Отработка: ${st.work.amount.toFixed(2)} руб.`); }
-    if (st.electricity.checked && st.electricity.amount > 0) {
-        total += st.electricity.amount;
-        if (st.electricity.consumption > 0) {
-            parts.push(`Электроэнергия ${st.electricity.consumption} кВт·ч (показания ${st.electricity.prevReading}→${st.electricity.currReading}): ${st.electricity.amount.toFixed(2)} руб.`);
-        } else {
-            parts.push(`Электроэнергия: ${st.electricity.amount.toFixed(2)} руб.`);
-        }
-    }
-    if (st.extra.checked && st.extra.amount > 0) {
-        total += st.extra.amount;
-        const label = (st.extra.label && st.extra.label.trim()) ? st.extra.label.trim() : 'Прочее';
-        parts.push(`${label}: ${st.extra.amount.toFixed(2)} руб.`);
-    }
-
-    const purpose = (st.manualPurpose && st.manualPurpose.trim()) ? st.manualPurpose.trim() : parts.join(', ');
-    receiptCustomAmounts.set(p.id, { amount: total, mode: 'custom', purpose });
-
-    if (updateDom) {
-        const totalBadge = document.querySelector(`.receipt-total-badge[data-id="${p.id}"]`);
-        if (totalBadge) totalBadge.textContent = `${fmt(total)} ₽`;
-        const totalText = document.querySelector(`.receipt-total-text[data-id="${p.id}"]`);
-        if (totalText) totalText.textContent = `${fmt(total)} ₽`;
-        const calcText = document.querySelector(`.receipt-ee-calc-text[data-id="${p.id}"]`);
-        if (calcText) calcText.textContent = st.electricity.consumption > 0 ? `= ${st.electricity.consumption} кВт·ч` : '';
-        const eeAmtInp = document.querySelector(`.receipt-item-amount-inp[data-id="${p.id}"][data-key="electricity"]`);
-        if (eeAmtInp && document.activeElement !== eeAmtInp) eeAmtInp.value = st.electricity.amount.toFixed(2);
-    }
-    return total;
-}
-
-function renderCompositionItem(p, key, label, item) {
-    return `<div class="receipt-item-row" style="display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap;">
-        <label style="display:flex;align-items:center;gap:6px;flex:1;min-width:160px;font-size:.83rem;cursor:pointer;">
-            <input type="checkbox" class="receipt-item-cb" data-id="${p.id}" data-key="${key}" ${item.checked?'checked':''} style="width:16px;height:16px;accent-color:var(--green-600);">
-            ${label}
-        </label>
-        <input type="number" class="receipt-item-amount-inp" data-id="${p.id}" data-key="${key}" min="0" step="0.01" value="${(item.amount||0).toFixed(2)}"
-            style="width:100px;font-size:.82rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;text-align:right;${item.checked?'':'opacity:.5;'}"> ₽
-    </div>`;
-}
-
-function renderElectricityItem(p, item) {
-    const hasPrev = item.prevReading !== null && item.prevReading !== undefined;
-    return `<div class="receipt-item-row receipt-ee-row" style="padding:6px 0;border-top:1px dashed var(--gray-200);margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:6px;font-size:.83rem;cursor:pointer;">
-            <input type="checkbox" class="receipt-item-cb" data-id="${p.id}" data-key="electricity" ${item.checked?'checked':''} style="width:16px;height:16px;accent-color:var(--green-600);">
-            ⚡ Электроэнергия
-        </label>
-        <div class="receipt-ee-details" data-id="${p.id}" style="display:${item.checked?'flex':'none'};gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;padding-left:22px;">
-            <span style="font-size:.78rem;color:var(--gray-600);">Пред. показание: <strong>${hasPrev ? item.prevReading : 'нет данных'}</strong></span>
-            <input type="number" class="receipt-ee-current-inp" data-id="${p.id}" placeholder="Текущее показание" value="${item.currReading || ''}" step="0.01"
-                style="width:130px;font-size:.82rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;" ${hasPrev?'':'disabled title="Нет данных о предыдущем показании — введите сумму вручную"'}>
-            <span class="receipt-ee-calc-text" data-id="${p.id}" style="font-size:.78rem;color:var(--green-700);font-weight:600;">${item.consumption>0 ? `= ${item.consumption} кВт·ч` : ''}</span>
-            <input type="number" class="receipt-item-amount-inp" data-id="${p.id}" data-key="electricity" min="0" step="0.01" value="${(item.amount||0).toFixed(2)}"
-                style="width:100px;font-size:.82rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;text-align:right;"> ₽
-        </div>
-    </div>`;
-}
-
-function renderCompositionExtra(p, item) {
-    return `<div class="receipt-item-row" style="display:flex;align-items:center;gap:8px;padding:4px 0;flex-wrap:wrap;border-top:1px dashed var(--gray-200);margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:6px;flex-shrink:0;font-size:.83rem;cursor:pointer;">
-            <input type="checkbox" class="receipt-item-cb" data-id="${p.id}" data-key="extra" ${item.checked?'checked':''} style="width:16px;height:16px;accent-color:var(--green-600);">
-            Другое / аванс
-        </label>
-        <input type="text" class="receipt-extra-label-inp" data-id="${p.id}" placeholder="Описание" value="${escapeHtml(item.label||'')}"
-            style="flex:1;min-width:100px;font-size:.8rem;padding:4px 8px;border:1px solid var(--gray-300);border-radius:6px;">
-        <input type="number" class="receipt-item-amount-inp" data-id="${p.id}" data-key="extra" min="0" step="0.01" value="${(item.amount||0).toFixed(2)}"
-            style="width:100px;font-size:.82rem;padding:4px 6px;border:1px solid var(--gray-300);border-radius:6px;text-align:right;"> ₽
-    </div>`;
-}
 
 function renderReceiptsList() {
     const search = document.getElementById('receiptSearchInput').value;
@@ -2496,6 +2541,7 @@ function renderReceiptsList() {
 
         const st = getOrInitItemsState(p);
         const total = recalcRow(p, st, false);
+        const saved = receiptCustomAmounts.get(p.id) || { purpose: '' };
         const isOpen = receiptOpenRows.has(p.id);
 
         return `<div class="plot-row" data-id="${p.id}" style="flex-direction:column;align-items:stretch;padding:10px 14px;gap:0;">
@@ -2520,6 +2566,9 @@ function renderReceiptsList() {
                     <input type="text" class="receipt-manual-purpose-inp" data-id="${p.id}" value="${escapeHtml(st.manualPurpose||'')}"
                         placeholder="Назначение платежа — заполняется автоматически, можно переписать вручную"
                         style="width:100%;font-size:.8rem;padding:5px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;">
+                    <div style="text-align:right;margin-top:2px;">
+                        <span class="receipt-purpose-counter" data-id="${p.id}" style="font-size:.72rem;color:var(--gray-500);">${(saved.purpose||'').length} / ${PURPOSE_MAX_LEN} символов (лимит банка на назначение платежа)</span>
+                    </div>
                 </div>
                 <div style="margin-top:6px;font-size:.82rem;color:var(--gray-700);">Итого к оплате: <strong class="receipt-total-text" data-id="${p.id}">${fmt(total)} ₽</strong></div>
             </div>
@@ -2665,11 +2714,19 @@ document.getElementById('receiptsSelectAll').addEventListener('change', e => {
 });
 
 // ===================== QR И КВИТАНЦИИ =====================
+// Поле "Назначение платежа" в платёжных QR (ST00012 / ГОСТ Р 56042-2014, реквизит Purpose
+// альбома УФЭБС) официально ограничено 210 символами — это техническое ограничение банков,
+// а не наша прихоть. Если что-то не помещается, обрезаем аккуратно (с многоточием), а не
+// заменяем весь текст на общую фразу — так теряется меньше полезной информации.
+const PURPOSE_MAX_LEN = 210;
+
 function qrPurpose(plot) {
+    const suffix = `, уч. ${plot.plotNumber}`;
     // Если задано пользовательское назначение — используем его
     if (plot.customPurpose && plot.customPurpose.trim()) {
-        let s = plot.customPurpose.trim() + `, уч. ${plot.plotNumber}`;
-        return s.slice(0, 150);
+        let s = plot.customPurpose.trim() + suffix;
+        if (s.length > PURPOSE_MAX_LEN) s = s.slice(0, PURPOSE_MAX_LEN - 1) + '…';
+        return s;
     }
     let parts = [...(plot.qrParts || [])];
     if (parts.length === 0) {
@@ -2679,9 +2736,9 @@ function qrPurpose(plot) {
         if (plot.workSum > 0) parts.push(`Отработка: ${plot.workSum.toFixed(2)} руб.`);
         if (plot.electricitySum > 0) parts.push(`Электроэнергия: ${plot.electricitySum.toFixed(2)} руб.`);
     }
-    let s = parts.join(', ') + `, уч. ${plot.plotNumber}`;
-    if (s.length > 150) s = `Оплата взносов уч.${plot.plotNumber}`;
-    return s.slice(0, 150);
+    let s = parts.join(', ') + suffix;
+    if (s.length > PURPOSE_MAX_LEN) s = s.slice(0, PURPOSE_MAX_LEN - 1) + '…';
+    return s;
 }
 
 function rubleCase(n) {
@@ -3638,16 +3695,199 @@ document.getElementById('btnReloadData').addEventListener('click', () => {
 initSettings();
 
 function startApp() {
-    addLog('🚀 Инициализация приложения...', 'info');
+    applyRolePermissions();
+    addLog(`🚀 Инициализация приложения... (пользователь: ${currentUser ? currentUser.username : '?'})`, 'info');
     loadAllData();
 }
 
 initAuthGate();
 
 document.getElementById('btnLogout').addEventListener('click', () => {
-    if (confirm('Выйти из системы? Потребуется снова ввести пароль.')) {
-        sessionStorage.removeItem('snt_authed');
+    if (confirm('Выйти из системы? Потребуется снова ввести логин и пароль.')) {
+        sessionStorage.removeItem('snt_current_user');
         location.reload();
+    }
+});
+
+// ===================== СТРАНИЦА «ПОЛЬЗОВАТЕЛИ» (только admin) =====================
+document.getElementById('ghRepoLabel').textContent = `${GH_OWNER}/${GH_REPO}`;
+
+const ghTokenInput = document.getElementById('ghTokenInput');
+ghTokenInput.value = localStorage.getItem('snt_gh_token') || '';
+document.getElementById('saveGhTokenBtn').addEventListener('click', () => {
+    const t = ghTokenInput.value.trim();
+    if (t) { localStorage.setItem('snt_gh_token', t); alert('Токен сохранён в этом браузере.'); }
+    else { localStorage.removeItem('snt_gh_token'); alert('Токен удалён.'); }
+});
+
+function renderUsersSourceNotice() {
+    const el = document.getElementById('usersSourceNotice');
+    if (!el) return;
+    if (usersSource === 'remote') {
+        el.style.background = 'var(--green-50, #f0fdf4)';
+        el.style.color = 'var(--green-700)';
+        el.textContent = `✅ Список загружен из users.json (${usersList.length} польз.)`;
+    } else {
+        el.style.background = '#fff7ed';
+        el.style.color = '#c2410c';
+        el.textContent = '⚠️ users.json не найден или недоступен — используется встроенная резервная учётная запись admin. Добавьте пользователей и сохраните на GitHub.';
+    }
+}
+
+function renderUsersTable() {
+    renderUsersSourceNotice();
+    const wrap = document.getElementById('usersTableWrap');
+    if (!wrap) return;
+    if (!usersList.length) { wrap.innerHTML = '<div style="padding:16px;color:var(--gray-500);">Пользователей нет</div>'; return; }
+    wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+        <thead><tr style="text-align:left;border-bottom:1px solid var(--gray-200);">
+            <th style="padding:6px 8px;">Логин</th><th style="padding:6px 8px;">Роль</th><th style="padding:6px 8px;">Вкладки</th><th style="padding:6px 8px;"></th>
+        </tr></thead>
+        <tbody>
+        ${usersList.map((u, i) => `<tr style="border-bottom:1px solid var(--gray-100);">
+            <td style="padding:6px 8px;font-weight:600;">${escapeHtml(u.username)}</td>
+            <td style="padding:6px 8px;">${u.role === 'admin' ? '<span class="badge badge-green">Администратор</span>' : '<span class="badge badge-gray">Пользователь</span>'}</td>
+            <td style="padding:6px 8px;">${u.role === 'admin' ? 'Все' : (u.allowedTabs||[]).map(t => (ALL_TABS.find(x=>x.id===t)||{label:t}).label).join(', ') || '—'}</td>
+            <td style="padding:6px 8px;text-align:right;white-space:nowrap;">
+                <button class="btn btn-outline btn-sm edit-user-btn" data-idx="${i}" style="padding:3px 8px;">✏️</button>
+                <button class="btn btn-outline btn-sm del-user-btn" data-idx="${i}" style="padding:3px 8px;">🗑</button>
+            </td>
+        </tr>`).join('')}
+        </tbody></table>`;
+
+    wrap.querySelectorAll('.edit-user-btn').forEach(btn => btn.addEventListener('click', () => openUserModal(parseInt(btn.dataset.idx))));
+    wrap.querySelectorAll('.del-user-btn').forEach(btn => btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.idx);
+        const u = usersList[idx];
+        if (u.username === currentUser.username) { alert('Нельзя удалить самого себя, пока вы в системе.'); return; }
+        if (!confirm(`Удалить пользователя «${u.username}»?`)) return;
+        usersList.splice(idx, 1);
+        renderUsersTable();
+    }));
+}
+
+function renderUserModalTabs(selected) {
+    const list = document.getElementById('userModalTabsList');
+    const sel = new Set(selected || []);
+    list.innerHTML = ALL_TABS.map(t => `<label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">
+        <input type="checkbox" class="user-tab-cb" value="${t.id}" ${sel.has(t.id)?'checked':''} style="width:16px;height:16px;accent-color:var(--green-600);">
+        ${t.label}
+    </label>`).join('');
+}
+
+function openUserModal(idx) {
+    const isEdit = idx !== undefined && idx !== null;
+    const u = isEdit ? usersList[idx] : null;
+    document.getElementById('userModalTitle').textContent = isEdit ? `Редактирование: ${u.username}` : 'Новый пользователь';
+    document.getElementById('userModalOriginalUsername').value = isEdit ? u.username : '';
+    document.getElementById('userModalUsername').value = isEdit ? u.username : '';
+    document.getElementById('userModalPassword').value = '';
+    document.getElementById('userModalPassHint').textContent = isEdit ? '(оставьте пустым, чтобы не менять)' : '';
+    document.getElementById('userModalRole').value = isEdit ? u.role : 'user';
+    renderUserModalTabs(isEdit ? u.allowedTabs : []);
+    toggleUserModalTabsVisibility();
+    document.getElementById('userModal').classList.add('open');
+}
+
+function toggleUserModalTabsVisibility() {
+    const isAdmin = document.getElementById('userModalRole').value === 'admin';
+    document.getElementById('userModalTabsWrap').style.display = isAdmin ? 'none' : '';
+}
+document.getElementById('userModalRole').addEventListener('change', toggleUserModalTabsVisibility);
+
+document.getElementById('addUserBtn').addEventListener('click', () => openUserModal());
+document.getElementById('closeUserModalBtn').addEventListener('click', () => document.getElementById('userModal').classList.remove('open'));
+document.getElementById('cancelUserModalBtn').addEventListener('click', () => document.getElementById('userModal').classList.remove('open'));
+
+document.getElementById('saveUserModalBtn').addEventListener('click', async () => {
+    const originalUsername = document.getElementById('userModalOriginalUsername').value;
+    const username = document.getElementById('userModalUsername').value.trim();
+    const password = document.getElementById('userModalPassword').value;
+    const role = document.getElementById('userModalRole').value;
+    const allowedTabs = Array.from(document.querySelectorAll('.user-tab-cb:checked')).map(cb => cb.value);
+
+    if (!username) { alert('Введите логин'); return; }
+    if (/\s/.test(username)) { alert('Логин не должен содержать пробелов'); return; }
+    const dupe = usersList.find(u => u.username.toLowerCase() === username.toLowerCase() && u.username !== originalUsername);
+    if (dupe) { alert('Такой логин уже занят'); return; }
+
+    const isEdit = !!originalUsername;
+    if (!isEdit && !password) { alert('Укажите пароль для нового пользователя'); return; }
+    if (password && password.length < 4) { alert('Пароль должен быть не короче 4 символов'); return; }
+    if (role === 'user' && allowedTabs.length === 0) { if (!confirm('Не выбрано ни одной вкладки — пользователь не увидит данных. Продолжить?')) return; }
+
+    let passHash;
+    if (password) passHash = await sha256Hex(password);
+    else if (isEdit) passHash = usersList.find(u => u.username === originalUsername).passHash;
+
+    const record = { username, passHash, role, allowedTabs: role === 'admin' ? ALL_TAB_IDS.slice() : allowedTabs };
+
+    if (isEdit) {
+        const idx = usersList.findIndex(u => u.username === originalUsername);
+        usersList[idx] = record;
+        if (originalUsername === currentUser.username) {
+            currentUser = { username: record.username, role: record.role, allowedTabs: record.allowedTabs };
+            sessionStorage.setItem('snt_current_user', JSON.stringify(currentUser));
+            applyRolePermissions();
+        }
+    } else {
+        usersList.push(record);
+    }
+
+    document.getElementById('userModal').classList.remove('open');
+    renderUsersTable();
+});
+
+document.getElementById('saveUsersToGhBtn').addEventListener('click', async () => {
+    const token = localStorage.getItem('snt_gh_token');
+    if (!token) { alert('Сначала укажите и сохраните GitHub-токен ниже на этой странице.'); return; }
+    if (!usersList.some(u => u.role === 'admin')) { alert('В списке должен остаться хотя бы один администратор.'); return; }
+
+    const btn = document.getElementById('saveUsersToGhBtn');
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ Сохранение...';
+    btn.disabled = true;
+    try {
+        const apiUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${FILES.users}?ref=${GH_BRANCH}`;
+        let sha = null;
+        const getResp = await fetch(apiUrl, { headers: { Authorization: `token ${token}` } });
+        if (getResp.ok) { const info = await getResp.json(); sha = info.sha; }
+        else if (getResp.status !== 404) {
+            const errInfo = await getResp.json().catch(() => ({}));
+            throw new Error(errInfo.message || `HTTP ${getResp.status}`);
+        }
+
+        const jsonStr = JSON.stringify({ users: usersList }, null, 2);
+        const contentB64 = btoa(unescape(encodeURIComponent(jsonStr)));
+        const putResp = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${FILES.users}`, {
+            method: 'PUT',
+            headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: `Обновление users.json (${new Date().toLocaleString('ru-RU')})`,
+                content: contentB64,
+                branch: GH_BRANCH,
+                ...(sha ? { sha } : {})
+            })
+        });
+        if (!putResp.ok) {
+            const err = await putResp.json().catch(() => ({}));
+            throw new Error(err.message || `HTTP ${putResp.status}`);
+        }
+        usersSource = 'remote';
+        renderUsersSourceNotice();
+        alert('Сохранено в репозиторий. Изменения применятся у всех при следующем входе (может занять пару минут из-за кэша CDN).');
+    } catch (e) {
+        alert('Не удалось сохранить: ' + e.message);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+});
+
+// Отрисовываем таблицу пользователей при заходе на вкладку
+document.querySelectorAll('.nav-tab').forEach(tab => {
+    if (tab.dataset.page === 'users') {
+        tab.addEventListener('click', () => renderUsersTable());
     }
 });
 
