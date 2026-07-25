@@ -218,6 +218,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 <div id="authOverlay" style="position:fixed;inset:0;background:linear-gradient(135deg,var(--green-700),var(--green-800));z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
@@ -242,6 +243,7 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="nav-tab" data-page="receipts">🧾 Квитанции</div>
 <div class="nav-tab" data-page="passport">🏠 Паспорт участка</div>
 <div class="nav-tab" data-page="finance">💰 Финансы</div>
+<div class="nav-tab" data-page="electricity">⚡ Электроэнергия</div>
 <div class="nav-tab" data-page="settings">⚙️ Настройки</div>
 <div class="nav-tab" id="navTabUsers" data-page="users" style="display:none;">👥 Пользователи</div>
 </div>
@@ -546,6 +548,47 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 </div>
 
+<!-- ELECTRICITY -->
+<div class="page" id="page-electricity">
+<div class="card">
+<div class="card-title">⚡ Показания электросчётчиков</div>
+<div id="electricityNoData" class="empty-state">
+<div class="icon">📭</div>
+<p>Загрузите данные на вкладке «Дашборд»</p>
+</div>
+<div id="electricityDataView" style="display:none;">
+<div class="search-bar">
+<input type="text" class="search-input" id="electricitySearchInput" placeholder="🔍 Поиск по участку или ФИО...">
+<div class="toolbar-right">
+<button class="btn btn-secondary btn-sm" id="resetElectricityFilters">✕ Сброс</button>
+<button class="btn btn-blue btn-sm" id="printElectricityBtn">🖨 Печать</button>
+<button class="btn btn-secondary btn-sm" id="exportElectricityCsv">📄 CSV</button>
+</div>
+</div>
+<div class="table-wrap">
+<table class="data-table">
+<thead>
+<tr>
+<th style="width:90px;">№ уч.</th>
+<th>ФИО владельца</th>
+<th style="width:120px;text-align:right;">Пред. показания</th>
+<th style="width:120px;text-align:right;">Тек. показания</th>
+<th style="width:100px;text-align:right;">Расход кВт·ч</th>
+<th style="width:100px;text-align:right;">Тариф ₽</th>
+<th style="width:120px;text-align:right;">Сумма ₽</th>
+<th style="width:120px;text-align:center;">Дата съёма</th>
+</tr>
+</thead>
+<tbody id="electricityTableBody"></tbody>
+</table>
+</div>
+<div id="electricityFooter" style="display:flex;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;">
+<span id="electricityTotal" style="font-size:.85rem;color:var(--gray-600);"></span>
+</div>
+</div>
+</div>
+</div>
+
 <!-- SETTINGS -->
 <div class="page" id="page-settings">
 <div class="card">
@@ -703,6 +746,7 @@ const ALL_TABS = [
     { id: 'receipts',  label: '🧾 Квитанции' },
     { id: 'passport',  label: '🏠 Паспорт участка' },
     { id: 'finance',   label: '💰 Финансы' },
+    { id: 'electricity', label: '⚡ Электроэнергия' },
     { id: 'settings',  label: '⚙️ Настройки' }
 ];
 const ALL_TAB_IDS = ALL_TABS.map(t => t.id);
@@ -916,6 +960,160 @@ let originalPlotsBackup = [];
 let financialAnalyzer = null;
 let financeChartInstance = null;
 let financePieInstance = null;
+
+// ===================== ЭЛЕКТРОЭНЕРГИЯ =====================
+function renderElectricityPage() {
+    const noData = document.getElementById('electricityNoData');
+    const dataView = document.getElementById('electricityDataView');
+
+    if (!eeRepo || !eeRepo.getAll || eeRepo.getAll().length === 0) {
+        if(noData) noData.style.display = '';
+        if(dataView) dataView.style.display = 'none';
+        return;
+    }
+
+    if(noData) noData.style.display = 'none';
+    if(dataView) dataView.style.display = '';
+
+    const search = document.getElementById('electricitySearchInput').value;
+    let items = eeRepo.getAll();
+
+    if (search) {
+        const q = search.toLowerCase().trim();
+        items = items.filter(e => {
+            const pn = String(e.plotNumber || '').toLowerCase();
+            const owner = String(e.owner || '').toLowerCase();
+            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+            return plotMatch || owner.includes(q);
+        });
+    }
+
+    items.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0;
+        const nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+    });
+
+    const tbody = document.getElementById('electricityTableBody');
+    let totalConsumption = 0;
+    let totalSum = 0;
+
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-500);">Ничего не найдено</td></tr>`;
+    } else {
+        tbody.innerHTML = items.map(e => {
+            const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+            const amount = consumption * (e.tariff || 3.82);
+            totalConsumption += consumption;
+            totalSum += amount;
+
+            return `<tr>
+                <td><span class="plot-num-badge">${e.plotNumber}</span></td>
+                <td>${escapeHtml(e.owner || '—')}</td>
+                <td style="text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
+                <td style="text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
+                <td style="text-align:right;font-weight:600;">${consumption.toFixed(2)}</td>
+                <td style="text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
+                <td style="text-align:right;font-weight:600;color:var(--gray-800);">${fmt(amount)}</td>
+                <td style="text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    const footer = document.getElementById('electricityTotal');
+    if (footer) {
+        footer.textContent = `Показано: ${items.length} | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽`;
+    }
+}
+
+document.getElementById('electricitySearchInput').addEventListener('input', renderElectricityPage);
+
+document.getElementById('resetElectricityFilters').addEventListener('click', () => {
+    document.getElementById('electricitySearchInput').value = '';
+    renderElectricityPage();
+});
+
+document.getElementById('printElectricityBtn').addEventListener('click', () => {
+    const search = document.getElementById('electricitySearchInput').value;
+    let items = eeRepo.getAll ? eeRepo.getAll() : [];
+    if (search) {
+        const q = search.toLowerCase().trim();
+        items = items.filter(e => {
+            const pn = String(e.plotNumber || '').toLowerCase();
+            const owner = String(e.owner || '').toLowerCase();
+            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+            return plotMatch || owner.includes(q);
+        });
+    }
+    items.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0;
+        const nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+    });
+
+    const rows = items.map(e => {
+        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+        const amount = consumption * (e.tariff || 3.82);
+        return `<tr>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${e.plotNumber}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${escapeHtml(e.owner || '—')}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${consumption.toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmt(amount)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
+        </tr>`;
+    }).join('');
+
+    const totalConsumption = items.reduce((s, e) => s + Math.max(0, (e.currReading || 0) - (e.prevReading || 0)), 0);
+    const totalSum = items.reduce((s, e) => s + Math.max(0, ((e.currReading || 0) - (e.prevReading || 0)) * (e.tariff || 3.82)), 0);
+
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><meta charset="UTF-8"><title>Электроэнергия — СНТ Берёзка-2</title>
+        <style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:12px;}th,td{border:1px solid #ccc;padding:6px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}.footer{margin-top:12px;font-size:12px;color:#666;}</style>
+        </head><body><h2>⚡ Показания электросчётчиков — СНТ «Берёзка-2» (${new Date().toLocaleDateString('ru-RU')})</h2>
+        <table><thead><tr><th>№ уч.</th><th>ФИО</th><th>Пред. показ.</th><th>Тек. показ.</th><th>Расход кВт·ч</th><th>Тариф</th><th>Сумма ₽</th><th>Дата</th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="footer">Итого: ${items.length} участков | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽</div>
+        </body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 600);
+});
+
+document.getElementById('exportElectricityCsv').addEventListener('click', () => {
+    let items = eeRepo.getAll ? eeRepo.getAll() : [];
+    const search = document.getElementById('electricitySearchInput').value;
+    if (search) {
+        const q = search.toLowerCase().trim();
+        items = items.filter(e => {
+            const pn = String(e.plotNumber || '').toLowerCase();
+            const owner = String(e.owner || '').toLowerCase();
+            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+            return plotMatch || owner.includes(q);
+        });
+    }
+    items.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0;
+        const nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+    });
+
+    const header = ['№ участка','ФИО','Пред. показания','Тек. показания','Расход кВт·ч','Тариф','Сумма','Дата'];
+    const rows = items.map(e => {
+        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+        const amount = consumption * (e.tariff || 3.82);
+        return [e.plotNumber, e.owner || '—', (e.prevReading || 0).toFixed(2), (e.currReading || 0).toFixed(2), consumption.toFixed(2), (e.tariff || 3.82).toFixed(2), fmt(amount), e.readingDate || ''];
+    });
+    const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'elektroenergiya_snt.csv';
+    a.click();
+});
 
 // ===================== НАСТРОЙКИ =====================
 let REQ = {
@@ -2128,6 +2326,7 @@ document.querySelectorAll('.nav-tab').forEach(tab => {
         if(tab.dataset.page === 'debtors') renderDebtorsTable();
         if(tab.dataset.page === 'receipts') renderReceiptsList();
         if(tab.dataset.page === 'finance') renderFinancePage();
+        if(tab.dataset.page === 'electricity') renderElectricityPage();
     });
 });
 
@@ -3581,6 +3780,160 @@ document.getElementById('exportFinanceCsv').addEventListener('click', () => {
     a.download = 'finansy_snt.csv';
     a.click();
 });
+// ===================== ЭЛЕКТРОЭНЕРГИЯ =====================
+function renderElectricityPage() {
+    const noData = document.getElementById('electricityNoData');
+    const dataView = document.getElementById('electricityDataView');
+
+    if (!eeRepo || !eeRepo.getAll || eeRepo.getAll().length === 0) {
+        if(noData) noData.style.display = '';
+        if(dataView) dataView.style.display = 'none';
+        return;
+    }
+
+    if(noData) noData.style.display = 'none';
+    if(dataView) dataView.style.display = '';
+
+    const search = document.getElementById('electricitySearchInput').value;
+    let items = eeRepo.getAll();
+
+    if (search) {
+        const q = search.toLowerCase().trim();
+        items = items.filter(e => {
+            const pn = String(e.plotNumber || '').toLowerCase();
+            const owner = String(e.owner || '').toLowerCase();
+            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+            return plotMatch || owner.includes(q);
+        });
+    }
+
+    items.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0;
+        const nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+    });
+
+    const tbody = document.getElementById('electricityTableBody');
+    let totalConsumption = 0;
+    let totalSum = 0;
+
+    if (!items.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-500);">Ничего не найдено</td></tr>`;
+    } else {
+        tbody.innerHTML = items.map(e => {
+            const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+            const amount = consumption * (e.tariff || 3.82);
+            totalConsumption += consumption;
+            totalSum += amount;
+
+            return `<tr>
+                <td><span class="plot-num-badge">${e.plotNumber}</span></td>
+                <td>${escapeHtml(e.owner || '—')}</td>
+                <td style="text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
+                <td style="text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
+                <td style="text-align:right;font-weight:600;">${consumption.toFixed(2)}</td>
+                <td style="text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
+                <td style="text-align:right;font-weight:600;color:var(--gray-800);">${fmt(amount)}</td>
+                <td style="text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    const footer = document.getElementById('electricityTotal');
+    if (footer) {
+        footer.textContent = `Показано: ${items.length} | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽`;
+    }
+}
+
+document.getElementById('electricitySearchInput').addEventListener('input', renderElectricityPage);
+
+document.getElementById('resetElectricityFilters').addEventListener('click', () => {
+    document.getElementById('electricitySearchInput').value = '';
+    renderElectricityPage();
+});
+
+document.getElementById('printElectricityBtn').addEventListener('click', () => {
+    const search = document.getElementById('electricitySearchInput').value;
+    let items = eeRepo.getAll ? eeRepo.getAll() : [];
+    if (search) {
+        const q = search.toLowerCase().trim();
+        items = items.filter(e => {
+            const pn = String(e.plotNumber || '').toLowerCase();
+            const owner = String(e.owner || '').toLowerCase();
+            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+            return plotMatch || owner.includes(q);
+        });
+    }
+    items.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0;
+        const nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+    });
+
+    const rows = items.map(e => {
+        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+        const amount = consumption * (e.tariff || 3.82);
+        return `<tr>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${e.plotNumber}</td>
+            <td style="border:1px solid #ccc;padding:6px;">${escapeHtml(e.owner || '—')}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${consumption.toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmt(amount)}</td>
+            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
+        </tr>`;
+    }).join('');
+
+    const totalConsumption = items.reduce((s, e) => s + Math.max(0, (e.currReading || 0) - (e.prevReading || 0)), 0);
+    const totalSum = items.reduce((s, e) => s + Math.max(0, ((e.currReading || 0) - (e.prevReading || 0)) * (e.tariff || 3.82)), 0);
+
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><meta charset="UTF-8"><title>Электроэнергия — СНТ Берёзка-2</title>
+        <style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:12px;}th,td{border:1px solid #ccc;padding:6px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}.footer{margin-top:12px;font-size:12px;color:#666;}</style>
+        </head><body><h2>⚡ Показания электросчётчиков — СНТ «Берёзка-2» (${new Date().toLocaleDateString('ru-RU')})</h2>
+        <table><thead><tr><th>№ уч.</th><th>ФИО</th><th>Пред. показ.</th><th>Тек. показ.</th><th>Расход кВт·ч</th><th>Тариф</th><th>Сумма ₽</th><th>Дата</th></tr></thead><tbody>${rows}</tbody></table>
+        <div class="footer">Итого: ${items.length} участков | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽</div>
+        </body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 600);
+});
+
+document.getElementById('exportElectricityCsv').addEventListener('click', () => {
+    let items = eeRepo.getAll ? eeRepo.getAll() : [];
+    const search = document.getElementById('electricitySearchInput').value;
+    if (search) {
+        const q = search.toLowerCase().trim();
+        items = items.filter(e => {
+            const pn = String(e.plotNumber || '').toLowerCase();
+            const owner = String(e.owner || '').toLowerCase();
+            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+            return plotMatch || owner.includes(q);
+        });
+    }
+    items.sort((a, b) => {
+        const na = parseFloat(a.plotNumber) || 0;
+        const nb = parseFloat(b.plotNumber) || 0;
+        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+    });
+
+    const header = ['№ участка','ФИО','Пред. показания','Тек. показания','Расход кВт·ч','Тариф','Сумма','Дата'];
+    const rows = items.map(e => {
+        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+        const amount = consumption * (e.tariff || 3.82);
+        return [e.plotNumber, e.owner || '—', (e.prevReading || 0).toFixed(2), (e.currReading || 0).toFixed(2), consumption.toFixed(2), (e.tariff || 3.82).toFixed(2), fmt(amount), e.readingDate || ''];
+    });
+    const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'elektroenergiya_snt.csv';
+    a.click();
+});
+
 // ===================== НАСТРОЙКИ =====================
 function initSettings() {
     document.getElementById('setName').value = REQ.Name;
