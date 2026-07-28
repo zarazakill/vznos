@@ -771,6 +771,7 @@ body {
     }
 }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -966,13 +967,37 @@ function escapeHtml(str) {
 /* ================================================================
    ПАРСИНГ ODS
    ================================================================ */
+// Safari не всегда находит namespaced-атрибуты через getAttribute
+function getNsAttribute(el, localName) {
+    if (!el || !el.attributes) return null;
+    for (let i = 0; i < el.attributes.length; i++) {
+        const attr = el.attributes[i];
+        if (attr.localName === localName || attr.name === localName ||
+            attr.name.endsWith(':' + localName)) {
+            return attr.value;
+        }
+    }
+    return null;
+}
+
 async function fetchAndParseOds(url, parserFn) {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const buf = await r.arrayBuffer();
-    const zip = await JSZip.loadAsync(buf);
-    const xml = await zip.file("content.xml").async("string");
-    return parserFn(xml);
+    // Safari агрессивно кэширует — добавляем уникальный параметр
+    const nocacheUrl = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    try {
+        const r = await fetch(nocacheUrl, { cache: 'no-cache', signal: controller.signal, mode: 'cors' });
+        clearTimeout(timeoutId);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const buf = await r.arrayBuffer();
+        if (typeof JSZip === 'undefined') throw new Error('JSZip не загружен. Проверьте интернет.');
+        const zip = await JSZip.loadAsync(buf);
+        const xml = await zip.file("content.xml").async("string");
+        return parserFn(xml);
+    } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+    }
 }
 function getAllTableRows(doc) {
     const rows = [];
@@ -982,22 +1007,32 @@ function getAllTableRows(doc) {
 }
 function getCellText(cell) {
     let t = "";
-    for (const n of cell.childNodes)
-        if (n.localName === "p") t += n.textContent || "";
+    if (!cell || !cell.childNodes) return "";
+    for (const n of cell.childNodes) {
+        // Safari-safe: text:p может иметь nodeName "text:p" или localName "p"
+        if (n.localName === "p" || n.nodeName === "text:p") {
+            t += n.textContent || "";
+        }
+    }
     return t.trim();
 }
 function expandRowCells(row) {
     const cells = [];
     for (const cell of row.childNodes) {
         if (cell.localName !== "table-cell" && cell.localName !== "covered-table-cell") continue;
-        const rep = Math.min(parseInt(cell.getAttribute("table:number-columns-repeated")) || 1, 30);
+        // Safari-safe получение атрибута
+        const repAttr = getNsAttribute(cell, "number-columns-repeated");
+        const rep = Math.min(parseInt(repAttr) || 1, 30);
         const text = getCellText(cell);
         for (let r = 0; r < rep; r++) cells.push(text);
     }
     return cells;
 }
 function parseBaseOds(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    // Safari-safe проверка ошибки парсинга
+    const parserError = doc.getElementsByTagName('parsererror')[0];
+    if (parserError) throw new Error('Ошибка парсинга base.ods: ' + parserError.textContent);
     const rows = getAllTableRows(doc);
     const result = new Map();
     for (let i = 8; i < rows.length; i++) {
@@ -1019,7 +1054,9 @@ function parseBaseOds(xml) {
     return result;
 }
 function parseDebitOds(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    const parserError = doc.getElementsByTagName('parsererror')[0];
+    if (parserError) throw new Error('Ошибка парсинга debit.ods: ' + parserError.textContent);
     const rows = getAllTableRows(doc);
     const result = new Map();
     let colPlot=0, colOwner=1, colDebt=7;
@@ -1071,7 +1108,9 @@ function parseDebitOds(xml) {
     return result;
 }
 function parseElectricityOds(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const doc = new DOMParser().parseFromString(xml, "text/xml");
+    const parserError = doc.getElementsByTagName('parsererror')[0];
+    if (parserError) throw new Error('Ошибка парсинга ee.ods: ' + parserError.textContent);
     const rows = getAllTableRows(doc);
     const result = new Map();
     let headerFound = false;
@@ -1137,6 +1176,7 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity) {
     return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${sanitizePurpose(purpose)}|Sum=${sumKop}`;
 }
 async function generateQR(text) {
+    if (typeof QRCode === 'undefined') throw new Error('QRCode библиотека не загружена');
     return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
 async function generateAndShowQR(type, btn, qrText) {
@@ -1144,7 +1184,8 @@ async function generateAndShowQR(type, btn, qrText) {
     const btnGroupId  = type === 'debt' ? 'debtQrButtons'   : type === 'ee' ? 'eeQrButtons'   : 'manualQrButtons';
     const container = document.getElementById(containerId);
     if (!container) return;
-    document.getElementById(`${type}QrImg`)?.remove();
+    const oldImg = document.getElementById(`${type}QrImg`);
+    if (oldImg) oldImg.remove();
     const orig = btn.textContent;
     btn.textContent = "⏳ Генерация…";
     btn.disabled = true;
@@ -1254,6 +1295,7 @@ async function loadPlotData(plotNumber) {
         renderManualPaymentCard(member, debt, ee);
 
     } catch(err) {
+        console.error('loadPlotData error:', err);
         showError("Ошибка: " + err.message + "\n\nПроверьте интернет-соединение.");
     }
 }
@@ -1507,19 +1549,23 @@ function takePhoto(plotNumber) {
    СОГЛАСИЕ
    ================================================================ */
 function isConsentAccepted() {
-    return localStorage.getItem(CONSENT_KEY) === "true" &&
-           localStorage.getItem(CONSENT_VER_KEY) === CONSENT_VERSION;
+    try {
+        return localStorage.getItem(CONSENT_KEY) === "true" &&
+               localStorage.getItem(CONSENT_VER_KEY) === CONSENT_VERSION;
+    } catch (e) { return false; }
 }
 function saveConsent() {
-    localStorage.setItem(CONSENT_KEY, "true");
-    localStorage.setItem(CONSENT_VER_KEY, CONSENT_VERSION);
+    try {
+        localStorage.setItem(CONSENT_KEY, "true");
+        localStorage.setItem(CONSENT_VER_KEY, CONSENT_VERSION);
+    } catch (e) { console.warn('localStorage недоступен'); }
 }
 function revokeConsent() {
-    localStorage.removeItem(CONSENT_KEY);
-    localStorage.removeItem(CONSENT_VER_KEY);
-    cachedDebtMap.clear();
-    cachedElectricityMap.clear();
-    cachedBaseMap.clear();
+    try {
+        localStorage.removeItem(CONSENT_KEY);
+        localStorage.removeItem(CONSENT_VER_KEY);
+    } catch (e) {}
+    cachedDebtMap.clear(); cachedElectricityMap.clear(); cachedBaseMap.clear();
     location.reload();
 }
 
