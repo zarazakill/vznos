@@ -981,11 +981,16 @@ function getNsAttribute(el, localName) {
 }
 
 // Safari: ODS content.xml может начинаться с BOM или невидимых символов,
-// что ломает DOMParser. Удаляем всё перед <?xml
+// что ломает DOMParser. Удаляем всё перед <?xml и убираем BOM
 function cleanXml(xml) {
+    // Удаляем BOM (U+FEFF) из начала строки
+    if (xml.charCodeAt(0) === 0xFEFF) {
+        xml = xml.substring(1);
+    }
+    // Находим начало XML declaration и обрезаем всё до него
     const idx = xml.indexOf('<?xml');
     if (idx > 0) return xml.substring(idx);
-    return xml.replace(/^[\s﻿-]*/, '');
+    return xml;
 }
 
 async function fetchAndParseOds(url, parserFn) {
