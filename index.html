@@ -983,6 +983,7 @@ function getNsAttribute(el, localName) {
 // Safari: ODS content.xml может начинаться с BOM или невидимых символов,
 // что ломает DOMParser. Удаляем всё перед <?xml и убираем BOM
 function cleanXml(xml) {
+    if (!xml) return '';
     // Удаляем BOM (U+FEFF) из начала строки
     if (xml.charCodeAt(0) === 0xFEFF) {
         xml = xml.substring(1);
@@ -994,7 +995,6 @@ function cleanXml(xml) {
 }
 
 async function fetchAndParseOds(url, parserFn) {
-    // Safari агрессивно кэширует — добавляем уникальный параметр
     const nocacheUrl = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 25000);
@@ -1003,12 +1003,40 @@ async function fetchAndParseOds(url, parserFn) {
         clearTimeout(timeoutId);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const buf = await r.arrayBuffer();
+        console.log('[ODS] Loaded', url, 'size:', buf.byteLength);
         if (typeof JSZip === 'undefined') throw new Error('JSZip не загружен. Проверьте интернет.');
+
         const zip = await JSZip.loadAsync(buf);
-        const xml = await zip.file("content.xml").async("string");
+
+        // Ищем content.xml case-insensitive (может быть Content.xml и т.п.)
+        let contentFile = null;
+        let contentPath = '';
+        for (const path in zip.files) {
+            if (path.toLowerCase().endsWith('content.xml') || path.toLowerCase() === 'content.xml') {
+                contentFile = zip.files[path];
+                contentPath = path;
+                break;
+            }
+        }
+        if (!contentFile) {
+            const allFiles = Object.keys(zip.files).join(', ');
+            throw new Error('content.xml не найден. Файлы: ' + allFiles);
+        }
+        console.log('[ODS] Found', contentPath);
+
+        // Используем uint8array + TextDecoder — надёжнее на мобильных
+        const uint8 = await contentFile.async("uint8array");
+        console.log('[ODS] Raw bytes:', uint8.length);
+        const xml = new TextDecoder("utf-8").decode(uint8);
+        console.log('[ODS] XML length:', xml.length, 'first:', xml.substring(0, 100));
+
+        if (!xml || xml.trim().length === 0) {
+            throw new Error('content.xml пустой после распаковки');
+        }
         return parserFn(xml);
     } catch (err) {
         clearTimeout(timeoutId);
+        console.error('[ODS] Error parsing', url, err);
         throw err;
     }
 }
