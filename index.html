@@ -980,6 +980,14 @@ function getNsAttribute(el, localName) {
     return null;
 }
 
+// Safari: ODS content.xml может начинаться с BOM или невидимых символов,
+// что ломает DOMParser. Удаляем всё перед <?xml
+function cleanXml(xml) {
+    const idx = xml.indexOf('<?xml');
+    if (idx > 0) return xml.substring(idx);
+    return xml.replace(/^[\s﻿-]*/, '');
+}
+
 async function fetchAndParseOds(url, parserFn) {
     // Safari агрессивно кэширует — добавляем уникальный параметр
     const nocacheUrl = url + (url.includes('?') ? '&' : '?') + '_=' + Date.now();
@@ -1054,6 +1062,7 @@ function parseBaseOds(xml) {
     return result;
 }
 function parseDebitOds(xml) {
+    xml = cleanXml(xml);
     const doc = new DOMParser().parseFromString(xml, "text/xml");
     const parserError = doc.getElementsByTagName('parsererror')[0];
     if (parserError) throw new Error('Ошибка парсинга debit.ods: ' + parserError.textContent);
@@ -1108,6 +1117,7 @@ function parseDebitOds(xml) {
     return result;
 }
 function parseElectricityOds(xml) {
+    xml = cleanXml(xml);
     const doc = new DOMParser().parseFromString(xml, "text/xml");
     const parserError = doc.getElementsByTagName('parsererror')[0];
     if (parserError) throw new Error('Ошибка парсинга ee.ods: ' + parserError.textContent);
