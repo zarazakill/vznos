@@ -218,7 +218,6 @@ select.filter-sel:focus{border-color:var(--green-400);}
 }
 </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
 <div id="authOverlay" style="position:fixed;inset:0;background:linear-gradient(135deg,var(--green-700),var(--green-800));z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
@@ -319,6 +318,19 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <button class="btn btn-blue btn-sm" id="exportXlsBtn">📊 Excel</button>
 <button class="btn btn-secondary btn-sm" id="exportCsvBtn">📄 CSV</button>
 <button class="btn btn-secondary btn-sm" id="printDebtorsBtn">🖨 Печать</button>
+<button class="btn btn-outline btn-sm" id="toggleColumnsBtn">⚙️ Колонки</button>
+</div>
+</div>
+<div id="columnSettingsPanel" style="display:none;margin-bottom:12px;padding:10px 14px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);">
+<span style="font-size:.85rem;font-weight:600;color:var(--gray-700);">Видимые колонки:</span>
+<div id="columnCheckboxes" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="phone" checked> 📞 Телефон</label>
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="membership" checked> Членские</label>
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="target" checked> Целевые</label>
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="arrears" checked> Прошлые годы</label>
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="work" checked> Отработка</label>
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="electricity" checked> Электроэнергия</label>
+<label style="display:flex;align-items:center;gap:4px;font-size:.82rem;cursor:pointer;"><input type="checkbox" class="col-toggle" data-col="details" checked> Состав долга</label>
 </div>
 </div>
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
@@ -340,12 +352,13 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <th data-sort="plotNumber" style="width:90px;">№ уч. <span class="sort-arrow"></span></th>
 <th data-sort="payerName">ФИО владельца <span class="sort-arrow"></span></th>
 <th data-sort="totalDebt" style="width:120px;">Итого долг ₽ <span class="sort-arrow desc"></span></th>
-<th style="width:100px;">Чл. взносы ₽</th>
-<th style="width:100px;">Целевые ₽</th>
-<th style="width:100px;">Прош. годы ₽</th>
-<th style="width:95px;">Отработка ₽</th>
-<th style="width:100px;">Электр. ₽</th>
-<th>Состав долга</th>
+<th class="col-phone" style="width:130px;">📞 Телефон</th>
+<th class="col-membership" style="width:100px;">Чл. взносы ₽</th>
+<th class="col-target" style="width:100px;">Целевые ₽</th>
+<th class="col-arrears" style="width:100px;">Прош. годы ₽</th>
+<th class="col-work" style="width:95px;">Отработка ₽</th>
+<th class="col-electricity" style="width:100px;">Электр. ₽</th>
+<th class="col-details">Состав долга</th>
 </tr>
 </thead>
 <tbody id="debtorsTableBody"></tbody>
@@ -2087,6 +2100,7 @@ function buildPlotsFromDebit() {
             id: `${d.plotNumber}_${d.owner}`,
             plotNumber: d.plotNumber,
             payerName: base.owner || d.owner || '—',
+            phone: base.phone || '',
             totalDebt: d.totalDebt || 0,
             membershipSum: d.membership || 0,
             targetSum: d.target || 0,
@@ -2462,12 +2476,53 @@ function getFilteredPlots() {
     });
 }
 
+// Настройки видимости колонок
+const DEFAULT_COLS = { phone: true, membership: true, target: true, arrears: true, work: true, electricity: true, details: true };
+function getColVisibility() {
+    try {
+        const saved = localStorage.getItem('snt_debtor_cols');
+        return saved ? { ...DEFAULT_COLS, ...JSON.parse(saved) } : { ...DEFAULT_COLS };
+    } catch(e) { return { ...DEFAULT_COLS }; }
+}
+function saveColVisibility(cols) {
+    localStorage.setItem('snt_debtor_cols', JSON.stringify(cols));
+}
+function applyColVisibility() {
+    const cols = getColVisibility();
+    document.querySelectorAll('.col-toggle').forEach(cb => {
+        cb.checked = !!cols[cb.dataset.col];
+    });
+    Object.keys(cols).forEach(key => {
+        const visible = cols[key];
+        document.querySelectorAll(`.col-${key}`).forEach(el => {
+            el.style.display = visible ? '' : 'none';
+        });
+    });
+}
+
+document.getElementById('toggleColumnsBtn').addEventListener('click', () => {
+    const panel = document.getElementById('columnSettingsPanel');
+    panel.style.display = panel.style.display === 'none' ? '' : 'none';
+});
+
+document.querySelectorAll('.col-toggle').forEach(cb => {
+    cb.addEventListener('change', () => {
+        const cols = getColVisibility();
+        cols[cb.dataset.col] = cb.checked;
+        saveColVisibility(cols);
+        applyColVisibility();
+        renderDebtorsTable();
+    });
+});
+
 function renderDebtorsTable() {
     filteredPlots = getFilteredPlots();
     const tbody = document.getElementById('debtorsTableBody');
+    const cols = getColVisibility();
+    const visibleCount = 4 + Object.values(cols).filter(v => v).length; // чекбокс + № + ФИО + долг + видимые
 
     if (!filteredPlots.length) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--gray-500);">Нет данных по заданным фильтрам</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${visibleCount}" style="text-align:center;padding:30px;color:var(--gray-500);">Нет данных по заданным фильтрам</td></tr>`;
     } else {
         const totalShown = filteredPlots.reduce((s, p) => s + p.totalDebt, 0);
         tbody.innerHTML = filteredPlots.map(p => {
@@ -2478,17 +2533,22 @@ function renderDebtorsTable() {
             if (p.arrearsSum + p.workSum > 0) typeBadges.push(`<span class="badge badge-orange">Пр.г.</span>`);
             if (p.electricitySum > 0) typeBadges.push(`<span class="badge badge-gray">Эл.</span>`);
 
+            const phoneCell = p.phone
+                ? `<a href="tel:${p.phone.replace(/[^\d+]/g,'')}" style="color:var(--blue-600);text-decoration:none;font-size:.82rem;white-space:nowrap;" title="Позвонить">📞 ${escapeHtml(p.phone)}</a>`
+                : '<span style="color:var(--gray-400);font-size:.82rem;">—</span>';
+
             return `<tr class="${checked?'selected':''}" data-id="${p.id}">
                 <td><input type="checkbox" ${checked?'checked':''} class="row-cb" data-id="${p.id}" style="width:17px;height:17px;accent-color:var(--green-600);cursor:pointer;"></td>
                 <td><span class="plot-num-badge">${p.plotNumber}</span></td>
                 <td>${p.payerName}</td>
                 <td class="plot-debt-amt">${fmt(p.totalDebt)}</td>
-                <td style="color:${p.membershipSum?'var(--gray-800)':'var(--gray-400)'}">${p.membershipSum>0?fmt(p.membershipSum):'—'}</td>
-                <td style="color:${p.targetSum?'var(--gray-800)':'var(--gray-400)'}">${p.targetSum>0?fmt(p.targetSum):'—'}</td>
-                <td style="color:${p.arrearsSum?'var(--gray-800)':'var(--gray-400)'}">${p.arrearsSum>0?fmt(p.arrearsSum):'—'}</td>
-                <td style="color:${p.workSum?'var(--gray-800)':'var(--gray-400)'}">${p.workSum>0?fmt(p.workSum):'—'}</td>
-                <td style="color:${p.electricitySum?'var(--gray-800)':'var(--gray-400)'}">${p.electricitySum>0?fmt(p.electricitySum):'—'}</td>
-                <td><div style="display:flex;gap:4px;flex-wrap:wrap;">${typeBadges.join('')} <span style="font-size:.76rem;color:var(--gray-500);">${p.details.map(d=>d.label).join('; ')}</span></div></td>
+                ${cols.phone ? `<td class="col-phone">${phoneCell}</td>` : ''}
+                ${cols.membership ? `<td class="col-membership" style="color:${p.membershipSum?'var(--gray-800)':'var(--gray-400)'}">${p.membershipSum>0?fmt(p.membershipSum):'—'}</td>` : ''}
+                ${cols.target ? `<td class="col-target" style="color:${p.targetSum?'var(--gray-800)':'var(--gray-400)'}">${p.targetSum>0?fmt(p.targetSum):'—'}</td>` : ''}
+                ${cols.arrears ? `<td class="col-arrears" style="color:${p.arrearsSum?'var(--gray-800)':'var(--gray-400)'}">${p.arrearsSum>0?fmt(p.arrearsSum):'—'}</td>` : ''}
+                ${cols.work ? `<td class="col-work" style="color:${p.workSum?'var(--gray-800)':'var(--gray-400)'}">${p.workSum>0?fmt(p.workSum):'—'}</td>` : ''}
+                ${cols.electricity ? `<td class="col-electricity" style="color:${p.electricitySum?'var(--gray-800)':'var(--gray-400)'}">${p.electricitySum>0?fmt(p.electricitySum):'—'}</td>` : ''}
+                ${cols.details ? `<td class="col-details"><div style="display:flex;gap:4px;flex-wrap:wrap;">${typeBadges.join('')} <span style="font-size:.76rem;color:var(--gray-500);">${p.details.map(d=>d.label).join('; ')}</span></div></td>` : ''}
             </tr>`;
         }).join('');
         document.getElementById('tableTotal').textContent = `Показано: ${filteredPlots.length} из ${allPlots.length} | Сумма: ${fmt(totalShown)} ₽`;
@@ -2566,8 +2626,26 @@ document.getElementById('openReceiptsForSelected').addEventListener('click', () 
 // ===================== ЭКСПОРТ =====================
 document.getElementById('exportCsvBtn').addEventListener('click', () => {
     const plots = filteredPlots.length ? filteredPlots : allPlots;
-    const header = ['№ участка','ФИО','Итого долг','Членские','Целевые','Задолж. прош.','Отработка','Электроэнергия','Состав'];
-    const rows = plots.map(p => [p.plotNumber, p.payerName, p.totalDebt.toFixed(2), p.membershipSum.toFixed(2), p.targetSum.toFixed(2), p.arrearsSum.toFixed(2), p.workSum.toFixed(2), p.electricitySum.toFixed(2), p.details.map(d=>d.label).join('; ')]);
+    const cols = getColVisibility();
+    const header = ['№ участка','ФИО','Итого долг'];
+    if (cols.phone) header.push('Телефон');
+    if (cols.membership) header.push('Членские');
+    if (cols.target) header.push('Целевые');
+    if (cols.arrears) header.push('Задолж. прош.');
+    if (cols.work) header.push('Отработка');
+    if (cols.electricity) header.push('Электроэнергия');
+    if (cols.details) header.push('Состав');
+    const rows = plots.map(p => {
+        const row = [p.plotNumber, p.payerName, p.totalDebt.toFixed(2)];
+        if (cols.phone) row.push(p.phone || '');
+        if (cols.membership) row.push(p.membershipSum.toFixed(2));
+        if (cols.target) row.push(p.targetSum.toFixed(2));
+        if (cols.arrears) row.push(p.arrearsSum.toFixed(2));
+        if (cols.work) row.push(p.workSum.toFixed(2));
+        if (cols.electricity) row.push(p.electricitySum.toFixed(2));
+        if (cols.details) row.push(p.details.map(d=>d.label).join('; '));
+        return row;
+    });
     const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
     const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -2588,13 +2666,40 @@ document.getElementById('exportXlsBtn').addEventListener('click', () => {
 
 document.getElementById('printDebtorsBtn').addEventListener('click', () => {
     const plots = filteredPlots.length ? filteredPlots : allPlots;
-    const rows = plots.map(p => `<tr><td>${p.plotNumber}</td><td>${p.payerName}</td><td><b>${fmt(p.totalDebt)} ₽</b></td><td>${p.details.map(d=>d.label).join('<br>')}</td></tr>`).join('');
+    const cols = getColVisibility();
+    const printCols = [];
+    printCols.push('<th>№ уч.</th>');
+    printCols.push('<th>ФИО</th>');
+    if (cols.phone) printCols.push('<th>Телефон</th>');
+    printCols.push('<th>Сумма</th>');
+    if (cols.membership) printCols.push('<th>Чл. взносы</th>');
+    if (cols.target) printCols.push('<th>Целевые</th>');
+    if (cols.arrears) printCols.push('<th>Прош. годы</th>');
+    if (cols.work) printCols.push('<th>Отработка</th>');
+    if (cols.electricity) printCols.push('<th>Электр.</th>');
+    if (cols.details) printCols.push('<th>Состав</th>');
+
+    const rows = plots.map(p => {
+        const cells = [];
+        cells.push(`<td>${p.plotNumber}</td>`);
+        cells.push(`<td>${escapeHtml(p.payerName)}</td>`);
+        if (cols.phone) cells.push(`<td>${p.phone ? escapeHtml(p.phone) : '—'}</td>`);
+        cells.push(`<td><b>${fmt(p.totalDebt)} ₽</b></td>`);
+        if (cols.membership) cells.push(`<td>${p.membershipSum>0?fmt(p.membershipSum):'—'}</td>`);
+        if (cols.target) cells.push(`<td>${p.targetSum>0?fmt(p.targetSum):'—'}</td>`);
+        if (cols.arrears) cells.push(`<td>${p.arrearsSum>0?fmt(p.arrearsSum):'—'}</td>`);
+        if (cols.work) cells.push(`<td>${p.workSum>0?fmt(p.workSum):'—'}</td>`);
+        if (cols.electricity) cells.push(`<td>${p.electricitySum>0?fmt(p.electricitySum):'—'}</td>`);
+        if (cols.details) cells.push(`<td>${p.details.map(d=>d.label).join('<br>')}</td>`);
+        return `<tr>${cells.join('')}</tr>`;
+    }).join('');
+
     const w = window.open('', '_blank');
     w.document.write(`<html><head><meta charset="UTF-8"><title>Должники СНТ Берёзка-2</title>
-        <style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:12px;}th,td{border:1px solid #ccc;padding:6px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}</style>
+        <style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:11px;}th,td{border:1px solid #ccc;padding:5px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}</style>
         </head><body><h2>СНТ «Берёзка-2» — Реестр задолженности (${new Date().toLocaleDateString('ru-RU')})</h2>
         <p>Итого: ${plots.length} участков, сумма: ${fmt(plots.reduce((s,p)=>s+p.totalDebt,0))} ₽</p>
-        <table><thead><tr><th>№ уч.</th><th>ФИО</th><th>Сумма</th><th>Состав</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+        <table><thead><tr>${printCols.join('')}</tr></thead><tbody>${rows}</tbody></table></body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 600);
 });
