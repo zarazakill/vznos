@@ -856,6 +856,7 @@ async function compressPhoto(file, maxWidth = 1920, quality = 0.85) {
     }
 }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -990,9 +991,9 @@ const BIC           = "045004641";
 const CORRESP_ACC   = "30101810500000000641";
 const TARIFF        = 3.82;
 
-const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
-const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
-const BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
+const DEBIT_URL = "./debit.ods";
+const EE_URL    = "./ee.ods";
+const BASE_URL  = "./base.ods";
 
 let cachedDebtMap        = new Map();
 let cachedElectricityMap = new Map();
@@ -1131,7 +1132,9 @@ function escapeHtml(str) {
    ПАРСИНГ ODS
    ================================================================ */
 async function fetchAndParseOds(url, parserFn) {
-    const r = await fetch(url);
+    // cache-busting для Safari (он агрессивно кэширует fetch)
+    const nocacheUrl = url + (url.includes("?") ? "&" : "?") + "_v=" + Date.now();
+    const r = await fetch(nocacheUrl, { cache: "no-store" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const buf = await r.arrayBuffer();
     const zip = await JSZip.loadAsync(buf);
