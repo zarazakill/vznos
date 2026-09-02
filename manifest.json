@@ -2,11 +2,13 @@
   "name": "СНТ Берёзка-2",
   "short_name": "Берёзка-2",
   "description": "Управление взносами и задолженностями СНТ",
-  "start_url": "/",
+  "start_url": "./index.html",
+  "scope": ".",
   "display": "standalone",
   "theme_color": "#2E7D32",
   "background_color": "#F4F6F4",
   "orientation": "portrait",
+  "id": "berezka2-pwa-v2.1",
   "icons": [
     {
       "src": "favicon-96x96.png",
@@ -30,7 +32,7 @@
       "src": "apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ]
 }
