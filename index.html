@@ -700,85 +700,6 @@ body {
     cursor: pointer;
 }
 
-
-/* ================================================================
-   SERVICE WORKER + INDEXEDDB
-   ================================================================ */
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.error('SW registration failed:', err));
-    });
-}
-
-const DB_NAME = 'Berezka2DB';
-const DB_VERSION = 1;
-let dbInstance = null;
-
-function openDB() {
-    return new Promise((resolve, reject) => {
-        if (dbInstance) return resolve(dbInstance);
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onerror = () => reject(req.error);
-        req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains('odsCache')) {
-                db.createObjectStore('odsCache', { keyPath: 'url' });
-            }
-        };
-    });
-}
-async function cacheOdsData(url, dataMap) {
-    try {
-        const db = await openDB();
-        const tx = db.transaction('odsCache', 'readwrite');
-        const store = tx.objectStore('odsCache');
-        store.put({ url, data: Array.from(dataMap.entries()), timestamp: Date.now() });
-    } catch (e) { console.warn('DB cache write failed:', e); }
-}
-async function getCachedOds(url) {
-    try {
-        const db = await openDB();
-        const tx = db.transaction('odsCache', 'readonly');
-        const store = tx.objectStore('odsCache');
-        const result = await new Promise((res, rej) => {
-            const r = store.get(url);
-            r.onsuccess = () => res(r.result);
-            r.onerror = () => rej(r.error);
-        });
-        if (result && (Date.now() - result.timestamp < 3600000)) {
-            return new Map(result.data);
-        }
-    } catch (e) { console.warn('DB cache read failed:', e); }
-    return null;
-}
-
-/* ================================================================
-   СЖАТИЕ ФОТО НА КЛИЕНТЕ
-   ================================================================ */
-async function compressPhoto(file, maxWidth = 1920, quality = 0.85) {
-    try {
-        const img = await createImageBitmap(file);
-        const canvas = document.createElement('canvas');
-        const ratio = Math.min(maxWidth / img.width, 1);
-        canvas.width = Math.floor(img.width * ratio);
-        canvas.height = Math.floor(img.height * ratio);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        return new Promise((resolve, reject) => {
-            canvas.toBlob(blob => {
-                if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-                else reject(new Error('Canvas toBlob failed'));
-            }, 'image/jpeg', quality);
-        });
-    } catch (e) {
-        console.warn('Compression failed, using original:', e);
-        return file;
-    }
-}
-
 /* ================================================================
    TOAST (вместо alert)
    ================================================================ */
@@ -976,34 +897,6 @@ async function compressPhoto(file, maxWidth = 1920, quality = 0.85) {
 
 <script>
 /* ================================================================
-   КОНСТАНТЫ
-   ================================================================ */
-const API_BASE_URL     = "https://wwcat.duckdns.org:12580";
-const CONSENT_VERSION  = "1.0";
-const CONSENT_KEY      = "snt_consent_accepted";
-const CONSENT_VER_KEY  = "snt_consent_version";
-
-const ORGANIZATION  = "СНТ «Берёзка-2»";
-const INN           = "5433118499";
-const PERSONAL_ACC  = "40703810644050040322";
-const BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
-const BIC           = "045004641";
-const CORRESP_ACC   = "30101810500000000641";
-const TARIFF        = 3.82;
-
-const DEBIT_URL = "./debit.ods";
-const EE_URL    = "./ee.ods";
-const BASE_URL  = "./base.ods";
-
-let cachedDebtMap        = new Map();
-let cachedElectricityMap = new Map();
-let cachedBaseMap        = new Map();
-let currentPlotNumber    = "";
-let isBankExpanded       = true;
-let lastSyncTime         = null;
-
-
-/* ================================================================
    SERVICE WORKER + INDEXEDDB
    ================================================================ */
 if ('serviceWorker' in navigator) {
@@ -1032,6 +925,7 @@ function openDB() {
         };
     });
 }
+
 async function cacheOdsData(url, dataMap) {
     try {
         const db = await openDB();
@@ -1040,6 +934,7 @@ async function cacheOdsData(url, dataMap) {
         store.put({ url, data: Array.from(dataMap.entries()), timestamp: Date.now() });
     } catch (e) { console.warn('DB cache write failed:', e); }
 }
+
 async function getCachedOds(url) {
     try {
         const db = await openDB();
@@ -1080,6 +975,34 @@ async function compressPhoto(file, maxWidth = 1920, quality = 0.85) {
         return file;
     }
 }
+
+/* ================================================================
+   КОНСТАНТЫ
+   ================================================================ */
+const API_BASE_URL     = "https://wwcat.duckdns.org:12580";
+const CONSENT_VERSION  = "1.0";
+const CONSENT_KEY      = "snt_consent_accepted";
+const CONSENT_VER_KEY  = "snt_consent_version";
+
+const ORGANIZATION  = "СНТ «Берёзка-2»";
+const INN           = "5433118499";
+const PERSONAL_ACC  = "40703810644050040322";
+const BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
+const BIC           = "045004641";
+const CORRESP_ACC   = "30101810500000000641";
+const TARIFF        = 3.82;
+
+// ВОТ ЗДЕСЬ ГЛАВНОЕ ИСПРАВЛЕНИЕ — используем GitHub URL как в первом файле
+const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
+const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
+const BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
+
+let cachedDebtMap        = new Map();
+let cachedElectricityMap = new Map();
+let cachedBaseMap        = new Map();
+let currentPlotNumber    = "";
+let isBankExpanded       = true;
+let lastSyncTime         = null;
 
 /* ================================================================
    TOAST (заменяем alert на более приятный)
@@ -1175,7 +1098,7 @@ function parseBaseOds(xml) {
         if (plotRaw.toLowerCase() === "итого") break;
         result.set(plotRaw.toLowerCase(), {
             plotNumber: plotRaw.toLowerCase(),
-            owner: "", // ФИО удалено из кэша для защиты персональных данных
+            owner: "",
             membership: (cells[2]||"").trim(),
             phone: (cells[3]||"").trim(),
             email: (cells[4]||"").trim(),
@@ -1217,7 +1140,7 @@ function parseDebitOds(xml) {
             const debtEnd = parseNumber(cells[colDebt]);
             const overpayEnd = parseNumber(cells[8]);
             current = {
-                plotNumber: col0.toLowerCase(), owner: "", // ФИО удалено из кэша
+                plotNumber: col0.toLowerCase(), owner: "",
                 totalDebt: debtEnd, overpayEnd: overpayEnd,
                 hasDebt: debtEnd > 0.01, hasOverpayment: overpayEnd > 0.01,
                 membershipDebt:0, targetDebt:0, arrearsDebt:0, workDebt:0, electricityDebt:0
@@ -1683,7 +1606,6 @@ function takePhoto(plotNumber) {
         if (ydStatus) ydStatus.textContent = '☁ Сжатие и загрузка…';
 
         try {
-            // Сжимаем фото перед отправкой
             const compressedFile = await compressPhoto(file, 1920, 0.85);
             if (ydStatus) ydStatus.textContent = `☁ Загрузка (${Math.round(compressedFile.size/1024)} КБ)…`;
 
@@ -1699,13 +1621,6 @@ function takePhoto(plotNumber) {
             if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = `⚠️ ${err.message}`; }
             if (ydStatus) ydStatus.textContent = '☁ Ошибка загрузки';
             if (takeBtn)  takeBtn.style.display = 'block';
-
-            // Регистрируем background sync для повторной попытки
-            if ('sync' in navigator.serviceWorker.ready) {
-                navigator.serviceWorker.ready.then(reg => {
-                    reg.sync.register('upload-photo-' + Date.now()).catch(()=>{});
-                });
-            }
         }
     };
     input.click();
