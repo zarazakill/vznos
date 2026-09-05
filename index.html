@@ -1135,18 +1135,19 @@ function escapeHtml(str) {
    ПАРСИНГ ODS
    ================================================================ */
 async function fetchAndParseOds(url, parserFn) {
-    // cache-busting для Safari (он агрессивно кэширует fetch)
+    // Уникальный параметр для обхода агрессивного кэша Safari
     const nocacheUrl = url + (url.includes("?") ? "&" : "?") + "_v=" + Date.now();
     
     // ИЗМЕНЕНИЕ 1: Убрали cache: "no-store". 
-    // В iOS Safari это иногда вызывает сбои сети. Уникального URL (_v=...) достаточно.
+    // В связке iOS Safari + Service Worker это часто вызывает сетевые ошибки или opaque responses.
     const r = await fetch(nocacheUrl, { cache: "default" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     
-    // ИЗМЕНЕНИЕ 2: Используем blob() вместо arrayBuffer().
-    // iOS Safari гораздо стабильнее работает с Blob при передаче данных в JSZip,
-    // это предотвращает переполнение памяти и тихие падения вкладки [[14]].
+    // ИЗМЕНЕНИЕ 2: Используем blob() вместо arrayBuffer()
+    // Это предотвращает переполнение памяти и тихие краши вкладки на iOS [[14]]
     const blob = await r.blob();
+    
+    // JSZip нативно поддерживает Blob, это работает быстрее и безопаснее
     const zip = await JSZip.loadAsync(blob);
     
     const xml = await zip.file("content.xml").async("string");
