@@ -736,7 +736,10 @@ async function cacheOdsData(url, dataMap) {
         const tx = db.transaction('odsCache', 'readwrite');
         const store = tx.objectStore('odsCache');
         store.put({ url, data: Array.from(dataMap.entries()), timestamp: Date.now() });
-    } catch (e) { console.warn('DB cache write failed:', e); }
+    } catch (e) { 
+        // Не прерываем работу, просто логируем. В приватном режиме iOS это ожидаемо [[24]].
+        console.warn('IndexedDB недоступен или переполнен (возможно, приватный режим):', e); 
+    }
 }
 async function getCachedOds(url) {
     try {
@@ -1134,10 +1137,18 @@ function escapeHtml(str) {
 async function fetchAndParseOds(url, parserFn) {
     // cache-busting для Safari (он агрессивно кэширует fetch)
     const nocacheUrl = url + (url.includes("?") ? "&" : "?") + "_v=" + Date.now();
-    const r = await fetch(nocacheUrl, { cache: "no-store" });
+    
+    // ИЗМЕНЕНИЕ 1: Убрали cache: "no-store". 
+    // В iOS Safari это иногда вызывает сбои сети. Уникального URL (_v=...) достаточно.
+    const r = await fetch(nocacheUrl, { cache: "default" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const buf = await r.arrayBuffer();
-    const zip = await JSZip.loadAsync(buf);
+    
+    // ИЗМЕНЕНИЕ 2: Используем blob() вместо arrayBuffer().
+    // iOS Safari гораздо стабильнее работает с Blob при передаче данных в JSZip,
+    // это предотвращает переполнение памяти и тихие падения вкладки [[14]].
+    const blob = await r.blob();
+    const zip = await JSZip.loadAsync(blob);
+    
     const xml = await zip.file("content.xml").async("string");
     return parserFn(xml);
 }
