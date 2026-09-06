@@ -10,8 +10,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Берёзка-2">
 
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
 /* ================================================================
    DESIGN TOKENS — соответствуют values/colors.xml + dimens.xml
@@ -782,6 +780,12 @@ body {
 </head>
 <body>
 
+<div id="startupState" style="padding:24px;text-align:center;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#424242;">
+    <div style="font-size:28px;margin-bottom:10px;">🌿</div>
+    <div style="font-weight:700;font-size:18px;">СНТ «Берёзка-2»</div>
+    <div id="startupMessage" style="margin-top:6px;color:#757575;font-size:14px;">Подготовка приложения…</div>
+</div>
+
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
 
@@ -819,7 +823,7 @@ body {
 
             <!-- СТАТУС загрузки данных -->
             <div id="dataStatus" class="status-card">
-                <div class="status-count" id="statusCount">⏳ Загрузка данных…</div>
+                <div class="status-count" id="statusCount">⏳ Подготовка данных…</div>
                 <div class="status-time" id="statusTime"></div>
             </div>
 
@@ -886,6 +890,79 @@ body {
 </div>
 
 <script>
+/* Lazy loading внешних библиотек: CDN больше не блокирует первый запуск */
+const LIBRARY_LOAD_TIMEOUT = 10000;
+const LIBRARY_URLS = {
+    jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    qrcode: 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js'
+};
+
+function loadScriptOnce(src, globalName, timeoutMs = LIBRARY_LOAD_TIMEOUT) {
+    if (window[globalName]) return Promise.resolve(window[globalName]);
+    const existing = document.querySelector(`script[data-lazy-src="${src}"]`);
+    if (existing) {
+        return new Promise((resolve, reject) => {
+            const started = Date.now();
+            const timer = setInterval(() => {
+                if (window[globalName]) {
+                    clearInterval(timer);
+                    resolve(window[globalName]);
+                } else if (Date.now() - started >= timeoutMs) {
+                    clearInterval(timer);
+                    reject(new Error(`Не удалось загрузить библиотеку ${globalName}`));
+                }
+            }, 50);
+        });
+    }
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.lazySrc = src;
+        let settled = false;
+        const finish = (fn, value) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            fn(value);
+        };
+        const timer = setTimeout(() => {
+            script.remove();
+            finish(reject, new Error(`Таймаут загрузки библиотеки ${globalName}`));
+        }, timeoutMs);
+        script.onload = () => {
+            if (window[globalName]) finish(resolve, window[globalName]);
+            else finish(reject, new Error(`Библиотека ${globalName} не инициализировалась`));
+        };
+        script.onerror = () => {
+            script.remove();
+            finish(reject, new Error(`Ошибка загрузки библиотеки ${globalName}`));
+        };
+        document.head.appendChild(script);
+    });
+}
+
+let jsZipPromise = null;
+let qrCodePromise = null;
+function ensureJSZip() {
+    if (window.JSZip) return Promise.resolve(window.JSZip);
+    if (!jsZipPromise) jsZipPromise = loadScriptOnce(LIBRARY_URLS.jszip, 'JSZip');
+    return jsZipPromise;
+}
+function ensureQRCode() {
+    if (window.QRCode) return Promise.resolve(window.QRCode);
+    if (!qrCodePromise) qrCodePromise = loadScriptOnce(LIBRARY_URLS.qrcode, 'QRCode');
+    return qrCodePromise;
+}
+function setStartupMessage(message) {
+    const el = document.getElementById('startupMessage');
+    if (el) el.textContent = message;
+}
+function showMainApp() {
+    document.getElementById('startupState')?.classList.add('hidden');
+    document.getElementById('mainApp')?.classList.remove('hidden');
+}
+
 /* ================================================================
    SERVICE WORKER + INDEXEDDB
    ================================================================ */
@@ -1077,10 +1154,7 @@ function escapeHtml(str) {
    ПАРСИНГ ODS
    ================================================================ */
 async function fetchAndParseOds(url, parserFn) {
-    // Проверяем наличие JSZip
-    if (typeof JSZip === 'undefined') {
-        throw new Error('Библиотека JSZip не загружена. Проверьте интернет-соединение.');
-    }
+    await ensureJSZip();
 
     const r = await fetchWithTimeout(url, { cache: "no-store" }, 15000);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1261,9 +1335,7 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpo
     return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${sanitizePurpose(purpose)}|Sum=${sumKop}`;
 }
 async function generateQR(text) {
-    if (typeof QRCode === 'undefined') {
-        throw new Error('Библиотека QRCode не загружена');
-    }
+    await ensureQRCode();
     return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
 async function generateAndShowQR(type, btn, qrText) {
@@ -1309,6 +1381,7 @@ window.saveQR = function(imgId) {
 function updateDataStatus() {
     const statusEl = document.getElementById('statusCount');
     const timeEl = document.getElementById('statusTime');
+    if (!statusEl || !timeEl) return;
 
     const baseOk = dataLoadStatus.base === 'ok';
     const debtOk = dataLoadStatus.debt === 'ok';
@@ -1402,11 +1475,7 @@ async function syncAllData() {
 
     syncPromise = (async () => {
         try {
-            // Проверяем JSZip
-            if (typeof JSZip === 'undefined') {
-                throw new Error('JSZip не загружен. Проверьте интернет-соединение.');
-            }
-
+            // JSZip загружается лениво внутри fetchAndParseOds.
             // Загружаем все три файла независимо
             const results = await Promise.allSettled([
                 loadSingleOds(BASE_URL, parseBaseOds, 'base', 'base'),
@@ -1475,9 +1544,19 @@ async function loadPlotData(plotNumber, fromCache = false) {
         document.getElementById(id).classList.add('hidden'));
 
     try {
-        // Если данные ещё не загружены — запускаем синхронизацию
-        if (cachedBaseMap.size === 0 && cachedDebtMap.size === 0 && cachedElectricityMap.size === 0) {
-            await syncAllData();
+        // Поиск не блокируется ожиданием сети: синхронизация идёт в фоне.
+        const noDataLoaded =
+            cachedBaseMap.size === 0 &&
+            cachedDebtMap.size === 0 &&
+            cachedElectricityMap.size === 0;
+
+        if (noDataLoaded) {
+            const sync = syncAllData();
+            document.getElementById('statusTime').textContent = 'Данные загружаются…';
+            await Promise.race([
+                sync,
+                new Promise(resolve => setTimeout(resolve, 250))
+            ]);
         }
 
         const debt   = cachedDebtMap.get(normalized);
@@ -1485,6 +1564,15 @@ async function loadPlotData(plotNumber, fromCache = false) {
         const member = cachedBaseMap.get(normalized);
 
         if (!debt && !ee && !member) {
+            const stillLoading =
+                dataLoadStatus.base === 'loading' ||
+                dataLoadStatus.debt === 'loading' ||
+                dataLoadStatus.ee === 'loading';
+            if (stillLoading) {
+                document.getElementById('notFoundBlock').classList.add('hidden');
+                showToast('Данные ещё загружаются. Результат появится автоматически.');
+                return;
+            }
             document.getElementById('notFoundBlock').classList.remove('hidden');
             return;
         }
@@ -1829,7 +1917,7 @@ function showConsentScreen() {
     accept.onclick = () => {
         saveConsent();
         overlay.remove();
-        document.getElementById('mainApp').classList.remove('hidden');
+        showMainApp();
         initMainApp();
     };
     document.getElementById('declineBtn').onclick = () => {
@@ -1883,7 +1971,7 @@ function showSettingsModal() {
     };
     document.getElementById('clearBtn').onclick = () => {
         cachedDebtMap.clear(); cachedElectricityMap.clear(); cachedBaseMap.clear();
-        document.getElementById('statusCard').classList.add('hidden');
+        document.getElementById('dataStatus')?.classList.add('hidden');
         showToast('Кэш данных очищен');
         close();
     };
@@ -1893,6 +1981,8 @@ function showSettingsModal() {
    ИНИЦИАЛИЗАЦИЯ
    ================================================================ */
 function initMainApp() {
+    showMainApp();
+
     const searchBtn = document.getElementById('searchBtn');
     const plotInput = document.getElementById('plotInput');
     let searchDebounceTimer;
@@ -1930,11 +2020,24 @@ function initMainApp() {
 }
 
 // Старт
-if (isConsentAccepted()) {
-    document.getElementById('mainApp').classList.remove('hidden');
-    initMainApp();
-} else {
-    showConsentScreen();
+try {
+    if (isConsentAccepted()) {
+        showMainApp();
+        setStartupMessage('Приложение готово. Данные загружаются в фоне…');
+        initMainApp();
+    } else {
+        document.getElementById('startupState')?.classList.add('hidden');
+        showConsentScreen();
+    }
+} catch (err) {
+    console.error('Application startup failed:', err);
+    showMainApp();
+    const errorState = document.getElementById('errorState');
+    const errorMsg = document.getElementById('errorMsg');
+    if (errorState && errorMsg) {
+        errorState.classList.remove('hidden');
+        errorMsg.textContent = `Ошибка запуска: ${err.message}`;
+    }
 }
 </script>
 </body>

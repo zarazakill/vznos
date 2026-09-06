@@ -2,6 +2,7 @@
 const CACHE_NAME = 'berezka2-v2.1';
 const STATIC_CACHE = 'berezka2-static-v2.1';
 const DATA_CACHE = 'berezka2-data-v2.1';
+const CDN_CACHE = 'berezka2-cdn-v2.1';
 
 const urlsToCache = [
     './',
@@ -33,9 +34,10 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
+            const currentCaches = [STATIC_CACHE, DATA_CACHE, CDN_CACHE];
             return Promise.all(
                 cacheNames.map(name => {
-                    if (name !== STATIC_CACHE && name !== DATA_CACHE) {
+                    if (!currentCaches.includes(name)) {
                         console.log('SW: Deleting old cache:', name);
                         return caches.delete(name);
                     }
@@ -56,6 +58,23 @@ self.addEventListener('sync', event => {
         );
     }
 });
+
+// Вспомогательная функция fetch с таймаутом для SW
+function swFetchWithTimeout(request, timeoutMs = 15000) {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error('SW: fetch timeout'));
+        }, timeoutMs);
+
+        fetch(request).then(response => {
+            clearTimeout(timeout);
+            resolve(response);
+        }).catch(err => {
+            clearTimeout(timeout);
+            reject(err);
+        });
+    });
+}
 
 // Стратегия кеширования с корректной обработкой ошибок
 self.addEventListener('fetch', event => {
@@ -78,14 +97,14 @@ self.addEventListener('fetch', event => {
 
         event.respondWith(
             caches.match(request).then(cached => {
-                return cached || fetch(request).then(response => {
+                if (cached) return cached;
+                return swFetchWithTimeout(request).then(response => {
                     if (response && response.ok) {
                         const clone = response.clone();
                         caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
                     }
                     return response;
                 }).catch(() => {
-                    // Если ресурс не закеширован и сеть недоступна — возвращаем fallback
                     return new Response('Resource unavailable', { status: 503 });
                 });
             })
@@ -93,55 +112,60 @@ self.addEventListener('fetch', event => {
         return;
         }
 
-        // 2. ODS файлы — Stale While Revalidate (кэш первым, фоном обновляем)
-        if (request.url.includes('.ods')) {
+        // 2. CDN скрипты — отдельный кеш с длительным хранением
+        if (request.url.includes('cdn.jsdelivr.net')) {
             event.respondWith(
-                caches.open(DATA_CACHE).then(cache => {
+                caches.open(CDN_CACHE).then(cache => {
                     return cache.match(request).then(cached => {
-                        const fetchPromise = fetch(request).then(networkResponse => {
-                            if (networkResponse && networkResponse.ok) {
-                                cache.put(request, networkResponse.clone());
+                        if (cached) return cached;
+                        return swFetchWithTimeout(request).then(response => {
+                            if (response && response.ok) {
+                                const clone = response.clone();
+                                cache.put(request, clone);
                             }
-                            return networkResponse;
-                        }).catch(err => {
-                            console.warn('SW: Network fetch failed for ODS:', err);
-                            if (!cached) {
-                                return new Response(JSON.stringify({error: "offline"}), {
-                                    headers: {'Content-Type': 'application/json'},
-                                    status: 503
-                                });
-                            }
-                            // Если есть кэш, возвращаем его даже при ошибке сети
-                            return cached;
+                            return response;
+                        }).catch(() => {
+                            return new Response('CDN resource unavailable', {
+                                status: 503,
+                                headers: { 'Content-Type': 'text/plain' }
+                            });
                         });
-
-                        // Если есть кэш — возвращаем сразу, но фоном обновляем
-                        if (cached) {
-                            // Фоновое обновление
-                            event.waitUntil(fetchPromise.catch(() => {}));
-                            return cached;
-                        }
-                        return fetchPromise;
                     });
                 })
             );
             return;
         }
 
-        // 3. CDN скрипты (jszip, qrcode) — Cache First с fallback
-        if (request.url.includes('cdn.jsdelivr.net')) {
+        // 3. ODS файлы — Stale While Revalidate (кэш первым, фоном обновляем)
+        if (request.url.includes('.ods')) {
             event.respondWith(
-                caches.match(request).then(cached => {
-                    return cached || fetch(request).then(response => {
-                        if (response && response.ok) {
-                            const clone = response.clone();
-                            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
+                caches.open(DATA_CACHE).then(cache => {
+                    return cache.match(request).then(cached => {
+                        // Если есть кэш — возвращаем сразу, но фоном обновляем
+                        if (cached) {
+                            // Фоновое обновление с таймаутом
+                            event.waitUntil(
+                                swFetchWithTimeout(request).then(networkResponse => {
+                                    if (networkResponse && networkResponse.ok) {
+                                        cache.put(request, networkResponse.clone());
+                                    }
+                                    return networkResponse;
+                                }).catch(() => {})
+                            );
+                            return cached;
                         }
-                        return response;
-                    }).catch(() => {
-                        return new Response('CDN resource unavailable', {
-                            status: 503,
-                            headers: { 'Content-Type': 'text/plain' }
+
+                        // Кэша нет — пробуем загрузить с таймаутом
+                        return swFetchWithTimeout(request).then(networkResponse => {
+                            if (networkResponse && networkResponse.ok) {
+                                cache.put(request, networkResponse.clone());
+                            }
+                            return networkResponse;
+                        }).catch(() => {
+                            return new Response(JSON.stringify({error: "offline"}), {
+                                headers: {'Content-Type': 'application/json'},
+                                status: 503
+                            });
                         });
                     });
                 })
@@ -151,7 +175,7 @@ self.addEventListener('fetch', event => {
 
         // 4. Всё остальное — Network First с fallback на кэш
         event.respondWith(
-            fetch(request).then(response => {
+            swFetchWithTimeout(request).then(response => {
                 if (response && response.ok) {
                     const clone = response.clone();
                     caches.open(DATA_CACHE).then(cache => cache.put(request, clone));
@@ -160,7 +184,6 @@ self.addEventListener('fetch', event => {
             }).catch(() => {
                 return caches.match(request).then(cached => {
                     if (cached) return cached;
-                    // Если нет кэша и сеть недоступна — возвращаем корректный fallback
                     return new Response('Network unavailable', { status: 503 });
                 });
             })
