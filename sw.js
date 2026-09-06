@@ -14,7 +14,9 @@ const urlsToCache = [
 './favicon-96x96.png',
 './favicon-192x192.png',
 './favicon-512x512.png',
-'./apple-touch-icon.png'
+'./apple-touch-icon.png',
+'./js/jszip.min.js',
+'./js/qrcode.min.js'
 ];
 
 // Установка Service Worker
@@ -93,7 +95,8 @@ self.addEventListener('fetch', event => {
     // 1. Статические ресурсы (Cache First)
     if (urlsToCache.some(u => request.url.endsWith(u.replace('./', ''))) ||
         request.url.includes('favicon') ||
-        request.url.endsWith('manifest.json')) {
+        request.url.endsWith('manifest.json') ||
+        request.url.includes('/js/')) {
 
         event.respondWith(
             caches.match(request).then(cached => {
@@ -112,7 +115,7 @@ self.addEventListener('fetch', event => {
         return;
         }
 
-        // 2. CDN скрипты — отдельный кеш с длительным хранением
+        // 2. CDN скрипты (запасной вариант, если не загрузились локальные)
         if (request.url.includes('cdn.jsdelivr.net')) {
             event.respondWith(
                 caches.open(CDN_CACHE).then(cache => {
@@ -136,14 +139,12 @@ self.addEventListener('fetch', event => {
             return;
         }
 
-        // 3. ODS файлы — Stale While Revalidate (кэш первым, фоном обновляем)
+        // 3. ODS файлы — Stale While Revalidate
         if (request.url.includes('.ods')) {
             event.respondWith(
                 caches.open(DATA_CACHE).then(cache => {
                     return cache.match(request).then(cached => {
-                        // Если есть кэш — возвращаем сразу, но фоном обновляем
                         if (cached) {
-                            // Фоновое обновление с таймаутом
                             event.waitUntil(
                                 swFetchWithTimeout(request).then(networkResponse => {
                                     if (networkResponse && networkResponse.ok) {
@@ -154,8 +155,6 @@ self.addEventListener('fetch', event => {
                             );
                             return cached;
                         }
-
-                        // Кэша нет — пробуем загрузить с таймаутом
                         return swFetchWithTimeout(request).then(networkResponse => {
                             if (networkResponse && networkResponse.ok) {
                                 cache.put(request, networkResponse.clone());

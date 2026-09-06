@@ -10,29 +10,28 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Берёзка-2">
 
+    <!-- ЛОКАЛЬНЫЕ БИБЛИОТЕКИ — НЕТ ЗАВИСИМОСТИ ОТ CDN -->
+    <script src="./js/jszip.min.js"></script>
+    <script src="./js/qrcode.min.js"></script>
+
     <style>
 /* ================================================================
    DESIGN TOKENS — соответствуют values/colors.xml + dimens.xml
    ================================================================ */
 :root {
-    /* Зелёный */
     --green-50:  #F1F8E9;
     --green-100: #DCEDC8;
     --green-400: #66BB6A;
     --green-600: #388E3C;
     --green-700: #2E7D32;
     --green-800: #1B5E20;
-    /* Синий */
     --blue-50:   #E3F2FD;
     --blue-600:  #1565C0;
-    /* Красный */
     --red-50:    #FFEBEE;
     --red-400:   #EF5350;
     --red-600:   #C62828;
-    /* Оранжевый */
     --orange-50: #FFF3E0;
     --orange-600:#E65100;
-    /* Серый */
     --gray-50:   #FAFAFA;
     --gray-100:  #F5F5F5;
     --gray-200:  #EEEEEE;
@@ -43,7 +42,6 @@
     --gray-700:  #616161;
     --gray-800:  #424242;
     --gray-900:  #212121;
-    /* Семантика */
     --color-error:    #C62828;
     --color-success:  #388E3C;
     --color-warning:  #E65100;
@@ -53,25 +51,18 @@
     --text-primary:   #212121;
     --text-secondary: #757575;
     --text-hint:      #BDBDBD;
-    /* Отступы */
     --sp-xxs: 2px;   --sp-xs: 4px;   --sp-sm: 8px;
     --sp-md:  12px;  --sp-lg: 16px;  --sp-xl: 20px;
     --sp-xxl: 24px;  --sp-3xl: 32px;
-    /* Карточки */
     --card-radius: 16px;
     --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
     --card-shadow-md: 0 4px 16px rgba(0,0,0,0.10);
-    /* Кнопки */
     --btn-radius: 12px;
     --btn-height: 48px;
     --btn-height-lg: 56px;
 }
 
-/* ================================================================
-   RESET & BASE
-   ================================================================ */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
 html { -webkit-text-size-adjust: 100%; }
 
 body {
@@ -80,27 +71,16 @@ body {
     line-height: 1.5;
     background: var(--bg-main);
     color: var(--text-primary);
-    /* iPhone safe area */
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
 }
 
-/* ================================================================
-   LAYOUT — центрирование контента на планшете/ПК
-   ================================================================ */
-.app-shell {
-    max-width: 600px;
-    margin: 0 auto;
-}
+.app-shell { max-width: 600px; margin: 0 auto; }
 
-/* ================================================================
-   ШАПКА — идентична Android
-   ================================================================ */
 .app-header {
     background: var(--green-700);
     padding: var(--sp-xl) var(--sp-xl) var(--sp-xxl);
-    /* iPhone notch */
     padding-top: calc(var(--sp-xl) + env(safe-area-inset-top));
     color: white;
     position: relative;
@@ -113,7 +93,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding-right: 52px; /* место под кнопку настроек */
+    padding-right: 52px;
 }
 
 .header-sub {
@@ -142,9 +122,6 @@ body {
 }
 .settings-btn:hover { background: rgba(255,255,255,0.28); }
 
-/* ================================================================
-   КОНТЕНТ
-   ================================================================ */
 .content {
     padding: var(--sp-lg);
     display: flex;
@@ -152,9 +129,6 @@ body {
     gap: var(--sp-lg);
 }
 
-/* ================================================================
-   КАРТОЧКИ
-   ================================================================ */
 .card {
     background: var(--bg-card);
     border-radius: var(--card-radius);
@@ -173,14 +147,10 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
 }
-
 .card-title.blue  { color: var(--blue-600); }
 .card-title.red   { color: var(--color-error); }
 .card-title.dark  { color: var(--text-primary); }
 
-/* ================================================================
-   КНОПКИ — соответствуют Widget.Berezka2.Button.*
-   ================================================================ */
 .btn {
     display: flex;
     align-items: center;
@@ -208,19 +178,12 @@ body {
 
 .btn-primary   { background: var(--green-700); color: white; }
 .btn-primary-lg { background: var(--green-700); color: white; min-height: var(--btn-height-lg); font-size: 15px; }
-.btn-secondary {
-    background: transparent;
-    color: var(--green-700);
-    border: 1.5px solid var(--green-700);
-}
+.btn-secondary { background: transparent; color: var(--green-700); border: 1.5px solid var(--green-700); }
 .btn-blue   { background: var(--blue-600);  color: white; }
 .btn-danger { background: var(--color-error); color: white; }
 .btn-text   { background: transparent; color: var(--text-secondary); font-size: 14px; }
 .btn-gray   { background: var(--gray-200); color: var(--gray-800); }
 
-/* ================================================================
-   ПОИСК
-   ================================================================ */
 .search-label {
     font-size: 11px;
     font-weight: 700;
@@ -235,11 +198,6 @@ body {
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: var(--sp-lg);
-}
-
-.search-field-wrap {
-    position: relative;
-    margin-bottom: var(--sp-md);
 }
 
 .search-input {
@@ -268,9 +226,6 @@ body {
     font-weight: 500;
 }
 
-/* ================================================================
-   СТАТУС (загружено/обновлено)
-   ================================================================ */
 .status-card {
     background: var(--green-50);
     border: 1px solid var(--green-100);
@@ -288,9 +243,6 @@ body {
     margin-top: 2px;
 }
 
-/* ================================================================
-   СОСТОЯНИЯ
-   ================================================================ */
 .state-loading {
     text-align: center;
     padding: var(--sp-3xl) var(--sp-lg);
@@ -326,24 +278,9 @@ body {
     line-height: 1.7;
 }
 
-/* ================================================================
-   УЧАСТОК — ФИО + номер
-   ================================================================ */
-.plot-sub   { font-size: 13px; color: var(--text-secondary); }
-.plot-owner {
-    display: none !important; /* Фамилия скрыта по требованию */
-    font-size: 17px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 4px 0 var(--sp-md);
-    /* длинное ФИО переносится, но не ломает карточку */
-    overflow-wrap: anywhere;
-    line-height: 1.3;
-}
+.plot-sub { font-size: 13px; color: var(--text-secondary); }
+.plot-owner { display: none !important; font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 4px 0 var(--sp-md); overflow-wrap: anywhere; line-height: 1.3; }
 
-/* ================================================================
-   СУММА ЗАДОЛЖЕННОСТИ
-   ================================================================ */
 .debt-total {
     font-size: 24px;
     font-weight: 700;
@@ -353,9 +290,6 @@ body {
 }
 .debt-total.green { color: var(--color-success); font-size: 20px; }
 
-/* ================================================================
-   СТРОКИ СТРУКТУРЫ ДОЛГА
-   ================================================================ */
 .debt-line {
     display: flex;
     justify-content: space-between;
@@ -370,9 +304,6 @@ body {
 .debt-line-amount { font-weight: 700; color: var(--color-error); white-space: nowrap; }
 .debt-words { font-size: 12px; color: var(--text-secondary); margin: var(--sp-sm) 0 var(--sp-md); }
 
-/* ================================================================
-   QR
-   ================================================================ */
 .qr-image {
     display: block;
     width: 100%;
@@ -381,15 +312,9 @@ body {
     border-radius: var(--card-radius);
     border: 1px solid var(--gray-200);
 }
-.qr-buttons {
-    display: none;
-    gap: var(--sp-sm);
-}
+.qr-buttons { display: none; gap: var(--sp-sm); }
 .qr-buttons.visible { display: flex; }
 
-/* ================================================================
-   ПОЛЕ ВВОДА ПОКАЗАНИЙ
-   ================================================================ */
 .reading-input {
     width: 100%;
     padding: 14px var(--sp-lg);
@@ -419,9 +344,6 @@ body {
     display: none;
 }
 
-/* ================================================================
-   РУЧНАЯ ОПЛАТА — поля ввода
-   ================================================================ */
 .manual-input {
     width: 100%;
     padding: 12px var(--sp-lg);
@@ -446,9 +368,6 @@ body {
     margin-bottom: 4px;
 }
 
-/* ================================================================
-   ФОТО СЧЁТЧИКА
-   ================================================================ */
 .photo-preview {
     width: 100%;
     max-height: 240px;
@@ -487,9 +406,6 @@ body {
 .photo-actions { display: none; gap: var(--sp-sm); margin-top: var(--sp-md); }
 .btn-retake { background: var(--gray-200); color: var(--gray-800); }
 
-/* ================================================================
-   БАНКОВСКИЕ РЕКВИЗИТЫ
-   ================================================================ */
 .bank-row {
     display: flex;
     align-items: center;
@@ -501,13 +417,7 @@ body {
 }
 .bank-row:last-child { border-bottom: none; }
 .bank-label { color: var(--text-secondary); flex-shrink: 0; }
-.bank-value {
-    font-weight: 500;
-    color: var(--text-primary);
-    text-align: right;
-    overflow-wrap: anywhere;
-    flex: 1;
-}
+.bank-value { font-weight: 500; color: var(--text-primary); text-align: right; overflow-wrap: anywhere; flex: 1; }
 .copy-btn {
     background: none;
     border: none;
@@ -550,9 +460,6 @@ body {
     padding: 4px 8px;
 }
 
-/* ================================================================
-   ПРЕДУПРЕЖДЕНИЕ / ИНСТРУКЦИЯ
-   ================================================================ */
 .warning-block {
     background: var(--orange-50);
     border-left: 4px solid var(--orange-600);
@@ -592,16 +499,13 @@ body {
     flex-shrink: 0;
 }
 
-/* ================================================================
-   МОДАЛЬНОЕ ОКНО
-   ================================================================ */
 .modal-overlay {
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.75);
     z-index: 10000;
     display: flex;
-    align-items: flex-end;          /* Bottom sheet на мобиле */
+    align-items: flex-end;
     justify-content: center;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
@@ -618,7 +522,6 @@ body {
     overflow-y: auto;
     box-shadow: 0 -8px 40px rgba(0,0,0,0.3);
     animation: slideUp 0.25s ease-out;
-    /* iPhone home bar */
     padding-bottom: env(safe-area-inset-bottom);
 }
 @keyframes slideUp { from { transform:translateY(40px); opacity:0; } to { transform:translateY(0); opacity:1; } }
@@ -667,7 +570,6 @@ body {
 .modal-row-info strong { display: block; font-size: 15px; }
 .modal-row-info small  { font-size: 12px; color: var(--text-secondary); }
 
-/* Consent checkboxes */
 .consent-block {
     background: var(--green-50);
     border-radius: var(--card-radius);
@@ -699,9 +601,6 @@ body {
     cursor: pointer;
 }
 
-/* ================================================================
-   TOAST (вместо alert)
-   ================================================================ */
 .toast {
     position: fixed;
     bottom: calc(var(--sp-xxl) + env(safe-area-inset-bottom));
@@ -723,9 +622,6 @@ body {
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ================================================================
-   FOOTER
-   ================================================================ */
 .footer-note {
     text-align: center;
     font-size: 11px;
@@ -733,38 +629,23 @@ body {
     padding: var(--sp-xxl) var(--sp-lg);
 }
 
-/* ================================================================
-   УТИЛИТЫ
-   ================================================================ */
 .hidden { display: none !important; }
 .mt-sm  { margin-top: var(--sp-sm); }
 .mt-md  { margin-top: var(--sp-md); }
 .mt-lg  { margin-top: var(--sp-lg); }
 
-/* ================================================================
-   ПЛАНШЕТ / ПК  (≥ 600px — двухколоночная сетка карточек)
-   ================================================================ */
 @media (min-width: 640px) {
     body { padding-bottom: 32px; }
-
     .app-header { padding: var(--sp-xxl) var(--sp-xxl) 36px; }
     .header-title { font-size: 26px; }
-
     .content { padding: var(--sp-xl); max-width: 600px; margin: 0 auto; }
-
-    /* На планшете модалка — по центру, не bottom sheet */
     .modal-overlay { align-items: center; }
-    .modal-sheet {
-        border-radius: 24px;
-        max-height: 85vh;
-        max-width: 480px;
-    }
+    .modal-sheet { border-radius: 24px; max-height: 85vh; max-width: 480px; }
 }
 
 @media (min-width: 900px) {
     .app-shell { max-width: 900px; }
     .content { max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-lg); }
-    /* Поиск и статус — на всю ширину */
     .content > .search-block,
     .content > .state-loading,
     .content > .state-error,
@@ -776,10 +657,11 @@ body {
     }
 }
     </style>
-<base target="_blank">
+    <base target="_blank">
 </head>
 <body>
 
+<!-- STARTUP STATE -->
 <div id="startupState" style="padding:24px;text-align:center;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#424242;">
     <div style="font-size:28px;margin-bottom:10px;">🌿</div>
     <div style="font-weight:700;font-size:18px;">СНТ «Берёзка-2»</div>
@@ -807,13 +689,11 @@ body {
                 <div class="card-body">
                     <div class="search-label">Поиск участка</div>
                     <div class="search-heading">Введите номер вашего участка</div>
-
                     <span class="field-label-float">Например: 5, 4а, 10а…</span>
                     <input type="text" id="plotInput" class="search-input"
                            placeholder="15" autocomplete="off"
                            inputmode="text" enterkeyhint="search"
                            aria-label="Номер участка">
-
                     <button id="searchBtn" class="btn btn-primary-lg mt-md"
                             aria-label="Показать данные по участку">
                         Показать данные по участку
@@ -825,6 +705,11 @@ body {
             <div id="dataStatus" class="status-card">
                 <div class="status-count" id="statusCount">⏳ Подготовка данных…</div>
                 <div class="status-time" id="statusTime"></div>
+            </div>
+
+            <!-- НЕ НАЙДЕН -->
+            <div id="notFoundBlock" class="not-found hidden">
+                🔍 Участок не найден в базе данных.<br>Пример: 5, 4а, 10а
             </div>
 
             <!-- КАРТОЧКА ДОЛГА -->
@@ -890,77 +775,21 @@ body {
 </div>
 
 <script>
-/* Lazy loading внешних библиотек: CDN больше не блокирует первый запуск */
-const LIBRARY_LOAD_TIMEOUT = 10000;
-const LIBRARY_URLS = {
-    jszip: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
-    qrcode: 'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js'
-};
-
-function loadScriptOnce(src, globalName, timeoutMs = LIBRARY_LOAD_TIMEOUT) {
-    if (window[globalName]) return Promise.resolve(window[globalName]);
-    const existing = document.querySelector(`script[data-lazy-src="${src}"]`);
-    if (existing) {
-        return new Promise((resolve, reject) => {
-            const started = Date.now();
-            const timer = setInterval(() => {
-                if (window[globalName]) {
-                    clearInterval(timer);
-                    resolve(window[globalName]);
-                } else if (Date.now() - started >= timeoutMs) {
-                    clearInterval(timer);
-                    reject(new Error(`Не удалось загрузить библиотеку ${globalName}`));
-                }
-            }, 50);
-        });
-    }
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        script.dataset.lazySrc = src;
-        let settled = false;
-        const finish = (fn, value) => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            fn(value);
-        };
-        const timer = setTimeout(() => {
-            script.remove();
-            finish(reject, new Error(`Таймаут загрузки библиотеки ${globalName}`));
-        }, timeoutMs);
-        script.onload = () => {
-            if (window[globalName]) finish(resolve, window[globalName]);
-            else finish(reject, new Error(`Библиотека ${globalName} не инициализировалась`));
-        };
-        script.onerror = () => {
-            script.remove();
-            finish(reject, new Error(`Ошибка загрузки библиотеки ${globalName}`));
-        };
-        document.head.appendChild(script);
-    });
-}
-
-let jsZipPromise = null;
-let qrCodePromise = null;
+/* ================================================================
+   ПРОВЕРКА НАЛИЧИЯ БИБЛИОТЕК (локальные)
+   ================================================================ */
 function ensureJSZip() {
-    if (window.JSZip) return Promise.resolve(window.JSZip);
-    if (!jsZipPromise) jsZipPromise = loadScriptOnce(LIBRARY_URLS.jszip, 'JSZip');
-    return jsZipPromise;
+    if (typeof JSZip === 'undefined') {
+        throw new Error('JSZip не загружен. Проверьте файл ./js/jszip.min.js');
+    }
+    return JSZip;
 }
+
 function ensureQRCode() {
-    if (window.QRCode) return Promise.resolve(window.QRCode);
-    if (!qrCodePromise) qrCodePromise = loadScriptOnce(LIBRARY_URLS.qrcode, 'QRCode');
-    return qrCodePromise;
-}
-function setStartupMessage(message) {
-    const el = document.getElementById('startupMessage');
-    if (el) el.textContent = message;
-}
-function showMainApp() {
-    document.getElementById('startupState')?.classList.add('hidden');
-    document.getElementById('mainApp')?.classList.remove('hidden');
+    if (typeof QRCode === 'undefined') {
+        throw new Error('QRCode не загружен. Проверьте файл ./js/qrcode.min.js');
+    }
+    return QRCode;
 }
 
 /* ================================================================
@@ -1045,7 +874,6 @@ async function compressPhoto(file, maxWidth = 1920, quality = 0.85) {
         try {
             img = await createImageBitmap(file);
         } catch (e) {
-            // Fallback для старых iOS
             const imgEl = document.createElement('img');
             const url = URL.createObjectURL(file);
             await new Promise((resolve, reject) => {
@@ -1132,7 +960,7 @@ function numberToWords(amount) {
     else if (rub % 10 === 1)                         rubWord = "рубль";
     else if (rub % 10 >= 2 && rub % 10 <= 4)        rubWord = "рубля";
     else                                             rubWord = "рублей";
-    return `${rub} ${rubWord} ${String(kop).padStart(2,'0')} копеек`;
+    return `${rub} ${rubWord} ${String(kop).padStart(2, '0')} копеек`;
 }
 function isPlotNumber(s) {
     return s && typeof s === 'string' && /^\d{1,3}[а-яёa-z]?$/i.test(s.trim());
@@ -1147,14 +975,14 @@ function parseNumber(val) {
 function escapeHtml(str) {
     if (!str) return "";
     return str.replace(/[&<>"]/g, m =>
-        ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[m]);
+        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[m]);
 }
 
 /* ================================================================
    ПАРСИНГ ODS
    ================================================================ */
 async function fetchAndParseOds(url, parserFn) {
-    await ensureJSZip();
+    ensureJSZip();
 
     const r = await fetchWithTimeout(url, { cache: "no-store" }, 15000);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -1310,8 +1138,8 @@ function buildDetailedPurpose(debt) {
     if (debt.arrearsDebt > 0.01)    parts.push(`Задолженность прошлых лет: ${formatAmountShort(debt.arrearsDebt)}р`);
     if (debt.workDebt > 0.01)       parts.push(`Отработка: ${formatAmountShort(debt.workDebt)}р`);
     if (debt.electricityDebt > 0.01) parts.push(`Электроэнергия: ${formatAmountShort(debt.electricityDebt)}р`);
-        const safePlot = escapeHtml(debt.plotNumber);
-        const suffix = ` уч.${safePlot}`;
+    const safePlot = escapeHtml(debt.plotNumber);
+    const suffix = ` уч.${safePlot}`;
     let result = parts.join(", ") + suffix;
     if (result.length > 210) result = `Оплата взносов уч.${safePlot}`;
     return result;
@@ -1335,7 +1163,7 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpo
     return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${sanitizePurpose(purpose)}|Sum=${sumKop}`;
 }
 async function generateQR(text) {
-    await ensureQRCode();
+    ensureQRCode();
     return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
 }
 async function generateAndShowQR(type, btn, qrText) {
@@ -1420,25 +1248,20 @@ async function loadSingleOds(url, parserFn, cacheKey, statusKey) {
     updateDataStatus();
 
     try {
-        // Сначала пробуем кэш
         const cached = await getDataCache(cacheKey);
         if (cached) {
-            // Кэш есть — используем его сразу
             const data = parserFn(cached);
             dataLoadStatus[statusKey] = 'ok';
             updateDataStatus();
-            // В фоне обновляем
             fetchAndParseOds(url, parserFn)
                 .then(freshData => {
                     saveDataCache(cacheKey, freshData);
-                    // Обновляем кэш в памяти
                     if (statusKey === 'base') cachedBaseMap = freshData;
                     else if (statusKey === 'debt') cachedDebtMap = freshData;
                     else if (statusKey === 'ee') cachedElectricityMap = freshData;
                     lastSyncTime = new Date();
                     dataLoadStatus[statusKey] = 'ok';
                     updateDataStatus();
-                    // Если есть активный поиск — перерисовываем
                     if (currentPlotNumber) loadPlotData(currentPlotNumber, true);
                 })
                 .catch(err => {
@@ -1447,7 +1270,6 @@ async function loadSingleOds(url, parserFn, cacheKey, statusKey) {
             return data;
         }
 
-        // Кэша нет — загружаем с сети
         const freshData = await fetchAndParseOds(url, parserFn);
         dataLoadStatus[statusKey] = 'ok';
         lastSyncTime = new Date();
@@ -1457,7 +1279,6 @@ async function loadSingleOds(url, parserFn, cacheKey, statusKey) {
     } catch (err) {
         dataLoadStatus[statusKey] = 'error';
         updateDataStatus();
-        // Пробуем ещё раз получить кэш (может быть старая версия)
         const cached = await getDataCache(cacheKey);
         if (cached) {
             const data = parserFn(cached);
@@ -1470,20 +1291,16 @@ async function loadSingleOds(url, parserFn, cacheKey, statusKey) {
 }
 
 async function syncAllData() {
-    // Защита от параллельных вызовов
     if (syncPromise) return syncPromise;
 
     syncPromise = (async () => {
         try {
-            // JSZip загружается лениво внутри fetchAndParseOds.
-            // Загружаем все три файла независимо
             const results = await Promise.allSettled([
                 loadSingleOds(BASE_URL, parseBaseOds, 'base', 'base'),
                 loadSingleOds(DEBIT_URL, parseDebitOds, 'debt', 'debt'),
                 loadSingleOds(EE_URL, parseElectricityOds, 'ee', 'ee')
             ]);
 
-            // Обрабатываем результаты
             const baseResult = results[0];
             const debtResult = results[1];
             const eeResult = results[2];
@@ -1515,7 +1332,6 @@ async function syncAllData() {
             lastSyncTime = new Date();
             updateDataStatus();
 
-            // Если есть активный поиск — обновляем данные
             if (currentPlotNumber) {
                 loadPlotData(currentPlotNumber, true);
             }
@@ -1523,9 +1339,12 @@ async function syncAllData() {
             return { base: cachedBaseMap, debt: cachedDebtMap, ee: cachedElectricityMap };
         } catch (err) {
             console.error('Sync failed:', err);
-            // Показываем ошибку, но не блокируем UI
-            document.getElementById('errorState').classList.remove('hidden');
-            document.getElementById('errorMsg').textContent = `Ошибка загрузки данных: ${err.message}`;
+            const errorState = document.getElementById('errorState');
+            const errorMsg = document.getElementById('errorMsg');
+            if (errorState && errorMsg) {
+                errorState.classList.remove('hidden');
+                errorMsg.textContent = `Ошибка загрузки данных: ${err.message}`;
+            }
             throw err;
         } finally {
             syncPromise = null;
@@ -1540,11 +1359,15 @@ async function loadPlotData(plotNumber, fromCache = false) {
     currentPlotNumber = normalized;
 
     ['debtCard','electricityCard','manualPaymentCard','bankDetailsCard',
-     'warningCard','instructionCard'].forEach(id =>
-        document.getElementById(id).classList.add('hidden'));
+     'warningCard','instructionCard'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+
+    const notFound = document.getElementById('notFoundBlock');
+    if (notFound) notFound.classList.add('hidden');
 
     try {
-        // Поиск не блокируется ожиданием сети: синхронизация идёт в фоне.
         const noDataLoaded =
             cachedBaseMap.size === 0 &&
             cachedDebtMap.size === 0 &&
@@ -1552,7 +1375,8 @@ async function loadPlotData(plotNumber, fromCache = false) {
 
         if (noDataLoaded) {
             const sync = syncAllData();
-            document.getElementById('statusTime').textContent = 'Данные загружаются…';
+            const timeEl = document.getElementById('statusTime');
+            if (timeEl) timeEl.textContent = 'Данные загружаются…';
             await Promise.race([
                 sync,
                 new Promise(resolve => setTimeout(resolve, 250))
@@ -1569,36 +1393,45 @@ async function loadPlotData(plotNumber, fromCache = false) {
                 dataLoadStatus.debt === 'loading' ||
                 dataLoadStatus.ee === 'loading';
             if (stillLoading) {
-                document.getElementById('notFoundBlock').classList.add('hidden');
                 showToast('Данные ещё загружаются. Результат появится автоматически.');
                 return;
             }
-            document.getElementById('notFoundBlock').classList.remove('hidden');
+            if (notFound) notFound.classList.remove('hidden');
             return;
         }
-        document.getElementById('notFoundBlock').classList.add('hidden');
-        document.getElementById('bankDetailsCard').classList.remove('hidden');
-        document.getElementById('warningCard').classList.remove('hidden');
-        document.getElementById('instructionCard').classList.remove('hidden');
-        document.getElementById('errorState').classList.add('hidden');
+
+        if (notFound) notFound.classList.add('hidden');
+
+        const bankCard = document.getElementById('bankDetailsCard');
+        if (bankCard) bankCard.classList.remove('hidden');
+        const warningCard = document.getElementById('warningCard');
+        if (warningCard) warningCard.classList.remove('hidden');
+        const instructionCard = document.getElementById('instructionCard');
+        if (instructionCard) instructionCard.classList.remove('hidden');
+        const errorState = document.getElementById('errorState');
+        if (errorState) errorState.classList.add('hidden');
+
         renderBankDetails();
         if (debt) renderDebtCard(debt);
         if (ee)   renderElectricityCard(ee);
         renderManualPaymentCard(member, debt, ee);
 
     } catch(err) {
-        // Если данные есть в кэше, но не загрузились — показываем ошибку, но не блокируем
         const debt = cachedDebtMap.get(normalized);
         const ee = cachedElectricityMap.get(normalized);
         if (debt || ee) {
-            // Показываем то, что есть
-            document.getElementById('bankDetailsCard').classList.remove('hidden');
+            const bankCard = document.getElementById('bankDetailsCard');
+            if (bankCard) bankCard.classList.remove('hidden');
             renderBankDetails();
             if (debt) renderDebtCard(debt);
             if (ee) renderElectricityCard(ee);
         }
-        document.getElementById('errorState').classList.remove('hidden');
-        document.getElementById('errorMsg').textContent = `⚠️ ${err.message}`;
+        const errorState = document.getElementById('errorState');
+        const errorMsg = document.getElementById('errorMsg');
+        if (errorState && errorMsg) {
+            errorState.classList.remove('hidden');
+            errorMsg.textContent = `⚠️ ${err.message}`;
+        }
     }
 }
 
@@ -1606,30 +1439,44 @@ async function loadPlotData(plotNumber, fromCache = false) {
    БАНК
    ================================================================ */
 function renderBankDetails() {
-    document.getElementById('bankOrg').textContent     = ORGANIZATION;
-    document.getElementById('bankInn').textContent     = INN;
-    document.getElementById('bankAccount').textContent = PERSONAL_ACC;
-    document.getElementById('bankName').textContent    = BANK_NAME;
-    document.getElementById('bankBic').textContent     = BIC;
-    document.getElementById('bankCorresp').textContent = CORRESP_ACC;
+    const org = document.getElementById('bankOrg');
+    const inn = document.getElementById('bankInn');
+    const acc = document.getElementById('bankAccount');
+    const name = document.getElementById('bankName');
+    const bic = document.getElementById('bankBic');
+    const corr = document.getElementById('bankCorresp');
+
+    if (org) org.textContent = ORGANIZATION;
+    if (inn) inn.textContent = INN;
+    if (acc) acc.textContent = PERSONAL_ACC;
+    if (name) name.textContent = BANK_NAME;
+    if (bic) bic.textContent = BIC;
+    if (corr) corr.textContent = CORRESP_ACC;
 
     document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.onclick = () => {
-            const text = document.getElementById(btn.dataset.copy).textContent;
-            navigator.clipboard.writeText(text).then(() => showToast(`Скопировано: ${text}`));
+            const text = document.getElementById(btn.dataset.copy)?.textContent;
+            if (text) navigator.clipboard.writeText(text).then(() => showToast(`Скопировано: ${text}`));
         };
     });
-    document.getElementById('copyAllBtn').onclick = () => {
-        const text = `Получатель: ${ORGANIZATION}\nИНН: ${INN}\nР/счёт: ${PERSONAL_ACC}\nБанк: ${BANK_NAME}\nБИК: ${BIC}\nК/счёт: ${CORRESP_ACC}`;
-        navigator.clipboard.writeText(text).then(() => showToast("Реквизиты скопированы"));
-    };
+
+    const copyAll = document.getElementById('copyAllBtn');
+    if (copyAll) {
+        copyAll.onclick = () => {
+            const text = `Получатель: ${ORGANIZATION}\nИНН: ${INN}\nР/счёт: ${PERSONAL_ACC}\nБанк: ${BANK_NAME}\nБИК: ${BIC}\nК/счёт: ${CORRESP_ACC}`;
+            navigator.clipboard.writeText(text).then(() => showToast("Реквизиты скопированы"));
+        };
+    }
+
     const toggleBtn = document.getElementById('toggleBankBtn');
-    const content   = document.getElementById('bankDetailsContent');
-    toggleBtn.onclick = () => {
-        isBankExpanded = !isBankExpanded;
-        content.style.display = isBankExpanded ? '' : 'none';
-        toggleBtn.textContent = isBankExpanded ? 'скрыть ▲' : 'показать ▼';
-    };
+    const content = document.getElementById('bankDetailsContent');
+    if (toggleBtn && content) {
+        toggleBtn.onclick = () => {
+            isBankExpanded = !isBankExpanded;
+            content.style.display = isBankExpanded ? '' : 'none';
+            toggleBtn.textContent = isBankExpanded ? 'скрыть ▲' : 'показать ▼';
+        };
+    }
 }
 
 /* ================================================================
@@ -1637,11 +1484,12 @@ function renderBankDetails() {
    ================================================================ */
 function renderDebtCard(debt) {
     const c = document.getElementById('debtCard');
+    if (!c) return;
     c.classList.remove('hidden');
+
     let html = `<div class="card-body">
         <div class="card-title">💰 Задолженность</div>
-        <div class="plot-sub">Участок №${escapeHtml(debt.plotNumber)}</div>
-        `;
+        <div class="plot-sub">Участок №${escapeHtml(debt.plotNumber)}</div>`;
 
     if (debt.hasDebt) {
         html += `<div class="debt-total">Задолженность: ${formatMoney(debt.totalDebt)} ₽</div>
@@ -1681,7 +1529,9 @@ let currentEeData = null;
 function renderElectricityCard(ee) {
     currentEeData = ee;
     const c = document.getElementById('electricityCard');
+    if (!c) return;
     c.classList.remove('hidden');
+
     c.innerHTML = `<div class="card-body">
         <div class="card-title blue">⚡ Электроэнергия</div>
         <div class="plot-sub">Участок №${escapeHtml(ee.plotNumber)}</div>
@@ -1717,20 +1567,25 @@ function renderElectricityCard(ee) {
     const input  = document.getElementById('newReadingInput');
     const calc   = document.getElementById('calcAmountBlock');
     const genBtn = document.getElementById('genEeQrBtn');
-    input.addEventListener('input', function() {
-        const newVal = parseFloat(this.value);
-        if (isNaN(newVal) || newVal <= ee.currentReading) {
-            calc.style.display = 'none';
-            genBtn.disabled = true;
-            return;
-        }
-        const amount = (newVal - ee.currentReading) * TARIFF;
-        calc.textContent = `📊 Сумма к оплате: ${formatAmountShort(amount)} ₽`;
-        calc.style.display = 'block';
-        genBtn.disabled = false;
-        genBtn.onclick = () => generateAndShowQR('ee', genBtn, buildPaymentQR(ee.plotNumber, amount, null, true));
-    });
-    document.getElementById('takePhotoBtn').onclick = () => takePhoto(currentPlotNumber);
+
+    if (input && calc && genBtn) {
+        input.addEventListener('input', function() {
+            const newVal = parseFloat(this.value);
+            if (isNaN(newVal) || newVal <= ee.currentReading) {
+                calc.style.display = 'none';
+                genBtn.disabled = true;
+                return;
+            }
+            const amount = (newVal - ee.currentReading) * TARIFF;
+            calc.textContent = `📊 Сумма к оплате: ${formatAmountShort(amount)} ₽`;
+            calc.style.display = 'block';
+            genBtn.disabled = false;
+            genBtn.onclick = () => generateAndShowQR('ee', genBtn, buildPaymentQR(ee.plotNumber, amount, null, true));
+        });
+    }
+
+    const takeBtn = document.getElementById('takePhotoBtn');
+    if (takeBtn) takeBtn.onclick = () => takePhoto(currentPlotNumber);
 }
 
 /* ================================================================
@@ -1738,8 +1593,9 @@ function renderElectricityCard(ee) {
    ================================================================ */
 function renderManualPaymentCard(member, debt, ee) {
     const c = document.getElementById('manualPaymentCard');
+    if (!c) return;
     c.classList.remove('hidden');
-    const ownerName = (debt?.owner || ee?.owner || member?.owner || "");
+
     c.innerHTML = `<div class="card-body">
         <div class="card-title">💳 Произвольная оплата</div>
         <div class="plot-sub">Участок №${escapeHtml(currentPlotNumber)}</div>
@@ -1760,19 +1616,22 @@ function renderManualPaymentCard(member, debt, ee) {
 
     const amountInput  = document.getElementById('manualAmountInput');
     const generateBtn  = document.getElementById('manualGenerateBtn');
-    const updateBtn = () => {
-        const amount = parseFloat(amountInput.value);
-        const ok = !isNaN(amount) && amount > 0;
-        generateBtn.disabled = !ok;
-        generateBtn.textContent = ok ? "📱 Сгенерировать QR" : "📱 Введите сумму";
-    };
-    amountInput.addEventListener('input', updateBtn);
-    generateBtn.onclick = () => {
-        const amount = parseFloat(amountInput.value);
-        if (!amount || amount <= 0) return;
-        const purpose = document.getElementById('manualPurposeInput').value.trim();
-        generateAndShowQR('manual', generateBtn, buildPaymentQR(currentPlotNumber, amount, null, false, purpose));
-    };
+
+    if (amountInput && generateBtn) {
+        const updateBtn = () => {
+            const amount = parseFloat(amountInput.value);
+            const ok = !isNaN(amount) && amount > 0;
+            generateBtn.disabled = !ok;
+            generateBtn.textContent = ok ? "📱 Сгенерировать QR" : "📱 Введите сумму";
+        };
+        amountInput.addEventListener('input', updateBtn);
+        generateBtn.onclick = () => {
+            const amount = parseFloat(amountInput.value);
+            if (!amount || amount <= 0) return;
+            const purpose = document.getElementById('manualPurposeInput')?.value.trim() || '';
+            generateAndShowQR('manual', generateBtn, buildPaymentQR(currentPlotNumber, amount, null, false, purpose));
+        };
+    }
 }
 
 /* ================================================================
@@ -1786,7 +1645,7 @@ async function uploadPhotoToServer(plotNumber, readingValue, file) {
     const r = await fetchWithTimeout(`${API_BASE_URL}/upload`, { method:'POST', body:fd }, 30000);
     if (!r.ok) {
         let msg = `HTTP ${r.status}`;
-        try { const e = await r.json(); msg = e.error || msg; } catch{}
+        try { const e = await r.json(); msg = e.error || msg; } catch(e) {}
         throw new Error(msg);
     }
     return r.json();
@@ -1808,15 +1667,17 @@ function takePhoto(plotNumber) {
         const actions   = document.getElementById('photoActions');
         const ydStatus  = document.getElementById('ydStatus');
 
-        const reader = new FileReader();
-        reader.onload = ev => { if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; } };
-        reader.readAsDataURL(file);
+        if (preview) {
+            const reader = new FileReader();
+            reader.onload = ev => { preview.src = ev.target.result; preview.style.display = 'block'; };
+            reader.readAsDataURL(file);
+        }
 
-        if (takeBtn)  takeBtn.style.display = 'none';
+        if (takeBtn) takeBtn.style.display = 'none';
         if (progress) progress.style.display = 'block';
-        if (success)  success.style.display = 'none';
+        if (success) success.style.display = 'none';
         if (errorDiv) errorDiv.style.display = 'none';
-        if (actions)  actions.style.display = 'flex';
+        if (actions) actions.style.display = 'flex';
         if (ydStatus) ydStatus.textContent = '☁ Сжатие и загрузка…';
 
         try {
@@ -1826,15 +1687,15 @@ function takePhoto(plotNumber) {
             await uploadPhotoToServer(plotNumber, readingValue, compressedFile);
 
             if (progress) progress.style.display = 'none';
-            if (success)  success.style.display = 'block';
+            if (success) success.style.display = 'block';
             if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено на Яндекс.Диске';
-            if (takeBtn)  { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
-            if (actions)  actions.style.display = 'none';
+            if (takeBtn) { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
+            if (actions) actions.style.display = 'none';
         } catch(err) {
             if (progress) progress.style.display = 'none';
             if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = `⚠️ ${err.message}`; }
             if (ydStatus) ydStatus.textContent = '☁ Ошибка загрузки';
-            if (takeBtn)  takeBtn.style.display = 'block';
+            if (takeBtn) takeBtn.style.display = 'block';
         }
     };
     input.click();
@@ -1906,23 +1767,35 @@ function showConsentScreen() {
     </div>`;
     document.body.appendChild(overlay);
 
-    const c1=document.getElementById('c1'), c2=document.getElementById('c2'), c3=document.getElementById('c3');
-    const accept=document.getElementById('acceptBtn');
+    const c1 = document.getElementById('c1');
+    const c2 = document.getElementById('c2');
+    const c3 = document.getElementById('c3');
+    const accept = document.getElementById('acceptBtn');
+    const decline = document.getElementById('declineBtn');
+
     const update = () => {
-        const ok = c1.checked && c2.checked && c3.checked;
-        accept.disabled = !ok;
-        accept.style.opacity = ok ? '1' : '0.4';
+        const ok = c1?.checked && c2?.checked && c3?.checked;
+        if (accept) { accept.disabled = !ok; accept.style.opacity = ok ? '1' : '0.4'; }
     };
-    c1.onchange = c2.onchange = c3.onchange = update;
-    accept.onclick = () => {
-        saveConsent();
-        overlay.remove();
-        showMainApp();
-        initMainApp();
-    };
-    document.getElementById('declineBtn').onclick = () => {
-        if (confirm('Без согласия использование приложения невозможно. Закрыть?')) window.close();
-    };
+
+    if (c1) c1.onchange = update;
+    if (c2) c2.onchange = update;
+    if (c3) c3.onchange = update;
+
+    if (accept) {
+        accept.onclick = () => {
+            saveConsent();
+            overlay.remove();
+            showMainApp();
+            initMainApp();
+        };
+    }
+
+    if (decline) {
+        decline.onclick = () => {
+            if (confirm('Без согласия использование приложения невозможно. Закрыть?')) window.close();
+        };
+    }
 }
 
 /* ================================================================
@@ -1963,18 +1836,49 @@ function showSettingsModal() {
         </div>
     </div>`;
     document.body.appendChild(overlay);
+
     const close = () => overlay.remove();
-    document.getElementById('closeModalBtn').onclick = close;
+    const closeBtn = document.getElementById('closeModalBtn');
+    if (closeBtn) closeBtn.onclick = close;
+
     overlay.onclick = e => { if (e.target === overlay) close(); };
-    document.getElementById('revokeBtn').onclick = () => {
-        if (confirm('Отозвать согласие на обработку персональных данных?\n\nПосле отзыва потребуется повторное согласие.')) revokeConsent();
-    };
-    document.getElementById('clearBtn').onclick = () => {
-        cachedDebtMap.clear(); cachedElectricityMap.clear(); cachedBaseMap.clear();
-        document.getElementById('dataStatus')?.classList.add('hidden');
-        showToast('Кэш данных очищен');
-        close();
-    };
+
+    const revokeBtn = document.getElementById('revokeBtn');
+    if (revokeBtn) {
+        revokeBtn.onclick = () => {
+            if (confirm('Отозвать согласие на обработку персональных данных?\n\nПосле отзыва потребуется повторное согласие.')) {
+                revokeConsent();
+            }
+        };
+    }
+
+    const clearBtn = document.getElementById('clearBtn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            cachedDebtMap.clear();
+            cachedElectricityMap.clear();
+            cachedBaseMap.clear();
+            const dataStatus = document.getElementById('dataStatus');
+            if (dataStatus) dataStatus.classList.add('hidden');
+            showToast('Кэш данных очищен');
+            close();
+        };
+    }
+}
+
+/* ================================================================
+   ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ UI
+   ================================================================ */
+function setStartupMessage(message) {
+    const el = document.getElementById('startupMessage');
+    if (el) el.textContent = message;
+}
+
+function showMainApp() {
+    const startup = document.getElementById('startupState');
+    const main = document.getElementById('mainApp');
+    if (startup) startup.classList.add('hidden');
+    if (main) main.classList.remove('hidden');
 }
 
 /* ================================================================
@@ -1985,48 +1889,59 @@ function initMainApp() {
 
     const searchBtn = document.getElementById('searchBtn');
     const plotInput = document.getElementById('plotInput');
-    let searchDebounceTimer;
+    const retryBtn = document.getElementById('retryBtn');
 
-    // Валидация ввода: только цифры и буквы
-    plotInput.addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9а-яёa-z]/gi, '').toLowerCase();
-        clearTimeout(searchDebounceTimer);
-    });
+    if (plotInput) {
+        plotInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9а-яёa-z]/gi, '').toLowerCase();
+        });
+        plotInput.onkeydown = e => { if (e.key === 'Enter' && searchBtn) searchBtn.click(); };
+    }
 
-    searchBtn.onclick = () => {
-        const v = plotInput.value.trim();
-        if (v && isPlotNumber(v)) {
-            // Сначала показываем статус загрузки
-            document.getElementById('errorState').classList.add('hidden');
-            loadPlotData(v);
-        } else {
-            plotInput.focus();
-            showToast("Введите корректный номер участка (например: 5, 4а)");
-        }
-    };
-    plotInput.onkeydown = e => { if (e.key === 'Enter') searchBtn.click(); };
-    document.getElementById('settingsBtn').onclick = showSettingsModal;
-    document.getElementById('retryBtn').onclick = () => {
-        const v = plotInput.value.trim();
-        if (v && isPlotNumber(v)) loadPlotData(v);
-        else syncAllData().catch(console.warn);
-    };
+    if (searchBtn) {
+        searchBtn.onclick = () => {
+            if (!plotInput) return;
+            const v = plotInput.value.trim();
+            if (v && isPlotNumber(v)) {
+                const errorState = document.getElementById('errorState');
+                if (errorState) errorState.classList.add('hidden');
+                loadPlotData(v);
+            } else {
+                plotInput.focus();
+                showToast("Введите корректный номер участка (например: 5, 4а)");
+            }
+        };
+    }
 
-    // Запускаем начальную загрузку данных в фоне
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) settingsBtn.onclick = showSettingsModal;
+
+    if (retryBtn) {
+        retryBtn.onclick = () => {
+            if (!plotInput) return;
+            const v = plotInput.value.trim();
+            if (v && isPlotNumber(v)) loadPlotData(v);
+            else syncAllData().catch(console.warn);
+        };
+    }
+
     updateDataStatus();
     syncAllData().catch(err => {
         console.warn('Initial sync failed, but UI is ready:', err);
     });
 }
 
-// Старт
+// ================================================================
+// СТАРТ
+// ================================================================
 try {
     if (isConsentAccepted()) {
         showMainApp();
         setStartupMessage('Приложение готово. Данные загружаются в фоне…');
         initMainApp();
     } else {
-        document.getElementById('startupState')?.classList.add('hidden');
+        const startup = document.getElementById('startupState');
+        if (startup) startup.classList.add('hidden');
         showConsentScreen();
     }
 } catch (err) {
