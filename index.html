@@ -11,7 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="Берёзка-2">
 
     <!-- ============================================================
-         ОТЛАДЧИК
+         СКРЫТЫЙ ОТЛАДЧИК — доступ по двойному тапу по логотипу
          ============================================================ -->
     <style>
         #debugPanel {
@@ -32,6 +32,7 @@
             box-shadow: 0 4px 20px rgba(0,0,0,0.8);
             line-height: 1.5;
             pointer-events: auto;
+            display: none;
         }
         #debugPanel .debug-error { color: #ff4444; }
         #debugPanel .debug-ok { color: #44ff44; }
@@ -42,37 +43,42 @@
             position: fixed;
             bottom: 10px;
             right: 10px;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.7);
             color: #0f0;
             border: 1px solid #0f0;
             border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            font-size: 18px;
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
             cursor: pointer;
             z-index: 100000;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             font-family: monospace;
+            opacity: 0.3;
+            transition: opacity 0.3s;
         }
-        #debugToggle:hover { background: rgba(0,255,0,0.2); }
+        #debugToggle:hover { opacity: 1; }
         .debug-hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ -->
-<div id="debugPanel" class="debug-hidden">
+<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ (СКРЫТА) -->
+<div id="debugPanel">
     <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
         <span class="debug-title">🔍 ОТЛАДКА</span>
         <span id="debugTime" style="color:#888;font-size:10px;"></span>
+        <button onclick="document.getElementById('debugPanel').style.display='none'; document.getElementById('debugToggle').style.display='none';" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;">✕</button>
     </div>
     <div id="debugLog"></div>
 </div>
+
+<!-- КНОПКА ОТЛАДКИ (СКРЫТАЯ) -->
 <button id="debugToggle">🐞</button>
 
-<!-- ОТЛАДЧИК -->
+<!-- ОТЛАДЧИК (СКРЫТЫЙ) -->
 <script>
 (function() {
     var debugLog = [];
@@ -81,6 +87,37 @@
     var debugToggle = document.getElementById('debugToggle');
     var debugTime = document.getElementById('debugTime');
     var isDebugVisible = false;
+    var clickCount = 0;
+    var clickTimer = null;
+
+    // ============================================================
+    // СКРЫТЫЙ ВХОД В ОТЛАДКУ: двойной тап по логотипу
+    // ============================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        var logo = document.querySelector('.header-title');
+        if (logo) {
+            logo.style.cursor = 'default';
+            logo.addEventListener('click', function(e) {
+                clickCount++;
+                clearTimeout(clickTimer);
+                if (clickCount >= 2) {
+                    clickCount = 0;
+                    // Показываем отладку
+                    isDebugVisible = !isDebugVisible;
+                    debugPanel.style.display = isDebugVisible ? 'block' : 'none';
+                    debugToggle.style.display = isDebugVisible ? 'flex' : 'none';
+                    if (isDebugVisible) {
+                        debug('👁 Отладка активирована', 'title');
+                        debug('📱 ' + navigator.userAgent, 'info');
+                    }
+                } else {
+                    clickTimer = setTimeout(function() {
+                        clickCount = 0;
+                    }, 500);
+                }
+            });
+        }
+    });
 
     window.debug = function(message, type) {
         type = type || 'info';
@@ -101,18 +138,10 @@
 
     debugToggle.onclick = function() {
         isDebugVisible = !isDebugVisible;
-        debugPanel.classList.toggle('debug-hidden', !isDebugVisible);
-        debugToggle.textContent = isDebugVisible ? '✕' : '🐞';
+        debugPanel.style.display = isDebugVisible ? 'block' : 'none';
+        debugToggle.style.display = isDebugVisible ? 'flex' : 'none';
         if (isDebugVisible) debug('👁 Отладка включена', 'info');
     };
-
-    setTimeout(function() {
-        isDebugVisible = true;
-        debugPanel.classList.remove('debug-hidden');
-        debugToggle.textContent = '✕';
-        debug('🚀 Отладчик запущен', 'title');
-        debug('📱 User-Agent: ' + navigator.userAgent, 'info');
-    }, 100);
 
     window.addEventListener('error', function(e) {
         debug('❌ ОШИБКА: ' + (e.message || e.error?.message || 'Неизвестная ошибка'), 'error');
@@ -806,7 +835,7 @@ body {
 <div id="mainApp" class="hidden">
     <header class="app-header">
         <div class="app-shell">
-            <div class="header-title">🌿 СНТ «Берёзка-2»</div>
+            <div class="header-title" style="cursor:default;">🌿 СНТ «Берёзка-2»</div>
             <div class="header-sub">Взносы и задолженности</div>
             <button class="settings-btn" id="settingsBtn" aria-label="Настройки">⚙️</button>
         </div>
@@ -900,11 +929,6 @@ body {
 
 <script>
 // ================================================================
-// ОТЛАДКА
-// ================================================================
-debug('🚀 Запуск приложения', 'title');
-
-// ================================================================
 // ПРОВЕРКА БИБЛИОТЕК
 // ================================================================
 function checkLibraries() {
@@ -937,7 +961,6 @@ setTimeout(function() {
 // SERVICE WORKER
 // ================================================================
 if ('serviceWorker' in navigator) {
-    debug('📡 Service Worker поддерживается', 'info');
     window.addEventListener('load', function() {
         navigator.serviceWorker.register('./sw.js')
             .then(function(reg) {
@@ -947,15 +970,11 @@ if ('serviceWorker' in navigator) {
                 debug('❌ SW регистрация: ' + err.message, 'error');
             });
     });
-} else {
-    debug('⚠️ Service Worker не поддерживается', 'warn');
 }
 
 // ================================================================
 // КОНСТАНТЫ
 // ================================================================
-debug('📋 Загрузка констант…', 'info');
-
 const API_BASE_URL     = "https://wwcat.duckdns.org:12580";
 const CONSENT_VERSION  = "1.0";
 const CONSENT_KEY      = "snt_consent_accepted";
@@ -972,8 +991,6 @@ const TARIFF        = 3.82;
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
 const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
 const BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
-
-debug('✅ Константы загружены', 'ok');
 
 var cachedDebtMap        = new Map();
 var cachedElectricityMap = new Map();
@@ -1034,27 +1051,18 @@ function escapeHtml(str) {
 }
 function formatDateDisplay(dateStr) {
     if (!dateStr || dateStr === "не указана") return "не указана";
-    
     dateStr = dateStr.trim();
-    
-    // 1. Проверяем на русскую дату: ДД.ММ.ГГГГ или ДД/ММ/ГГГГ
     var russianDateRegex = /^(\d{1,2})[\.\/\-](\d{1,2})(?:[\.\/\-](\d{2,4}))?$/;
     var match = dateStr.match(russianDateRegex);
-    
     if (match) {
         var day = match[1].padStart(2, '0');
         var month = match[2].padStart(2, '0');
         var year = match[3] || new Date().getFullYear().toString().slice(-2);
-        if (year.length === 2) {
-            year = '20' + year;
-        }
+        if (year.length === 2) year = '20' + year;
         return day + '.' + month + '.' + year;
     }
-    
-    // 2. Проверяем на слитный формат (Excel): ДДММГГ или ДДММГГГГ
     var compactRegex = /^(\d{2})(\d{2})(\d{2,4})$/;
     var compactMatch = dateStr.match(compactRegex);
-    
     if (compactMatch) {
         var day = compactMatch[1];
         var month = compactMatch[2];
@@ -1064,8 +1072,6 @@ function formatDateDisplay(dateStr) {
             return day + '.' + month + '.' + year;
         }
     }
-    
-    // 3. Если строка содержит только цифры и пробелы
     if (/^[\d\s,]+$/.test(dateStr) && dateStr.length > 3) {
         var noSpaces = dateStr.replace(/\s/g, '');
         var retryMatch = noSpaces.match(compactRegex);
@@ -1075,35 +1081,25 @@ function formatDateDisplay(dateStr) {
             return retryMatch[1] + '.' + retryMatch[2] + '.' + y;
         }
         var numVal = parseFloat(noSpaces);
-        if (numVal > 10000) {
-            return "не указана";
-        }
+        if (numVal > 10000) return "не указана";
     }
-    
     return dateStr;
 }
-
-debug('✅ Вспомогательные функции загружены', 'ok');
 
 // ================================================================
 // ПАРСЕР BASE
 // ================================================================
 function parseBaseOds(xml) {
-    debug('📊 Парсинг BASE (RegExp)…', 'info');
     var result = new Map();
-    
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
     var cellRegex = /<table:table-cell[^>]*>([\s\S]*?)<\/table:table-cell>/gi;
     var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
-    
     var rows = xml.match(rowRegex) || [];
     var dataStarted = false;
-    
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
         var cells = [];
         var cellMatches = row.match(cellRegex) || [];
-        
         for (var j = 0; j < cellMatches.length; j++) {
             var cellText = '';
             var pMatches = cellMatches[j].match(pRegex) || [];
@@ -1113,22 +1109,16 @@ function parseBaseOds(xml) {
             }
             cells.push(cellText.trim());
         }
-        
         if (cells.length === 0) continue;
         var col0 = (cells[0] || '').trim();
-        
         if (!dataStarted) {
             if (/участок|номер|№/i.test(col0) || isPlotNumber(col0)) {
                 dataStarted = true;
                 if (!isPlotNumber(col0)) continue;
-            } else {
-                continue;
-            }
+            } else continue;
         }
-        
         if (col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) break;
         if (!isPlotNumber(col0)) continue;
-        
         var plotKey = col0.toLowerCase();
         result.set(plotKey, {
             plotNumber: plotKey,
@@ -1140,8 +1130,6 @@ function parseBaseOds(xml) {
             area: (cells[12] || '').trim(),
         });
     }
-    
-    debug('   ✅ BASE: ' + result.size + ' записей', 'ok');
     return result;
 }
 
@@ -1149,27 +1137,19 @@ function parseBaseOds(xml) {
 // ПАРСЕР DEBIT
 // ================================================================
 function parseDebitOds(xml) {
-    debug('📊 Парсинг DEBIT (улучшенный)…', 'info');
     var result = new Map();
-    
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
     var cellRegex = /<table:table-cell[^>]*>([\s\S]*?)<\/table:table-cell>/gi;
     var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
-    
     var rows = xml.match(rowRegex) || [];
     var headerFound = false;
     var dataStarted = false;
     var current = null;
-    var colPlot = -1;
-    var colOwner = -1;
-    var colDebt = -1;
-    var colOverpay = -1;
-    
+    var colPlot = -1, colOwner = -1, colDebt = -1, colOverpay = -1;
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
         var cells = [];
         var cellMatches = row.match(cellRegex) || [];
-        
         for (var j = 0; j < cellMatches.length; j++) {
             var cellText = '';
             var pMatches = cellMatches[j].match(pRegex) || [];
@@ -1179,72 +1159,44 @@ function parseDebitOds(xml) {
             }
             cells.push(cellText.trim());
         }
-        
         if (cells.length < 2) continue;
-        
         var col0 = (cells[0] || '').trim();
         var col0l = col0.toLowerCase();
-        
         if (!headerFound) {
             var joined = cells.join(' ').toLowerCase();
             if (joined.includes('владельц') || joined.includes('номер') || joined.includes('участок')) {
                 for (var idx = 0; idx < cells.length; idx++) {
                     var val = cells[idx].toLowerCase();
-                    if (val === 'номер' || val === '№' || val.includes('участок') || val.includes('уч')) {
-                        colPlot = idx;
-                    }
-                    if (val.includes('владельц') || val.includes('фио') || val.includes('фамил')) {
-                        colOwner = idx;
-                    }
-                    if (val.includes('долг') || val.includes('задолжен') || val.includes('сумма')) {
-                        colDebt = idx;
-                    }
-                    if (val.includes('переплат') || val.includes('излиш')) {
-                        colOverpay = idx;
-                    }
+                    if (val === 'номер' || val === '№' || val.includes('участок') || val.includes('уч')) colPlot = idx;
+                    if (val.includes('владельц') || val.includes('фио') || val.includes('фамил')) colOwner = idx;
+                    if (val.includes('долг') || val.includes('задолжен') || val.includes('сумма')) colDebt = idx;
+                    if (val.includes('переплат') || val.includes('излиш')) colOverpay = idx;
                 }
                 headerFound = true;
-                debug('   📊 Найдены столбцы: участок=' + colPlot + ', владелец=' + colOwner + ', долг=' + colDebt, 'info');
                 continue;
             }
             continue;
         }
-        
         if (!dataStarted) {
-            if (isPlotNumber(col0)) {
-                dataStarted = true;
-            } else {
-                continue;
-            }
+            if (isPlotNumber(col0)) dataStarted = true;
+            else continue;
         }
-        
-        if (col0l === 'итого' || col0l.startsWith('итог')) {
-            break;
-        }
-        
+        if (col0l === 'итого' || col0l.startsWith('итог')) break;
+        if (!col0) continue;
         if (!isPlotNumber(col0)) {
             if (current && col0) {
                 var amount = 0;
                 for (var j = 0; j < cells.length; j++) {
                     var num = parseNumber(cells[j]);
-                    if (num > 0.01 && num < 1000000) {
-                        amount = num;
-                        break;
-                    }
+                    if (num > 0.01 && num < 1000000) { amount = num; break; }
                 }
                 if (amount > 0.01) {
                     var cat = col0.toLowerCase();
-                    if (cat.includes('членские взносы') || cat.includes('членск')) {
-                        current.membershipDebt += amount;
-                    } else if (cat.includes('целевые') || cat.includes('целев')) {
-                        current.targetDebt += amount;
-                    } else if (cat.includes('прошлых лет') || cat.includes('прошл')) {
-                        current.arrearsDebt += amount;
-                    } else if (cat.includes('отработк')) {
-                        current.workDebt += amount;
-                    } else if (cat.includes('электроэнерг') || cat.includes('эл')) {
-                        current.electricityDebt += amount;
-                    }
+                    if (cat.includes('членские взносы') || cat.includes('членск')) current.membershipDebt += amount;
+                    else if (cat.includes('целевые') || cat.includes('целев')) current.targetDebt += amount;
+                    else if (cat.includes('прошлых лет') || cat.includes('прошл')) current.arrearsDebt += amount;
+                    else if (cat.includes('отработк')) current.workDebt += amount;
+                    else if (cat.includes('электроэнерг') || cat.includes('эл')) current.electricityDebt += amount;
                     current.totalDebt = current.membershipDebt + current.targetDebt + 
                                         current.arrearsDebt + current.workDebt + current.electricityDebt;
                     current.hasDebt = current.totalDebt > 0.01;
@@ -1252,44 +1204,23 @@ function parseDebitOds(xml) {
             }
             continue;
         }
-        
         if (current && current.totalDebt > 0.01) {
             result.set(current.plotNumber, current);
-            debug('   📝 Участок ' + current.plotNumber + ': долг ' + current.totalDebt.toFixed(2), 'info');
         }
-        
         var plotKey = col0.toLowerCase();
         var owner = '';
         var debtEnd = 0;
         var overpayEnd = 0;
-        
-        if (colOwner >= 0 && colOwner < cells.length) {
-            owner = cells[colOwner] || '';
-        }
-        
-        if (colDebt >= 0 && colDebt < cells.length) {
-            debtEnd = parseNumber(cells[colDebt]);
-        }
-        
+        if (colOwner >= 0 && colOwner < cells.length) owner = cells[colOwner] || '';
+        if (colDebt >= 0 && colDebt < cells.length) debtEnd = parseNumber(cells[colDebt]);
         if (debtEnd === 0) {
             for (var j = 0; j < cells.length; j++) {
                 var num = parseNumber(cells[j]);
-                if (num > 0.01 && num < 1000000) {
-                    debtEnd = num;
-                    break;
-                }
+                if (num > 0.01 && num < 1000000) { debtEnd = num; break; }
             }
         }
-        
-        if (colOverpay >= 0 && colOverpay < cells.length) {
-            overpayEnd = parseNumber(cells[colOverpay]);
-        }
-        
-        if (overpayEnd === 0 && debtEnd < 0) {
-            overpayEnd = Math.abs(debtEnd);
-            debtEnd = 0;
-        }
-        
+        if (colOverpay >= 0 && colOverpay < cells.length) overpayEnd = parseNumber(cells[colOverpay]);
+        if (overpayEnd === 0 && debtEnd < 0) { overpayEnd = Math.abs(debtEnd); debtEnd = 0; }
         current = {
             plotNumber: plotKey,
             owner: owner,
@@ -1304,13 +1235,9 @@ function parseDebitOds(xml) {
             electricityDebt: 0
         };
     }
-    
     if (current && current.totalDebt > 0.01) {
         result.set(current.plotNumber, current);
-        debug('   📝 Участок ' + current.plotNumber + ': долг ' + current.totalDebt.toFixed(2), 'info');
     }
-    
-    debug('   ✅ DEBIT: ' + result.size + ' записей', 'ok');
     return result;
 }
 
@@ -1318,21 +1245,16 @@ function parseDebitOds(xml) {
 // ПАРСЕР EE — ПОИСК ДАТЫ ПО ФОРМАТУ
 // ================================================================
 function parseElectricityOds(xml) {
-    debug('📊 Парсинг EE (поиск даты по формату)…', 'info');
     var result = new Map();
-    
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
     var cellRegex = /<table:table-cell[^>]*>([\s\S]*?)<\/table:table-cell>/gi;
     var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
-    
     var rows = xml.match(rowRegex) || [];
     var headerFound = false;
-    
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
         var cells = [];
         var cellMatches = row.match(cellRegex) || [];
-        
         for (var j = 0; j < cellMatches.length; j++) {
             var cellText = '';
             var pMatches = cellMatches[j].match(pRegex) || [];
@@ -1342,87 +1264,45 @@ function parseElectricityOds(xml) {
             }
             cells.push(cellText.trim());
         }
-        
         if (cells.length < 2) continue;
-        
         var col0 = (cells[0] || '').trim();
-        
-        // Пропускаем заголовки
         if (!headerFound) {
             if (col0 === 'Номер' || col0 === '№' || col0.toLowerCase().includes('участок')) {
                 headerFound = true;
-                debug('   📊 Заголовок найден, начинаем парсинг', 'info');
                 continue;
             }
             continue;
         }
-        
-        // Пропускаем пустые строки и "итого"
-        if (!col0 || col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) {
-            continue;
-        }
-        
-        // Проверяем, что это номер участка
+        if (!col0 || col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) continue;
         if (!isPlotNumber(col0)) continue;
-        
         var plotNum = col0.toLowerCase();
-        
-        // ============================================================
-        // ПОИСК ДАННЫХ
-        // ============================================================
-        
         var owner = (cells[1] || '').trim();
-        
-        // ============================================================
-        // ПОИСК ДАТЫ — ИЩЕМ ЯЧЕЙКУ С ФОРМАТОМ ДД.ММ.ГГ ИЛИ ДД.ММ.ГГГГ
-        // ============================================================
         var dateStr = 'не указана';
         var dateRegex = /^\d{1,2}[\.\/\-]\d{1,2}(?:[\.\/\-]\d{2,4})?$/;
-        
-        // Проверяем все ячейки, кроме первой (номер участка)
         for (var j = 1; j < cells.length; j++) {
             var val = cells[j] || '';
             if (dateRegex.test(val.trim())) {
                 dateStr = val.trim();
-                debug('   📅 Найдена дата в столбце ' + j + ': "' + dateStr + '"', 'info');
                 break;
             }
         }
-        
-        // ============================================================
-        // ПОИСК ПОКАЗАНИЙ — ИЩЕМ САМОЕ БОЛЬШОЕ ЧИСЛО > 100
-        // ============================================================
         var currentReading = 0;
         var maxNum = 0;
-        
         for (var j = 1; j < cells.length; j++) {
             var val = cells[j] || '';
-            // Пропускаем ячейку с датой
             if (dateRegex.test(val.trim())) continue;
-            
             var num = parseNumber(val);
-            // Показания обычно > 100 и < 1 000 000
-            if (num > 100 && num < 1000000 && num > maxNum) {
-                maxNum = num;
-            }
+            if (num > 100 && num < 1000000 && num > maxNum) { maxNum = num; }
         }
         currentReading = maxNum;
-        
-        // Если всё ещё нет — ищем любое число > 10
         if (currentReading === 0) {
             for (var j = 1; j < cells.length; j++) {
                 var val = cells[j] || '';
                 if (dateRegex.test(val.trim())) continue;
                 var num = parseNumber(val);
-                if (num > 10 && num < 1000000) {
-                    currentReading = num;
-                    break;
-                }
+                if (num > 10 && num < 1000000) { currentReading = num; break; }
             }
         }
-        
-        debug('   📝 ' + plotNum + ': показания=' + currentReading + ', дата="' + dateStr + '"', 'info');
-        
         result.set(plotNum, {
             plotNumber: plotNum,
             owner: owner,
@@ -1433,8 +1313,6 @@ function parseElectricityOds(xml) {
             tariff: TARIFF
         });
     }
-    
-    debug('   ✅ EE: ' + result.size + ' записей', 'ok');
     return result;
 }
 
@@ -1442,28 +1320,23 @@ function parseElectricityOds(xml) {
 // ЗАГРУЗКА ДАННЫХ
 // ================================================================
 function fetchAndParseOds(url, parserFn) {
-    debug('📥 Загрузка: ' + url, 'info');
     if (typeof JSZip === 'undefined') {
         throw new Error('JSZip не загружен');
     }
     return fetch(url)
         .then(function(r) {
-            debug('   📥 Ответ: ' + r.status, 'info');
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.arrayBuffer();
         })
         .then(function(buf) {
-            debug('   📦 Получено ' + buf.byteLength + ' байт', 'ok');
             return JSZip.loadAsync(buf);
         })
         .then(function(zip) {
-            debug('   📦 ZIP распакован', 'ok');
             var file = zip.file("content.xml");
             if (!file) throw new Error('content.xml не найден');
             return file.async("string");
         })
         .then(function(xml) {
-            debug('   📄 XML получен (' + xml.length + ' символов)', 'ok');
             return parserFn(xml);
         });
 }
@@ -1479,7 +1352,6 @@ function setLoading(msg) {
     if (e) e.classList.add('hidden');
     var n = document.getElementById('notFoundBlock');
     if (n) n.classList.add('hidden');
-    debug('⏳ ' + msg, 'info');
 }
 function hideLoading() {
     var s = document.getElementById('loadingState');
@@ -1493,36 +1365,29 @@ function showError(msg) {
         if (m) m.textContent = msg;
         s.classList.remove('hidden');
     }
-    debug('❌ ' + msg, 'error');
 }
 
 function updateDataStatus() {
     var statusEl = document.getElementById('statusCount');
     var timeEl = document.getElementById('statusTime');
     if (!statusEl || !timeEl) return;
-
     var baseOk = dataLoadStatus.base === 'ok';
     var debtOk = dataLoadStatus.debt === 'ok';
     var eeOk = dataLoadStatus.ee === 'ok';
-
     var parts = [];
     if (baseOk) parts.push('✅ База');
     else if (dataLoadStatus.base === 'loading') parts.push('⏳ База');
     else if (dataLoadStatus.base === 'error') parts.push('⚠️ База');
     else parts.push('⬜ База');
-
     if (debtOk) parts.push('✅ Долги');
     else if (dataLoadStatus.debt === 'loading') parts.push('⏳ Долги');
     else if (dataLoadStatus.debt === 'error') parts.push('⚠️ Долги');
     else parts.push('⬜ Долги');
-
     if (eeOk) parts.push('✅ ЭЭ');
     else if (dataLoadStatus.ee === 'loading') parts.push('⏳ ЭЭ');
     else if (dataLoadStatus.ee === 'error') parts.push('⚠️ ЭЭ');
     else parts.push('⬜ ЭЭ');
-
     statusEl.textContent = parts.join(' · ');
-
     if (lastSyncTime) {
         timeEl.textContent = 'Обновлено: ' + lastSyncTime.toLocaleDateString('ru-RU') + ' ' +
             lastSyncTime.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
@@ -1536,7 +1401,6 @@ function updateDataStatus() {
 function loadSingleOds(url, parserFn, statusKey) {
     dataLoadStatus[statusKey] = 'loading';
     updateDataStatus();
-
     return fetchAndParseOds(url, parserFn)
         .then(function(data) {
             dataLoadStatus[statusKey] = 'ok';
@@ -1553,8 +1417,6 @@ function loadSingleOds(url, parserFn, statusKey) {
 
 function syncAllData() {
     if (syncPromise) return syncPromise;
-    debug('🔄 Синхронизация данных', 'title');
-
     syncPromise = Promise.allSettled([
         loadSingleOds(BASE_URL, parseBaseOds, 'base'),
         loadSingleOds(DEBIT_URL, parseDebitOds, 'debt'),
@@ -1564,96 +1426,104 @@ function syncAllData() {
         var baseResult = results[0];
         var debtResult = results[1];
         var eeResult = results[2];
-
         if (baseResult.status === 'fulfilled') {
             cachedBaseMap = baseResult.value;
             dataLoadStatus.base = 'ok';
-            debug('✅ BASE: ' + cachedBaseMap.size + ' записей', 'ok');
         } else {
             dataLoadStatus.base = 'error';
-            debug('❌ BASE ошибка: ' + baseResult.reason?.message, 'error');
         }
-
         if (debtResult.status === 'fulfilled') {
             cachedDebtMap = debtResult.value;
             dataLoadStatus.debt = 'ok';
-            debug('✅ DEBIT: ' + cachedDebtMap.size + ' записей', 'ok');
         } else {
             dataLoadStatus.debt = 'error';
-            debug('❌ DEBIT ошибка: ' + debtResult.reason?.message, 'error');
         }
-
         if (eeResult.status === 'fulfilled') {
             cachedElectricityMap = eeResult.value;
             dataLoadStatus.ee = 'ok';
-            debug('✅ EE: ' + cachedElectricityMap.size + ' записей', 'ok');
         } else {
             dataLoadStatus.ee = 'error';
-            debug('❌ EE ошибка: ' + eeResult.reason?.message, 'error');
         }
-
         lastSyncTime = new Date();
         updateDataStatus();
-        debug('✅ Синхронизация завершена', 'ok');
+        if (currentPlotNumber) {
+            loadPlotData(currentPlotNumber, true);
+        }
         return { base: cachedBaseMap, debt: cachedDebtMap, ee: cachedElectricityMap };
     })
     .finally(function() {
         syncPromise = null;
     });
-
     return syncPromise;
 }
 
-function loadPlotData(plotNumber) {
+function loadPlotData(plotNumber, fromCache) {
+    fromCache = fromCache || false;
     var normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
-    debug('🔍 Поиск участка: ' + normalized, 'info');
-
     ['debtCard','electricityCard','manualPaymentCard','bankDetailsCard',
      'warningCard','instructionCard'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
-
     var notFound = document.getElementById('notFoundBlock');
     if (notFound) notFound.classList.add('hidden');
-
-    var debt = cachedDebtMap.get(normalized);
-    var ee = cachedElectricityMap.get(normalized);
-    var member = cachedBaseMap.get(normalized);
-
-    debug('   📊 debt=' + !!debt + ', ee=' + !!ee + ', member=' + !!member, 'info');
-
-    if (!debt && !ee && !member) {
-        if (notFound) notFound.classList.remove('hidden');
-        debug('❌ Участок не найден', 'warn');
-        return;
+    try {
+        var noDataLoaded = cachedBaseMap.size === 0 && cachedDebtMap.size === 0 && cachedElectricityMap.size === 0;
+        if (noDataLoaded) {
+            var timeEl = document.getElementById('statusTime');
+            if (timeEl) timeEl.textContent = 'Данные загружаются…';
+            syncAllData();
+            return;
+        }
+        var debt = cachedDebtMap.get(normalized);
+        var ee = cachedElectricityMap.get(normalized);
+        var member = cachedBaseMap.get(normalized);
+        if (!debt && !ee && !member) {
+            var stillLoading = dataLoadStatus.base === 'loading' ||
+                dataLoadStatus.debt === 'loading' ||
+                dataLoadStatus.ee === 'loading';
+            if (stillLoading) {
+                showToast('Данные ещё загружаются. Результат появится автоматически.');
+                return;
+            }
+            if (notFound) notFound.classList.remove('hidden');
+            return;
+        }
+        if (notFound) notFound.classList.add('hidden');
+        var bankCard = document.getElementById('bankDetailsCard');
+        if (bankCard) bankCard.classList.remove('hidden');
+        var warningCard = document.getElementById('warningCard');
+        if (warningCard) warningCard.classList.remove('hidden');
+        var instructionCard = document.getElementById('instructionCard');
+        if (instructionCard) instructionCard.classList.remove('hidden');
+        var errorState = document.getElementById('errorState');
+        if (errorState) errorState.classList.add('hidden');
+        renderBankDetails();
+        if (debt) renderDebtCard(debt);
+        if (ee) renderElectricityCard(ee);
+        renderManualPaymentCard(member, debt, ee);
+    } catch(err) {
+        var debt = cachedDebtMap.get(normalized);
+        var ee = cachedElectricityMap.get(normalized);
+        if (debt || ee) {
+            renderBankDetails();
+            if (debt) renderDebtCard(debt);
+            if (ee) renderElectricityCard(ee);
+        }
+        var errorState = document.getElementById('errorState');
+        var errorMsg = document.getElementById('errorMsg');
+        if (errorState && errorMsg) {
+            errorState.classList.remove('hidden');
+            errorMsg.textContent = '⚠️ ' + err.message;
+        }
     }
-
-    if (notFound) notFound.classList.add('hidden');
-
-    var bankCard = document.getElementById('bankDetailsCard');
-    if (bankCard) bankCard.classList.remove('hidden');
-    var warningCard = document.getElementById('warningCard');
-    if (warningCard) warningCard.classList.remove('hidden');
-    var instructionCard = document.getElementById('instructionCard');
-    if (instructionCard) instructionCard.classList.remove('hidden');
-    var errorState = document.getElementById('errorState');
-    if (errorState) errorState.classList.add('hidden');
-
-    renderBankDetails();
-    if (debt) renderDebtCard(debt);
-    if (ee) renderElectricityCard(ee);
-    renderManualPaymentCard(member, debt, ee);
-    debug('✅ Данные отображены', 'ok');
 }
 
 // ================================================================
 // QR
 // ================================================================
-function sanitizePurpose(t) {
-    return t.replace(/[|;\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
-}
+function sanitizePurpose(t) { return t.replace(/[|;\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim(); }
 function formatAmountShort(a) {
     if (a === Math.floor(a)) return Math.floor(a).toString();
     return a.toFixed(2).replace('.', ',');
@@ -1689,18 +1559,14 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpo
     return 'ST00012|Name=' + ORGANIZATION + '|PersonalAcc=' + PERSONAL_ACC + '|BankName=' + BANK_NAME + '|BIC=' + BIC + '|CorrespAcc=' + CORRESP_ACC + '|PayeeINN=' + INN + '|Purpose=' + sanitizePurpose(purpose) + '|Sum=' + sumKop;
 }
 function generateQR(text) {
-    if (typeof QRCode === 'undefined') {
-        throw new Error('QRCode не загружен');
-    }
+    if (typeof QRCode === 'undefined') throw new Error('QRCode не загружен');
     return new Promise(function(resolve, reject) {
         try {
             QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' }, function(err, url) {
                 if (err) reject(err);
                 else resolve(url);
             });
-        } catch(e) {
-            reject(e);
-        }
+        } catch(e) { reject(e); }
     });
 }
 async function generateAndShowQR(type, btn, qrText) {
@@ -1754,7 +1620,6 @@ function renderBankDetails() {
     document.getElementById('bankName').textContent = BANK_NAME;
     document.getElementById('bankBic').textContent = BIC;
     document.getElementById('bankCorresp').textContent = CORRESP_ACC;
-
     document.querySelectorAll('.copy-btn').forEach(function(btn) {
         btn.onclick = function() {
             var text = document.getElementById(btn.dataset.copy).textContent;
@@ -1787,11 +1652,9 @@ function renderDebtCard(debt) {
     var c = document.getElementById('debtCard');
     if (!c) return;
     c.classList.remove('hidden');
-
     var html = '<div class="card-body">' +
         '<div class="card-title">💰 Задолженность</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(debt.plotNumber) + '</div>';
-
     if (debt.hasDebt) {
         html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div><div>';
         if (debt.membershipDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
@@ -1813,7 +1676,6 @@ function renderDebtCard(debt) {
     }
     html += '</div>';
     c.innerHTML = html;
-
     var qrBtn = document.getElementById('debtQrBtn');
     if (qrBtn && debt.hasDebt) {
         var qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
@@ -1822,16 +1684,14 @@ function renderDebtCard(debt) {
 }
 
 // ================================================================
-// КАРТОЧКА ЭЭ (С КОРРЕКТНОЙ ДАТОЙ)
+// КАРТОЧКА ЭЭ
 // ================================================================
 function renderElectricityCard(ee) {
     currentEeData = ee;
     var c = document.getElementById('electricityCard');
     if (!c) return;
     c.classList.remove('hidden');
-
     var dateDisplay = formatDateDisplay(ee.readingDateStr || "не указана");
-
     c.innerHTML = '<div class="card-body">' +
         '<div class="card-title blue">⚡ Электроэнергия</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(ee.plotNumber) + '</div>' +
@@ -1856,11 +1716,9 @@ function renderElectricityCard(ee) {
         '<button id="uploadPhotoBtn" class="btn btn-blue" style="flex:1;">☁ Загрузить</button>' +
         '<button id="retakePhotoBtn" class="btn btn-retake" style="flex:1;">↺ Переснять</button></div>' +
         '<div id="ydStatus" class="yd-status">☁ Яндекс.Диск</div></div>';
-
     var input = document.getElementById('newReadingInput');
     var calc = document.getElementById('calcAmountBlock');
     var genBtn = document.getElementById('genEeQrBtn');
-
     if (input && calc && genBtn) {
         input.addEventListener('input', function() {
             var newVal = parseFloat(this.value);
@@ -1878,7 +1736,6 @@ function renderElectricityCard(ee) {
             };
         });
     }
-
     var takeBtn = document.getElementById('takePhotoBtn');
     if (takeBtn) takeBtn.onclick = function() { takePhoto(currentPlotNumber); };
 }
@@ -1890,7 +1747,6 @@ function renderManualPaymentCard(member, debt, ee) {
     var c = document.getElementById('manualPaymentCard');
     if (!c) return;
     c.classList.remove('hidden');
-
     c.innerHTML = '<div class="card-body">' +
         '<div class="card-title">💳 Произвольная оплата</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(currentPlotNumber) + '</div>' +
@@ -1903,10 +1759,8 @@ function renderManualPaymentCard(member, debt, ee) {
         '<div id="manualQrButtons" class="qr-buttons mt-sm">' +
         '<button class="btn btn-blue" onclick="shareQR(\'manualQrImg\')">↗ Поделиться</button>' +
         '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'manualQrImg\')">💾 Сохранить</button></div></div>';
-
     var amountInput = document.getElementById('manualAmountInput');
     var generateBtn = document.getElementById('manualGenerateBtn');
-
     if (amountInput && generateBtn) {
         var updateBtn = function() {
             var amount = parseFloat(amountInput.value);
@@ -1939,7 +1793,6 @@ async function uploadPhotoToServer(plotNumber, readingValue, file) {
     }
     return r.json();
 }
-
 function takePhoto(plotNumber) {
     var input = document.createElement('input');
     input.type = 'file';
@@ -1956,20 +1809,17 @@ function takePhoto(plotNumber) {
         var errorDiv = document.getElementById('photoUploadError');
         var actions = document.getElementById('photoActions');
         var ydStatus = document.getElementById('ydStatus');
-
         var reader = new FileReader();
         reader.onload = function(ev) {
             if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
         };
         reader.readAsDataURL(file);
-
         if (takeBtn) takeBtn.style.display = 'none';
         if (progress) progress.style.display = 'block';
         if (success) success.style.display = 'none';
         if (errorDiv) errorDiv.style.display = 'none';
         if (actions) actions.style.display = 'flex';
         if (ydStatus) ydStatus.textContent = '☁ Загрузка…';
-
         try {
             await uploadPhotoToServer(plotNumber, readingValue, file);
             if (progress) progress.style.display = 'none';
@@ -2000,23 +1850,19 @@ function saveConsent() {
     try {
         localStorage.setItem(CONSENT_KEY, "true");
         localStorage.setItem(CONSENT_VER_KEY, CONSENT_VERSION);
-        debug('✅ Согласие сохранено', 'ok');
     } catch(e) {}
 }
 function revokeConsent() {
     try {
         localStorage.removeItem(CONSENT_KEY);
         localStorage.removeItem(CONSENT_VER_KEY);
-        debug('🔄 Согласие отозвано', 'warn');
     } catch(e) {}
     cachedDebtMap.clear();
     cachedElectricityMap.clear();
     cachedBaseMap.clear();
     location.reload();
 }
-
 function showConsentScreen() {
-    debug('📋 Показ согласия', 'info');
     var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = '<div class="modal-sheet">' +
@@ -2029,18 +1875,15 @@ function showConsentScreen() {
         '<p style="font-size:11px;color:var(--text-hint);margin-top:12px;line-height:1.5;">Дата принятия согласия фиксируется. Вы вправе отозвать согласие в настройках приложения.</p></div>' +
         '<div class="modal-footer"><button id="acceptBtn" class="btn btn-primary-lg" disabled>✓ Принять и продолжить</button><button id="declineBtn" class="btn btn-text">Отказаться и закрыть</button></div></div>';
     document.body.appendChild(overlay);
-
     var c1 = document.getElementById('c1');
     var c2 = document.getElementById('c2');
     var c3 = document.getElementById('c3');
     var accept = document.getElementById('acceptBtn');
-
     function update() {
         accept.disabled = !(c1.checked && c2.checked && c3.checked);
         accept.style.opacity = accept.disabled ? '0.4' : '1';
     }
     c1.onchange = c2.onchange = c3.onchange = update;
-
     accept.onclick = function() {
         saveConsent();
         overlay.remove();
@@ -2067,11 +1910,9 @@ function showSettingsModal() {
         '<div class="modal-row"><div class="modal-row-info"><strong>Очистить кэш</strong><small>Сбросить загруженные данные</small></div><button id="clearBtn" class="btn" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;background:var(--orange-600);color:white;">Очистить</button></div></div>' +
         '<div class="modal-footer"><button id="closeModalBtn" class="btn btn-secondary">Закрыть</button></div></div>';
     document.body.appendChild(overlay);
-
     var close = function() { overlay.remove(); };
     document.getElementById('closeModalBtn').onclick = close;
     overlay.onclick = function(e) { if (e.target === overlay) close(); };
-
     document.getElementById('revokeBtn').onclick = function() {
         if (confirm('Отозвать согласие на обработку персональных данных?')) revokeConsent();
     };
@@ -2093,16 +1934,11 @@ function showMainApp() {
     var main = document.getElementById('mainApp');
     if (startup) startup.classList.add('hidden');
     if (main) main.classList.remove('hidden');
-    debug('🖥️ Приложение показано', 'ok');
 }
-
 function initMainApp() {
-    debug('🚀 Инициализация', 'title');
     showMainApp();
-
     var searchBtn = document.getElementById('searchBtn');
     var plotInput = document.getElementById('plotInput');
-
     if (plotInput) {
         plotInput.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9а-яёa-z]/gi, '').toLowerCase();
@@ -2110,81 +1946,64 @@ function initMainApp() {
         plotInput.onkeydown = function(e) {
             if (e.key === 'Enter' && searchBtn) searchBtn.click();
         };
-        debug('✅ Поле ввода настроено', 'ok');
     }
-
     if (searchBtn) {
         searchBtn.onclick = function() {
             if (!plotInput) return;
             var v = plotInput.value.trim();
-            debug('🔍 Поиск: "' + v + '"', 'info');
             if (v && isPlotNumber(v)) {
                 document.getElementById('errorState').classList.add('hidden');
                 loadPlotData(v);
             } else {
                 plotInput.focus();
                 showToast('Введите корректный номер участка');
-                debug('⚠️ Некорректный номер: "' + v + '"', 'warn');
             }
         };
-        debug('✅ Кнопка поиска настроена', 'ok');
     }
-
     document.getElementById('settingsBtn').onclick = function() {
-        debug('⚙️ Настройки', 'info');
         showSettingsModal();
     };
     document.getElementById('retryBtn').onclick = function() {
-        debug('🔄 Повтор', 'info');
         var v = plotInput.value.trim();
         if (v && isPlotNumber(v)) loadPlotData(v);
         else syncAllData().catch(function(e) { console.warn(e); });
     };
-
     updateDataStatus();
     syncAllData().catch(function(err) {
-        debug('⚠️ Sync error: ' + err.message, 'warn');
+        console.warn('Initial sync failed, but UI is ready:', err);
     });
-
-    debug('✅ Инициализация завершена', 'ok');
 }
 
 // ================================================================
 // ЗАПУСК
 // ================================================================
-debug('🎯 Запуск приложения…', 'title');
-
 try {
     if (isConsentAccepted()) {
-        debug('✅ Согласие принято', 'ok');
         showMainApp();
         document.getElementById('startupMessage').textContent = 'Приложение готово. Данные загружаются…';
         setTimeout(function() {
             try {
                 initMainApp();
             } catch(e) {
-                debug('❌ Ошибка инициализации: ' + e.message, 'error');
-                showToast('Ошибка инициализации');
+                console.error('Init error:', e);
+                showToast('Ошибка инициализации. Перезагрузите страницу.');
             }
         }, 300);
     } else {
-        debug('📋 Требуется согласие', 'info');
         document.getElementById('startupState').classList.add('hidden');
         showConsentScreen();
     }
 } catch(err) {
-    debug('❌ Критическая ошибка: ' + err.message, 'error');
+    console.error('Application startup failed:', err);
     showMainApp();
     var errorState = document.getElementById('errorState');
     var errorMsg = document.getElementById('errorMsg');
     if (errorState && errorMsg) {
         errorState.classList.remove('hidden');
-        errorMsg.textContent = '⚠️ ' + err.message;
+        errorMsg.textContent = '⚠️ Ошибка запуска: ' + (err.message || 'Неизвестная ошибка');
         errorMsg.innerHTML += '<br><br><button class="btn btn-primary" onclick="location.reload()">🔄 Перезагрузить</button>';
     }
 }
-
-debug('✅ Скрипт загружен', 'ok');
 </script>
 </body>
 </html>
