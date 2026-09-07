@@ -1074,7 +1074,6 @@ function formatDateDisplay(dateStr) {
             if (y.length === 2) y = '20' + y;
             return retryMatch[1] + '.' + retryMatch[2] + '.' + y;
         }
-        // Если число очень большое — это показания
         var numVal = parseFloat(noSpaces);
         if (numVal > 10000) {
             return "не указана";
@@ -1316,10 +1315,10 @@ function parseDebitOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР EE (ФИКСИРОВАННЫЕ ИНДЕКСЫ — РАБОТАЕТ НА ВСЕХ БРАУЗЕРАХ)
+// ПАРСЕР EE — ПО СТРУКТУРЕ ФАЙЛА (ИЗ ee.xlsx)
 // ================================================================
 function parseElectricityOds(xml) {
-    debug('📊 Парсинг EE (фиксированные индексы)…', 'info');
+    debug('📊 Парсинг EE (по структуре файла)…', 'info');
     var result = new Map();
     
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
@@ -1350,7 +1349,7 @@ function parseElectricityOds(xml) {
         
         // Пропускаем заголовки
         if (!headerFound) {
-            if (col0.toLowerCase().includes('участок') || col0.toLowerCase().includes('номер') || col0 === '№') {
+            if (col0 === 'Номер' || col0 === '№' || col0.toLowerCase().includes('участок')) {
                 headerFound = true;
                 debug('   📊 Заголовок найден, начинаем парсинг', 'info');
                 continue;
@@ -1369,38 +1368,52 @@ function parseElectricityOds(xml) {
         var plotNum = col0.toLowerCase();
         
         // ============================================================
-        // ФИКСИРОВАННЫЕ ИНДЕКСЫ — ТАК РАБОТАЛО РАНЬШЕ!
-        // ============================================================
-        // Столбец 0: номер участка
-        // Столбец 1: владелец
-        // Столбец 4: дата снятия
-        // Столбец 6: текущие показания  ← ГЛАВНОЕ!
+        // ПРАВИЛЬНАЯ СТРУКТУРА (из ee.xlsx):
+        // 0: Номер участка
+        // 1: Владелец
+        // 2: Адрес
+        // 3: Счетчик
+        // 4: Дата последних показаний  ← ДАТА!
+        // 5: Показания на начало
+        // 6: Показания на конец
+        // 7: Общий расход
+        // 8: Долг
+        // 9: Переплата
+        // 10: Начислено
+        // 11: Оплачено
+        // 12: Долг
+        // 13: Переплата
         // ============================================================
         
         var owner = (cells[1] || '').trim();
-        var dateStr = (cells[4] || '').trim();
-        var currentReading = parseNumber(cells[6] || '0');
+        var dateStr = (cells[4] || '').trim();  // ← ДАТА в столбце 4!
+        var currentReading = parseNumber(cells[6] || '0');  // ← Показания на конец в столбце 6!
         
-        // Если показания не найдены или равны 0 — ищем в других столбцах
-        if (currentReading === 0 || currentReading < 10) {
-            for (var j = 5; j < Math.min(cells.length, 9); j++) {
+        // Если показания не найдены — ищем в столбце 5 (на начало)
+        if (currentReading === 0) {
+            currentReading = parseNumber(cells[5] || '0');
+        }
+        
+        // Если всё ещё 0 — ищем по всей строке
+        if (currentReading === 0) {
+            for (var j = 0; j < cells.length; j++) {
                 var num = parseNumber(cells[j]);
-                if (num > 100 && num < 100000) {
+                if (num > 10 && num < 100000) {
                     currentReading = num;
                     break;
                 }
             }
         }
         
-        debug('   📝 ' + plotNum + ': показания=' + currentReading + ', дата=' + dateStr, 'info');
+        debug('   📝 ' + plotNum + ': показания=' + currentReading + ', дата="' + dateStr + '"', 'info');
         
         result.set(plotNum, {
             plotNumber: plotNum,
             owner: owner,
             readingDateStr: dateStr || 'не указана',
-            previousReading: 0,
+            previousReading: parseNumber(cells[5] || '0'),
             currentReading: currentReading,
-            consumption: 0,
+            consumption: parseNumber(cells[7] || '0'),
             tariff: TARIFF
         });
     }
