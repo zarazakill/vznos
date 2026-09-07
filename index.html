@@ -1035,7 +1035,6 @@ function escapeHtml(str) {
 function formatDateDisplay(dateStr) {
     if (!dateStr || dateStr === "не указана") return "не указана";
     
-    // Убираем лишние пробелы
     dateStr = dateStr.trim();
     
     // Проверяем на русскую дату: ДД.ММ.ГГГГ или ДД.ММ.ГГ
@@ -1057,7 +1056,6 @@ function formatDateDisplay(dateStr) {
         return "не указана";
     }
     
-    // Если строка слишком длинная и не похожа на дату
     if (dateStr.length > 10 && !dateStr.includes('.') && !dateStr.includes('/')) {
         return "не указана";
     }
@@ -1297,10 +1295,10 @@ function parseDebitOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР EE (ИСПРАВЛЕННЫЙ — ПРАВИЛЬНО ЧИТАЕТ ПОКАЗАНИЯ)
+// ПАРСЕР EE (С ФИКСИРОВАННЫМИ СТОЛБЦАМИ — КАК РАБОТАЛО РАНЬШЕ)
 // ================================================================
 function parseElectricityOds(xml) {
-    debug('📊 Парсинг EE (исправленный)…', 'info');
+    debug('📊 Парсинг EE (фиксированные столбцы)…', 'info');
     var result = new Map();
     
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
@@ -1309,7 +1307,6 @@ function parseElectricityOds(xml) {
     
     var rows = xml.match(rowRegex) || [];
     var headerFound = false;
-    var colPlot = -1, colOwner = -1, colDate = -1, colPrev = -1, colCurrent = -1, colConsumption = -1;
     
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
@@ -1328,109 +1325,58 @@ function parseElectricityOds(xml) {
         
         if (cells.length < 2) continue;
         
+        var col0 = (cells[0] || '').trim();
+        
+        // Пропускаем заголовки
         if (!headerFound) {
-            var joined = cells.join(' ').toLowerCase();
-            if (joined.includes('участок') || joined.includes('номер') || joined.includes('показания')) {
-                for (var idx = 0; idx < cells.length; idx++) {
-                    var val = cells[idx].toLowerCase();
-                    if (val === '№' || val === 'номер' || val.includes('участок') || val.includes('уч')) {
-                        colPlot = idx;
-                    }
-                    if (val.includes('владельц') || val.includes('фио') || val.includes('фамил')) {
-                        colOwner = idx;
-                    }
-                    if (val.includes('дата') || val.includes('снятия')) {
-                        colDate = idx;
-                    }
-                    if (val.includes('предыдущ') || val.includes('пред') || val.includes('прошл')) {
-                        colPrev = idx;
-                    }
-                    if (val.includes('текущ') || val.includes('тек') || val.includes('показан')) {
-                        colCurrent = idx;
-                    }
-                    if (val.includes('расход') || val.includes('потребл') || val.includes('разниц')) {
-                        colConsumption = idx;
-                    }
-                }
+            if (col0.toLowerCase().includes('участок') || col0.toLowerCase().includes('номер') || col0 === '№') {
                 headerFound = true;
-                debug('   📊 Столбцы: участок=' + colPlot + ', дата=' + colDate + ', текущие=' + colCurrent, 'info');
+                debug('   📊 Заголовок найден, начинаем парсинг', 'info');
                 continue;
             }
             continue;
         }
         
-        var col0 = (cells[0] || '').trim();
-        if (!col0) continue;
-        
-        if (!isPlotNumber(col0)) {
-            var foundPlot = false;
-            for (var j = 0; j < cells.length; j++) {
-                if (isPlotNumber(cells[j])) {
-                    col0 = cells[j];
-                    foundPlot = true;
-                    break;
-                }
-            }
-            if (!foundPlot) continue;
+        // Пропускаем пустые строки и "итого"
+        if (!col0 || col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) {
+            continue;
         }
+        
+        // Проверяем, что это номер участка
+        if (!isPlotNumber(col0)) continue;
         
         var plotNum = col0.toLowerCase();
-        if (!isPlotNumber(plotNum)) {
-            var found = false;
-            for (var j = 0; j < cells.length; j++) {
-                if (isPlotNumber(cells[j])) {
-                    plotNum = cells[j].toLowerCase();
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) continue;
-        }
         
-        var owner = '';
-        var dateStr = '';
-        var prevReading = 0;
-        var currentReading = 0;
-        var consumption = 0;
+        // ============================================================
+        // ФИКСИРОВАННЫЕ ИНДЕКСЫ СТОЛБЦОВ (как в рабочей версии)
+        // Столбец 0: номер участка
+        // Столбец 1: владелец
+        // Столбец 4: дата снятия
+        // Столбец 5: предыдущие показания
+        // Столбец 6: текущие показания
+        // Столбец 7: расход
+        // ============================================================
         
-        if (colOwner >= 0 && colOwner < cells.length) {
-            owner = cells[colOwner] || '';
-        }
+        var owner = (cells[1] || '').trim();
+        var dateStr = (cells[4] || '').trim();
+        var prevReading = parseNumber(cells[5] || '0');
+        var currentReading = parseNumber(cells[6] || '0');
+        var consumption = parseNumber(cells[7] || '0');
         
-        if (colDate >= 0 && colDate < cells.length) {
-            dateStr = cells[colDate] || '';
-        }
-        
-        if (colPrev >= 0 && colPrev < cells.length) {
-            prevReading = parseNumber(cells[colPrev]);
-        }
-        
-        if (colCurrent >= 0 && colCurrent < cells.length) {
-            currentReading = parseNumber(cells[colCurrent]);
-        } else {
-            for (var j = 0; j < cells.length; j++) {
-                var num = parseNumber(cells[j]);
-                if (num > 100 && num < 100000 && num !== prevReading) {
-                    currentReading = num;
-                    break;
-                }
-            }
-        }
-        
-        if (colConsumption >= 0 && colConsumption < cells.length) {
-            consumption = parseNumber(cells[colConsumption]);
-        } else if (currentReading > 0 && prevReading > 0) {
-            consumption = currentReading - prevReading;
-        }
-        
+        // Если текущие показания не найдены — ищем по всему ряду
         if (currentReading === 0) {
             for (var j = 0; j < cells.length; j++) {
                 var num = parseNumber(cells[j]);
-                if (num > 10 && num < 100000 && num !== prevReading) {
+                if (num > 10 && num < 100000) {
                     currentReading = num;
                     break;
                 }
             }
+        }
+        
+        // Если расход не вычислен — вычисляем
+        if (consumption === 0 && currentReading > 0 && prevReading > 0) {
+            consumption = currentReading - prevReading;
         }
         
         debug('   📝 ' + plotNum + ': показания=' + currentReading + ', дата=' + dateStr, 'info');
@@ -1834,7 +1780,7 @@ function renderDebtCard(debt) {
 }
 
 // ================================================================
-// КАРТОЧКА ЭЭ (С ИСПРАВЛЕННОЙ ДАТОЙ)
+// КАРТОЧКА ЭЭ (С КОРРЕКТНОЙ ДАТОЙ)
 // ================================================================
 function renderElectricityCard(ee) {
     currentEeData = ee;
@@ -1842,9 +1788,7 @@ function renderElectricityCard(ee) {
     if (!c) return;
     c.classList.remove('hidden');
 
-    // ============================================================
-    // КОРРЕКТНАЯ ОБРАБОТКА ДАТЫ
-    // ============================================================
+    // Корректная обработка даты через formatDateDisplay
     var dateDisplay = formatDateDisplay(ee.readingDateStr || "не указана");
 
     c.innerHTML = '<div class="card-body">' +
