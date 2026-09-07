@@ -1032,6 +1032,38 @@ function escapeHtml(str) {
         return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[m] || m;
     });
 }
+function formatDateDisplay(dateStr) {
+    if (!dateStr || dateStr === "не указана") return "не указана";
+    
+    // Убираем лишние пробелы
+    dateStr = dateStr.trim();
+    
+    // Проверяем на русскую дату: ДД.ММ.ГГГГ или ДД.ММ.ГГ
+    var russianDateRegex = /^(\d{1,2})[\.\/](\d{1,2})(?:[\.\/](\d{2,4}))?$/;
+    var match = dateStr.match(russianDateRegex);
+    
+    if (match) {
+        var day = match[1].padStart(2, '0');
+        var month = match[2].padStart(2, '0');
+        var year = match[3] || new Date().getFullYear().toString().slice(-2);
+        if (year.length === 2) {
+            year = '20' + year;
+        }
+        return day + '.' + month + '.' + year;
+    }
+    
+    // Если строка содержит только цифры, пробелы и запятые — это не дата
+    if (/^[\d\s,]+$/.test(dateStr) && dateStr.length > 3) {
+        return "не указана";
+    }
+    
+    // Если строка слишком длинная и не похожа на дату
+    if (dateStr.length > 10 && !dateStr.includes('.') && !dateStr.includes('/')) {
+        return "не указана";
+    }
+    
+    return dateStr;
+}
 
 debug('✅ Вспомогательные функции загружены', 'ok');
 
@@ -1802,7 +1834,7 @@ function renderDebtCard(debt) {
 }
 
 // ================================================================
-// КАРТОЧКА ЭЭ
+// КАРТОЧКА ЭЭ (С ИСПРАВЛЕННОЙ ДАТОЙ)
 // ================================================================
 function renderElectricityCard(ee) {
     currentEeData = ee;
@@ -1810,11 +1842,16 @@ function renderElectricityCard(ee) {
     if (!c) return;
     c.classList.remove('hidden');
 
+    // ============================================================
+    // КОРРЕКТНАЯ ОБРАБОТКА ДАТЫ
+    // ============================================================
+    var dateDisplay = formatDateDisplay(ee.readingDateStr || "не указана");
+
     c.innerHTML = '<div class="card-body">' +
         '<div class="card-title blue">⚡ Электроэнергия</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(ee.plotNumber) + '</div>' +
         '<div class="debt-line"><span class="debt-line-label">Текущие показания</span><strong>' + formatNumber(ee.currentReading) + ' кВт·ч</strong></div>' +
-        '<div class="debt-line"><span class="debt-line-label">Дата снятия</span><span>' + escapeHtml(ee.readingDateStr || "не указана") + '</span></div>' +
+        '<div class="debt-line"><span class="debt-line-label">Дата снятия</span><span>' + escapeHtml(dateDisplay) + '</span></div>' +
         '<div class="debt-line"><span class="debt-line-label">Тариф</span><span>' + TARIFF.toFixed(2) + ' ₽/кВт·ч</span></div>' +
         '<label class="manual-label mt-md">Введите новые показания:</label>' +
         '<input type="number" id="newReadingInput" class="reading-input" placeholder="' + ee.currentReading + '" step="any" inputmode="decimal">' +
