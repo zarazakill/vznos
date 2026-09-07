@@ -1126,7 +1126,7 @@ function parseBaseOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР DEBIT
+// ПАРСЕР DEBIT (улучшенный)
 // ================================================================
 function parseDebitOds(xml) {
     debug('📊 Парсинг DEBIT (улучшенный)…', 'info');
@@ -1295,10 +1295,10 @@ function parseDebitOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР EE (С ФИКСИРОВАННЫМИ СТОЛБЦАМИ — КАК РАБОТАЛО РАНЬШЕ)
+// ПАРСЕР EE (УМНЫЙ — АВТООПРЕДЕЛЕНИЕ СТОЛБЦОВ)
 // ================================================================
 function parseElectricityOds(xml) {
-    debug('📊 Парсинг EE (фиксированные столбцы)…', 'info');
+    debug('📊 Парсинг EE (умный парсер)…', 'info');
     var result = new Map();
     
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
@@ -1306,8 +1306,9 @@ function parseElectricityOds(xml) {
     var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
     
     var rows = xml.match(rowRegex) || [];
-    var headerFound = false;
+    var allRows = [];
     
+    // 1. Парсим все строки в массив
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
         var cells = [];
@@ -1322,59 +1323,98 @@ function parseElectricityOds(xml) {
             }
             cells.push(cellText.trim());
         }
+        if (cells.length > 1) {
+            allRows.push(cells);
+        }
+    }
+    
+    // 2. Находим заголовок и определяем столбцы
+    var colPlot = 0, colOwner = 1, colDate = 4, colPrev = 5, colCurrent = 6, colConsumption = 7;
+    var dataStart = 0;
+    var headerFound = false;
+    
+    for (var i = 0; i < allRows.length && !headerFound; i++) {
+        var cells = allRows[i];
+        var joined = cells.join(' ').toLowerCase();
         
-        if (cells.length < 2) continue;
-        
+        if (joined.includes('участок') || joined.includes('показания') || joined.includes('дата')) {
+            for (var idx = 0; idx < cells.length; idx++) {
+                var val = cells[idx].toLowerCase();
+                if (val === '№' || val === 'номер' || val.includes('участок') || val.includes('уч')) colPlot = idx;
+                if (val.includes('владельц') || val.includes('фио') || val.includes('фамил')) colOwner = idx;
+                if (val.includes('дата') || val.includes('снятия')) colDate = idx;
+                if (val.includes('предыдущ') || val.includes('прошл')) colPrev = idx;
+                if (val.includes('текущ') || val.includes('показан')) colCurrent = idx;
+                if (val.includes('расход') || val.includes('потребл') || val.includes('разниц')) colConsumption = idx;
+            }
+            headerFound = true;
+            dataStart = i + 1;
+            debug('   📊 Столбцы: участок=' + colPlot + ', дата=' + colDate + ', текущие=' + colCurrent, 'info');
+        }
+    }
+    
+    if (!headerFound) {
+        debug('   📊 Заголовок не найден, используем стандартные индексы', 'warn');
+    }
+    
+    // 3. Парсим данные
+    for (var i = dataStart; i < allRows.length; i++) {
+        var cells = allRows[i];
         var col0 = (cells[0] || '').trim();
         
-        // Пропускаем заголовки
-        if (!headerFound) {
-            if (col0.toLowerCase().includes('участок') || col0.toLowerCase().includes('номер') || col0 === '№') {
-                headerFound = true;
-                debug('   📊 Заголовок найден, начинаем парсинг', 'info');
-                continue;
-            }
-            continue;
-        }
-        
-        // Пропускаем пустые строки и "итого"
         if (!col0 || col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) {
             continue;
         }
         
-        // Проверяем, что это номер участка
-        if (!isPlotNumber(col0)) continue;
-        
-        var plotNum = col0.toLowerCase();
-        
-        // ============================================================
-        // ФИКСИРОВАННЫЕ ИНДЕКСЫ СТОЛБЦОВ (как в рабочей версии)
-        // Столбец 0: номер участка
-        // Столбец 1: владелец
-        // Столбец 4: дата снятия
-        // Столбец 5: предыдущие показания
-        // Столбец 6: текущие показания
-        // Столбец 7: расход
-        // ============================================================
-        
-        var owner = (cells[1] || '').trim();
-        var dateStr = (cells[4] || '').trim();
-        var prevReading = parseNumber(cells[5] || '0');
-        var currentReading = parseNumber(cells[6] || '0');
-        var consumption = parseNumber(cells[7] || '0');
-        
-        // Если текущие показания не найдены — ищем по всему ряду
-        if (currentReading === 0) {
+        // Определяем номер участка
+        var plotNum = '';
+        if (colPlot >= 0 && colPlot < cells.length) {
+            plotNum = cells[colPlot].toLowerCase();
+        }
+        if (!plotNum || !isPlotNumber(plotNum)) {
             for (var j = 0; j < cells.length; j++) {
-                var num = parseNumber(cells[j]);
-                if (num > 10 && num < 100000) {
-                    currentReading = num;
+                if (isPlotNumber(cells[j])) {
+                    plotNum = cells[j].toLowerCase();
                     break;
                 }
             }
         }
+        if (!plotNum || !isPlotNumber(plotNum)) continue;
         
-        // Если расход не вычислен — вычисляем
+        // Сбор данных
+        var owner = (colOwner >= 0 && colOwner < cells.length) ? cells[colOwner] : '';
+        var dateStr = (colDate >= 0 && colDate < cells.length) ? cells[colDate] : '';
+        var prevReading = (colPrev >= 0 && colPrev < cells.length) ? parseNumber(cells[colPrev]) : 0;
+        var currentReading = (colCurrent >= 0 && colCurrent < cells.length) ? parseNumber(cells[colCurrent]) : 0;
+        var consumption = (colConsumption >= 0 && colConsumption < cells.length) ? parseNumber(cells[colConsumption]) : 0;
+        
+        // Если показания = номеру участка или < 10 — ищем правильные
+        if (currentReading === parseFloat(plotNum) || currentReading < 10) {
+            currentReading = 0;
+            for (var j = Math.max(colCurrent, 4); j < Math.min(cells.length, 9); j++) {
+                var num = parseNumber(cells[j]);
+                if (num > 100 && num < 100000) {
+                    currentReading = num;
+                    break;
+                }
+            }
+            if (currentReading === 0) {
+                for (var j = 0; j < cells.length; j++) {
+                    var num = parseNumber(cells[j]);
+                    if (num > 100 && num < 100000 && num !== prevReading) {
+                        currentReading = num;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Если дата — это показания (число), заменяем
+        if (dateStr && /^[\d\s,]+$/.test(dateStr) && dateStr.length > 3) {
+            dateStr = 'не указана';
+        }
+        
+        // Вычисляем расход
         if (consumption === 0 && currentReading > 0 && prevReading > 0) {
             consumption = currentReading - prevReading;
         }
@@ -1788,7 +1828,6 @@ function renderElectricityCard(ee) {
     if (!c) return;
     c.classList.remove('hidden');
 
-    // Корректная обработка даты через formatDateDisplay
     var dateDisplay = formatDateDisplay(ee.readingDateStr || "не указана");
 
     c.innerHTML = '<div class="card-body">' +
