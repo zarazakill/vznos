@@ -10,37 +10,37 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Берёзка-2">
 
-    <!-- ЗАЩИТА ОТ ЦИКЛИЧЕСКОЙ ПЕРЕЗАГРУЗКИ -->
+    <!-- ============================================================
+         ЗАЩИТА ОТ ЦИКЛИЧЕСКОЙ ПЕРЕЗАГРУЗКИ
+         ============================================================ -->
     <script>
     (function() {
-        // Предотвращаем бесконечную перезагрузку
         var reloadCount = parseInt(sessionStorage.getItem('berezka2_reload_count') || '0', 10);
         
         if (window.location.search.includes('reload=')) {
             if (reloadCount > 3) {
-                // Очищаем кеш и перезагружаем без параметра
                 sessionStorage.removeItem('berezka2_reload_count');
                 if ('caches' in window) {
                     caches.keys().then(function(keys) {
                         keys.forEach(function(key) { caches.delete(key); });
                     }).catch(function() {});
                 }
-                var url = window.location.pathname + window.location.search.replace(/[&?]reload=\d+/, '');
-                window.location.href = url;
+                var cleanUrl = window.location.pathname + window.location.hash;
+                window.location.href = cleanUrl;
                 throw new Error('Stopping infinite reload');
             }
             sessionStorage.setItem('berezka2_reload_count', String(reloadCount + 1));
         } else {
-            // Сброс при успешной загрузке
             sessionStorage.removeItem('berezka2_reload_count');
         }
 
-        // Защита от зависания инициализации
-        window._appInitialized = false;
-        window._initTimeout = setTimeout(function() {
-            if (!window._appInitialized) {
-                console.warn('Init timeout, forcing recovery');
-                window._appInitialized = true;
+        var initTimer = setTimeout(function() {
+            var mainApp = document.getElementById('mainApp');
+            var startup = document.getElementById('startupState');
+            if (mainApp && mainApp.classList.contains('hidden')) {
+                console.warn('Init timeout - forcing app display');
+                if (startup) startup.classList.add('hidden');
+                if (mainApp) mainApp.classList.remove('hidden');
                 var errorState = document.getElementById('errorState');
                 if (errorState) {
                     errorState.classList.remove('hidden');
@@ -50,18 +50,91 @@
                         errorMsg.innerHTML += '<br><br><button class="btn btn-primary" onclick="location.reload()">🔄 Перезагрузить</button>';
                     }
                 }
-                var startup = document.getElementById('startupState');
-                if (startup) startup.classList.add('hidden');
-                var main = document.getElementById('mainApp');
-                if (main) main.classList.remove('hidden');
             }
-        }, 10000);
+        }, 15000);
+
+        window._clearInitTimer = function() {
+            clearTimeout(initTimer);
+        };
     })();
     </script>
 
-    <!-- ЛОКАЛЬНЫЕ БИБЛИОТЕКИ -->
-    <script src="./js/jszip.min.js"></script>
-    <script src="./js/qrcode.min.js"></script>
+    <!-- ============================================================
+         ГИБРИДНАЯ ЗАГРУЗКА БИБЛИОТЕК: CDN → ЛОКАЛЬНЫЙ FALLBACK
+         ============================================================ -->
+    <script>
+    (function() {
+        function loadScript(src, fallbackSrc) {
+            return new Promise(function(resolve, reject) {
+                var script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                
+                var timeout = setTimeout(function() {
+                    script.onload = null;
+                    script.onerror = null;
+                    console.warn('CDN timeout, trying fallback:', fallbackSrc);
+                    loadFallback();
+                }, 8000);
+
+                function loadFallback() {
+                    clearTimeout(timeout);
+                    if (fallbackSrc) {
+                        var fallbackScript = document.createElement('script');
+                        fallbackScript.src = fallbackSrc;
+                        fallbackScript.async = true;
+                        fallbackScript.onload = function() {
+                            console.log('Loaded from fallback:', fallbackSrc);
+                            resolve();
+                        };
+                        fallbackScript.onerror = function() {
+                            reject(new Error('Failed to load from both CDN and fallback'));
+                        };
+                        document.head.appendChild(fallbackScript);
+                    } else {
+                        reject(new Error('Failed to load: ' + src));
+                    }
+                }
+
+                script.onload = function() {
+                    clearTimeout(timeout);
+                    console.log('Loaded from CDN:', src);
+                    resolve();
+                };
+                script.onerror = function() {
+                    clearTimeout(timeout);
+                    console.warn('CDN failed, trying fallback:', fallbackSrc);
+                    loadFallback();
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        window._libsLoaded = Promise.all([
+            loadScript(
+                'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+                './js/jszip.min.js'
+            ),
+            loadScript(
+                'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js',
+                './js/qrcode.min.js'
+            )
+        ]).catch(function(err) {
+            console.error('Failed to load libraries:', err);
+            var startup = document.getElementById('startupState');
+            var msg = document.getElementById('startupMessage');
+            if (msg) {
+                msg.textContent = '⚠️ Ошибка загрузки библиотек. Проверьте интернет.';
+                msg.style.color = '#C62828';
+            }
+            throw err;
+        });
+
+        window._libsReady = function() {
+            return window._libsLoaded;
+        };
+    })();
+    </script>
 
     <style>
 /* ================================================================
@@ -706,7 +779,6 @@ body {
     }
 }
     </style>
-    <base target="_blank">
 </head>
 <body>
 
@@ -714,7 +786,7 @@ body {
 <div id="startupState" style="padding:24px;text-align:center;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#424242;">
     <div style="font-size:28px;margin-bottom:10px;">🌿</div>
     <div style="font-weight:700;font-size:18px;">СНТ «Берёзка-2»</div>
-    <div id="startupMessage" style="margin-top:6px;color:#757575;font-size:14px;">Подготовка приложения…</div>
+    <div id="startupMessage" style="margin-top:6px;color:#757575;font-size:14px;">Загрузка библиотек…</div>
 </div>
 
 <!-- TOAST -->
@@ -750,22 +822,28 @@ body {
                 </div>
             </div>
 
-            <!-- СТАТУС загрузки данных -->
-            <div id="dataStatus" class="status-card">
-                <div class="status-count" id="statusCount">⏳ Подготовка данных…</div>
+            <!-- СТАТУС -->
+            <div id="statusCard" class="status-card hidden">
+                <div class="status-count" id="statusCount"></div>
                 <div class="status-time" id="statusTime"></div>
+            </div>
+
+            <!-- ЗАГРУЗКА -->
+            <div id="loadingState" class="state-loading hidden">
+                <div class="spinner"></div>
+                <div id="loadingMsg">Загрузка данных…</div>
+            </div>
+
+            <!-- ОШИБКА -->
+            <div id="errorState" class="state-error hidden">
+                <div class="error-text" id="errorMsg"></div>
+                <button id="retryBtn" class="btn btn-secondary" style="width:auto;">Повторить</button>
             </div>
 
             <!-- НЕ НАЙДЕН -->
             <div id="notFoundBlock" class="not-found hidden">
                 🔍 Участок не найден в базе данных.<br>Пример: 5, 4а, 10а
             </div>
-
-            <!-- КАРТОЧКА ДОЛГА -->
-            <div id="debtCard" class="card hidden"></div>
-
-            <!-- КАРТОЧКА ЭЛЕКТРОЭНЕРГИИ -->
-            <div id="electricityCard" class="card hidden"></div>
 
             <!-- РЕКВИЗИТЫ -->
             <div id="bankDetailsCard" class="card hidden">
@@ -809,14 +887,14 @@ body {
                 <div class="step"><div class="step-num">3</div><div>Или сохраните и отсканируйте — в банке выберите «Оплатить по QR» → «Загрузить из галереи»</div></div>
             </div>
 
+            <!-- КАРТОЧКА ДОЛГА -->
+            <div id="debtCard" class="card hidden"></div>
+
+            <!-- КАРТОЧКА ЭЛЕКТРОЭНЕРГИИ -->
+            <div id="electricityCard" class="card hidden"></div>
+
             <!-- КАРТОЧКА РУЧНОЙ ОПЛАТЫ -->
             <div id="manualPaymentCard" class="card hidden"></div>
-
-            <!-- ОШИБКА -->
-            <div id="errorState" class="state-error hidden">
-                <div class="error-text" id="errorMsg"></div>
-                <button id="retryBtn" class="btn btn-secondary" style="width:auto;">Повторить</button>
-            </div>
 
             <div class="footer-note">⚡ Данные синхронизируются при каждом поиске</div>
         </div>
@@ -825,175 +903,75 @@ body {
 
 <script>
 /* ================================================================
-   ПРОВЕРКА НАЛИЧИЯ БИБЛИОТЕК
+   ЖДЁМ ЗАГРУЗКУ БИБЛИОТЕК ПЕРЕД ЗАПУСКОМ
    ================================================================ */
-function ensureJSZip() {
-    if (typeof JSZip === 'undefined') {
-        throw new Error('JSZip не загружен. Проверьте файл ./js/jszip.min.js');
-    }
-    return JSZip;
-}
-
-function ensureQRCode() {
-    if (typeof QRCode === 'undefined') {
-        throw new Error('QRCode не загружен. Проверьте файл ./js/qrcode.min.js');
-    }
-    return QRCode;
-}
-
-/* ================================================================
-   SERVICE WORKER
-   ================================================================ */
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js')
-            .then(function(reg) { console.log('SW registered:', reg.scope); })
-            .catch(function(err) { console.error('SW registration failed:', err); });
-    });
-}
-
-/* ================================================================
-   INDEXEDDB
-   ================================================================ */
-var DB_NAME = 'Berezka2DB';
-var DB_VERSION = 2;
-var dbInstance = null;
-
-function openDB() {
-    return new Promise(function(resolve, reject) {
-        if (dbInstance) return resolve(dbInstance);
-        var req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onerror = function() { reject(req.error); };
-        req.onsuccess = function() { dbInstance = req.result; resolve(dbInstance); };
-        req.onupgradeneeded = function(e) {
-            var db = e.target.result;
-            if (!db.objectStoreNames.contains('odsCache')) {
-                db.createObjectStore('odsCache', { keyPath: 'url' });
+(function() {
+    window._libsReady().then(function() {
+        console.log('All libraries loaded, starting app');
+        window._librariesLoaded = true;
+        if (typeof startApp === 'function') {
+            startApp();
+        } else {
+            setTimeout(function() {
+                if (typeof startApp === 'function') {
+                    startApp();
+                } else {
+                    console.error('startApp not defined');
+                }
+            }, 100);
+        }
+    }).catch(function(err) {
+        console.error('Library loading failed:', err);
+        var startup = document.getElementById('startupState');
+        var main = document.getElementById('mainApp');
+        if (startup) startup.classList.add('hidden');
+        if (main) main.classList.remove('hidden');
+        var errorState = document.getElementById('errorState');
+        if (errorState) {
+            errorState.classList.remove('hidden');
+            var errorMsg = document.getElementById('errorMsg');
+            if (errorMsg) {
+                errorMsg.textContent = '⚠️ Не удалось загрузить необходимые библиотеки.\n\nПроверьте интернет-соединение и перезагрузите страницу.';
+                errorMsg.innerHTML += '<br><br><button class="btn btn-primary" onclick="location.reload()">🔄 Перезагрузить</button>';
             }
-            if (!db.objectStoreNames.contains('dataCache')) {
-                var store = db.createObjectStore('dataCache', { keyPath: 'key' });
-                store.createIndex('type', 'type', { unique: false });
-            }
-        };
-    });
-}
-
-/* ================================================================
-   FETCH С ТАЙМАУТОМ
-   ================================================================ */
-function fetchWithTimeout(url, options, timeoutMs) {
-    timeoutMs = timeoutMs || 15000;
-    var controller = new AbortController();
-    var timeout = setTimeout(function() { controller.abort(); }, timeoutMs);
-    return fetch(url, Object.assign({}, options || {}, { signal: controller.signal }))
-        .finally(function() { clearTimeout(timeout); });
-}
-
-/* ================================================================
-   КЭШИРОВАНИЕ ДАННЫХ
-   ================================================================ */
-function saveDataCache(type, data) {
-    try {
-        return openDB().then(function(db) {
-            var tx = db.transaction('dataCache', 'readwrite');
-            var store = tx.objectStore('dataCache');
-            store.put({ key: type, type: type, data: data, timestamp: Date.now() });
-        });
-    } catch (e) { return Promise.resolve(); }
-}
-
-function getDataCache(type) {
-    try {
-        return openDB().then(function(db) {
-            var tx = db.transaction('dataCache', 'readonly');
-            var store = tx.objectStore('dataCache');
-            return new Promise(function(resolve, reject) {
-                var r = store.get(type);
-                r.onsuccess = function() {
-                    var result = r.result;
-                    if (result && (Date.now() - result.timestamp < 3600000)) {
-                        resolve(result.data);
-                    } else {
-                        resolve(null);
-                    }
-                };
-                r.onerror = function() { reject(r.error); };
-            });
-        });
-    } catch (e) { return Promise.resolve(null); }
-}
-
-/* ================================================================
-   СЖАТИЕ ФОТО
-   ================================================================ */
-function compressPhoto(file, maxWidth, quality) {
-    maxWidth = maxWidth || 1920;
-    quality = quality || 0.85;
-    return new Promise(function(resolve, reject) {
-        try {
-            var img = document.createElement('img');
-            var url = URL.createObjectURL(file);
-            img.onload = function() {
-                var canvas = document.createElement('canvas');
-                var ratio = Math.min(maxWidth / img.width, 1);
-                canvas.width = Math.floor(img.width * ratio);
-                canvas.height = Math.floor(img.height * ratio);
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(function(blob) {
-                    if (blob) {
-                        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-                    } else {
-                        reject(new Error('Canvas toBlob failed'));
-                    }
-                }, 'image/jpeg', quality);
-                URL.revokeObjectURL(url);
-            };
-            img.onerror = function() {
-                URL.revokeObjectURL(url);
-                reject(new Error('Failed to load image'));
-            };
-            img.src = url;
-        } catch (e) {
-            reject(e);
         }
     });
-}
+})();
 
 /* ================================================================
    КОНСТАНТЫ
    ================================================================ */
-var API_BASE_URL     = "https://wwcat.duckdns.org:12580";
-var CONSENT_VERSION  = "1.0";
-var CONSENT_KEY      = "snt_consent_accepted";
-var CONSENT_VER_KEY  = "snt_consent_version";
+const API_BASE_URL     = "https://wwcat.duckdns.org:12580";
+const CONSENT_VERSION  = "1.0";
+const CONSENT_KEY      = "snt_consent_accepted";
+const CONSENT_VER_KEY  = "snt_consent_version";
 
-var ORGANIZATION  = "СНТ «Берёзка-2»";
-var INN           = "5433118499";
-var PERSONAL_ACC  = "40703810644050040322";
-var BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
-var BIC           = "045004641";
-var CORRESP_ACC   = "30101810500000000641";
-var TARIFF        = 3.82;
+const ORGANIZATION  = "СНТ «Берёзка-2»";
+const INN           = "5433118499";
+const PERSONAL_ACC  = "40703810644050040322";
+const BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
+const BIC           = "045004641";
+const CORRESP_ACC   = "30101810500000000641";
+const TARIFF        = 3.82;
 
-var DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
-var EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
-var BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
+const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
+const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
+const BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
 
-var cachedDebtMap        = new Map();
-var cachedElectricityMap = new Map();
-var cachedBaseMap        = new Map();
-var currentPlotNumber    = "";
-var isBankExpanded       = true;
-var lastSyncTime         = null;
-var syncPromise          = null;
-var dataLoadStatus       = { base: 'idle', debt: 'idle', ee: 'idle' };
-var currentEeData        = null;
+let cachedDebtMap        = new Map();
+let cachedElectricityMap = new Map();
+let cachedBaseMap        = new Map();
+let currentPlotNumber    = "";
+let isBankExpanded       = true;
+let lastSyncTime         = null;
+let syncPromise          = null;
+let dataLoadStatus       = { base: 'idle', debt: 'idle', ee: 'idle' };
+let currentEeData        = null;
 
 /* ================================================================
    TOAST
    ================================================================ */
-var toastTimer;
+let toastTimer;
 function showToast(msg) {
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -1041,9 +1019,23 @@ function escapeHtml(str) {
 /* ================================================================
    ПАРСИНГ ODS
    ================================================================ */
+function ensureJSZip() {
+    if (typeof JSZip === 'undefined') {
+        throw new Error('JSZip не загружен. Попробуйте перезагрузить страницу.');
+    }
+    return JSZip;
+}
+
+function ensureQRCode() {
+    if (typeof QRCode === 'undefined') {
+        throw new Error('QRCode не загружен. Попробуйте перезагрузить страницу.');
+    }
+    return QRCode;
+}
+
 function fetchAndParseOds(url, parserFn) {
     ensureJSZip();
-    return fetchWithTimeout(url, { cache: "no-store" }, 15000)
+    return fetch(url)
         .then(function(r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.arrayBuffer();
@@ -1102,7 +1094,7 @@ function parseBaseOds(xml) {
         if (plotRaw.toLowerCase() === "итого") break;
         result.set(plotRaw.toLowerCase(), {
             plotNumber: plotRaw.toLowerCase(),
-            owner: "",
+            owner: (cells[1]||"").trim(),
             membership: (cells[2]||"").trim(),
             phone: (cells[3]||"").trim(),
             email: (cells[4]||"").trim(),
@@ -1148,7 +1140,7 @@ function parseDebitOds(xml) {
             var debtEnd = parseNumber(cells[colDebt]);
             var overpayEnd = parseNumber(cells[8]);
             current = {
-                plotNumber: col0.toLowerCase(), owner: "",
+                plotNumber: col0.toLowerCase(), owner: (cells[colOwner]||"").trim(),
                 totalDebt: debtEnd, overpayEnd: overpayEnd,
                 hasDebt: debtEnd > 0.01, hasOverpayment: overpayEnd > 0.01,
                 membershipDebt:0, targetDebt:0, arrearsDebt:0, workDebt:0, electricityDebt:0
@@ -1216,10 +1208,9 @@ function buildDetailedPurpose(debt) {
     if (debt.arrearsDebt > 0.01)    parts.push('Задолженность прошлых лет: ' + formatAmountShort(debt.arrearsDebt) + 'р');
     if (debt.workDebt > 0.01)       parts.push('Отработка: ' + formatAmountShort(debt.workDebt) + 'р');
     if (debt.electricityDebt > 0.01) parts.push('Электроэнергия: ' + formatAmountShort(debt.electricityDebt) + 'р');
-    var safePlot = escapeHtml(debt.plotNumber);
-    var suffix = ' уч.' + safePlot;
+    var suffix = ' уч.' + debt.plotNumber;
     var result = parts.join(', ') + suffix;
-    if (result.length > 210) result = 'Оплата взносов уч.' + safePlot;
+    if (result.length > 210) result = 'Оплата взносов уч.' + debt.plotNumber;
     return result;
 }
 function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpose) {
@@ -1253,52 +1244,37 @@ function generateQR(text) {
         }
     });
 }
-function generateAndShowQR(type, btn, qrText) {
+async function generateAndShowQR(type, btn, qrText) {
     var containerId = type === 'debt' ? 'debtQrContainer' : type === 'ee' ? 'eeQrContainer' : 'manualQrContainer';
     var btnGroupId  = type === 'debt' ? 'debtQrButtons'   : type === 'ee' ? 'eeQrButtons'   : 'manualQrButtons';
     var container = document.getElementById(containerId);
     if (!container) return;
-    var oldImg = document.getElementById(type + 'QrImg');
-    if (oldImg) oldImg.remove();
+    document.getElementById(type + 'QrImg')?.remove();
     var orig = btn.textContent;
     btn.textContent = '⏳ Генерация…';
     btn.disabled = true;
-    generateQR(qrText)
-        .then(function(dataUrl) {
-            var img = document.createElement('img');
-            img.id = type + 'QrImg';
-            img.src = dataUrl;
-            img.className = 'qr-image';
-            img.alt = 'QR-код для оплаты';
-            container.appendChild(img);
-            var bg = document.getElementById(btnGroupId);
-            if (bg) bg.classList.add('visible');
-        })
-        .catch(function(e) {
-            showToast('Ошибка QR: ' + e.message);
-        })
-        .finally(function() {
-            btn.textContent = orig;
-            btn.disabled = false;
-        });
+    try {
+        var dataUrl = await generateQR(qrText);
+        var img = document.createElement('img');
+        img.id = type + 'QrImg';
+        img.src = dataUrl;
+        img.className = 'qr-image';
+        img.alt = 'QR-код для оплаты';
+        container.appendChild(img);
+        var bg = document.getElementById(btnGroupId);
+        if (bg) bg.classList.add('visible');
+    } catch(e) { showToast('Ошибка QR: ' + e.message); }
+    finally { btn.textContent = orig; btn.disabled = false; }
 }
-window.shareQR = function(imgId) {
+window.shareQR = async function(imgId) {
     var img = document.getElementById(imgId);
     if (!img) return;
-    fetch(img.src)
-        .then(function(r) { return r.blob(); })
-        .then(function(blob) {
-            var file = new File([blob], "qr_payment.png", { type: "image/png" });
-            if (navigator.share) {
-                return navigator.share({ files: [file], title: "QR-код оплаты" });
-            } else {
-                var a = document.createElement('a');
-                a.download = "qr_payment.png";
-                a.href = img.src;
-                a.click();
-            }
-        })
-        .catch(function(e) { console.error(e); });
+    try {
+        var blob = await fetch(img.src).then(function(r) { return r.blob(); });
+        var file = new File([blob], "qr_payment.png", { type: "image/png" });
+        if (navigator.share) await navigator.share({ files: [file], title: "QR-код оплаты" });
+        else { var a = document.createElement('a'); a.download = "qr_payment.png"; a.href = img.src; a.click(); }
+    } catch(e) { console.error(e); }
 };
 window.saveQR = function(imgId) {
     var img = document.getElementById(imgId);
@@ -1312,6 +1288,20 @@ window.saveQR = function(imgId) {
 /* ================================================================
    ЗАГРУЗКА ДАННЫХ
    ================================================================ */
+function setLoading(msg) {
+    document.getElementById('loadingState').classList.remove('hidden');
+    document.getElementById('loadingMsg').textContent = msg;
+    document.getElementById('errorState').classList.add('hidden');
+    document.getElementById('notFoundBlock').classList.add('hidden');
+}
+function hideLoading() { document.getElementById('loadingState').classList.add('hidden'); }
+function showError(msg) {
+    hideLoading();
+    var s = document.getElementById('errorState');
+    document.getElementById('errorMsg').textContent = msg;
+    s.classList.remove('hidden');
+}
+
 function updateDataStatus() {
     var statusEl = document.getElementById('statusCount');
     var timeEl = document.getElementById('statusTime');
@@ -1349,64 +1339,24 @@ function updateDataStatus() {
     }
 }
 
-function loadSingleOds(url, parserFn, cacheKey, statusKey) {
+async function loadSingleOds(url, parserFn, cacheKey, statusKey) {
     dataLoadStatus[statusKey] = 'loading';
     updateDataStatus();
 
-    return getDataCache(cacheKey)
-        .then(function(cached) {
-            if (cached) {
-                try {
-                    var data = parserFn(cached);
-                    dataLoadStatus[statusKey] = 'ok';
-                    updateDataStatus();
-                    // Фоновая загрузка
-                    fetchAndParseOds(url, parserFn)
-                        .then(function(freshData) {
-                            saveDataCache(cacheKey, freshData);
-                            if (statusKey === 'base') cachedBaseMap = freshData;
-                            else if (statusKey === 'debt') cachedDebtMap = freshData;
-                            else if (statusKey === 'ee') cachedElectricityMap = freshData;
-                            lastSyncTime = new Date();
-                            dataLoadStatus[statusKey] = 'ok';
-                            updateDataStatus();
-                            if (currentPlotNumber) loadPlotData(currentPlotNumber, true);
-                        })
-                        .catch(function(err) {
-                            console.warn('Фоновое обновление ' + statusKey + ' failed:', err);
-                        });
-                    return data;
-                } catch(e) {
-                    console.warn('Cached data parse error:', e);
-                    // fall through to fetch fresh
-                }
-            }
-            return fetchAndParseOds(url, parserFn)
-                .then(function(freshData) {
-                    dataLoadStatus[statusKey] = 'ok';
-                    lastSyncTime = new Date();
-                    saveDataCache(cacheKey, freshData);
-                    updateDataStatus();
-                    return freshData;
-                });
-        })
-        .catch(function(err) {
-            dataLoadStatus[statusKey] = 'error';
-            updateDataStatus();
-            return getDataCache(cacheKey)
-                .then(function(cached) {
-                    if (cached) {
-                        var data = parserFn(cached);
-                        dataLoadStatus[statusKey] = 'ok';
-                        updateDataStatus();
-                        return data;
-                    }
-                    throw err;
-                });
-        });
+    try {
+        var freshData = await fetchAndParseOds(url, parserFn);
+        dataLoadStatus[statusKey] = 'ok';
+        lastSyncTime = new Date();
+        updateDataStatus();
+        return freshData;
+    } catch (err) {
+        dataLoadStatus[statusKey] = 'error';
+        updateDataStatus();
+        throw err;
+    }
 }
 
-function syncAllData() {
+async function syncAllData() {
     if (syncPromise) return syncPromise;
 
     syncPromise = Promise.allSettled([
@@ -1469,7 +1419,7 @@ function syncAllData() {
     return syncPromise;
 }
 
-function loadPlotData(plotNumber, fromCache) {
+async function loadPlotData(plotNumber, fromCache) {
     fromCache = fromCache || false;
     var normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
@@ -1492,21 +1442,8 @@ function loadPlotData(plotNumber, fromCache) {
         if (noDataLoaded) {
             var timeEl = document.getElementById('statusTime');
             if (timeEl) timeEl.textContent = 'Данные загружаются…';
-            // Запускаем синхронизацию без ожидания
             syncAllData();
-            // Попытка получить данные после короткой задержки
-            return new Promise(function(resolve) {
-                setTimeout(function() {
-                    // Проверяем ещё раз после задержки
-                    var debt = cachedDebtMap.get(normalized);
-                    var ee = cachedElectricityMap.get(normalized);
-                    var member = cachedBaseMap.get(normalized);
-                    if (debt || ee || member) {
-                        renderData(normalized, debt, ee, member);
-                    }
-                    resolve();
-                }, 500);
-            });
+            return;
         }
 
         var debt = cachedDebtMap.get(normalized);
@@ -1526,7 +1463,21 @@ function loadPlotData(plotNumber, fromCache) {
             return;
         }
 
-        renderData(normalized, debt, ee, member);
+        if (notFound) notFound.classList.add('hidden');
+
+        var bankCard = document.getElementById('bankDetailsCard');
+        if (bankCard) bankCard.classList.remove('hidden');
+        var warningCard = document.getElementById('warningCard');
+        if (warningCard) warningCard.classList.remove('hidden');
+        var instructionCard = document.getElementById('instructionCard');
+        if (instructionCard) instructionCard.classList.remove('hidden');
+        var errorState = document.getElementById('errorState');
+        if (errorState) errorState.classList.add('hidden');
+
+        renderBankDetails();
+        if (debt) renderDebtCard(debt);
+        if (ee) renderElectricityCard(ee);
+        renderManualPaymentCard(member, debt, ee);
 
     } catch(err) {
         console.error('loadPlotData error:', err);
@@ -1544,25 +1495,6 @@ function loadPlotData(plotNumber, fromCache) {
             errorMsg.textContent = '⚠️ ' + err.message;
         }
     }
-}
-
-function renderData(normalized, debt, ee, member) {
-    var notFound = document.getElementById('notFoundBlock');
-    if (notFound) notFound.classList.add('hidden');
-
-    var bankCard = document.getElementById('bankDetailsCard');
-    if (bankCard) bankCard.classList.remove('hidden');
-    var warningCard = document.getElementById('warningCard');
-    if (warningCard) warningCard.classList.remove('hidden');
-    var instructionCard = document.getElementById('instructionCard');
-    if (instructionCard) instructionCard.classList.remove('hidden');
-    var errorState = document.getElementById('errorState');
-    if (errorState) errorState.classList.add('hidden');
-
-    renderBankDetails();
-    if (debt) renderDebtCard(debt);
-    if (ee) renderElectricityCard(ee);
-    renderManualPaymentCard(member, debt, ee);
 }
 
 /* ================================================================
@@ -1768,22 +1700,18 @@ function renderManualPaymentCard(member, debt, ee) {
 /* ================================================================
    ФОТО
    ================================================================ */
-function uploadPhotoToServer(plotNumber, readingValue, file) {
+async function uploadPhotoToServer(plotNumber, readingValue, file) {
     var fd = new FormData();
     fd.append('plot_number', plotNumber);
     fd.append('reading_value', readingValue);
     fd.append('photo', file);
-    return fetchWithTimeout(API_BASE_URL + '/upload', { method: 'POST', body: fd }, 30000)
-        .then(function(r) {
-            if (!r.ok) {
-                return r.json().then(function(data) {
-                    throw new Error(data.error || 'HTTP ' + r.status);
-                }).catch(function() {
-                    throw new Error('HTTP ' + r.status);
-                });
-            }
-            return r.json();
-        });
+    var r = await fetch(API_BASE_URL + '/upload', { method: 'POST', body: fd });
+    if (!r.ok) {
+        var msg = 'HTTP ' + r.status;
+        try { var e = await r.json(); msg = e.error || msg; } catch(e) {}
+        throw new Error(msg);
+    }
+    return r.json();
 }
 
 function takePhoto(plotNumber) {
@@ -1791,7 +1719,7 @@ function takePhoto(plotNumber) {
     input.type = 'file';
     input.accept = 'image/*';
     input.capture = 'environment';
-    input.onchange = function(e) {
+    input.onchange = async function(e) {
         var file = e.target.files[0];
         if (!file) return;
         var readingValue = document.getElementById('newReadingInput') ? document.getElementById('newReadingInput').value : '';
@@ -1803,40 +1731,32 @@ function takePhoto(plotNumber) {
         var actions   = document.getElementById('photoActions');
         var ydStatus  = document.getElementById('ydStatus');
 
-        if (preview) {
-            var reader = new FileReader();
-            reader.onload = function(ev) {
-                preview.src = ev.target.result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(file);
-        }
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+        };
+        reader.readAsDataURL(file);
 
-        if (takeBtn) takeBtn.style.display = 'none';
+        if (takeBtn)  takeBtn.style.display = 'none';
         if (progress) progress.style.display = 'block';
-        if (success) success.style.display = 'none';
+        if (success)  success.style.display = 'none';
         if (errorDiv) errorDiv.style.display = 'none';
-        if (actions) actions.style.display = 'flex';
-        if (ydStatus) ydStatus.textContent = '☁ Сжатие и загрузка…';
+        if (actions)  actions.style.display = 'flex';
+        if (ydStatus) ydStatus.textContent = '☁ Загрузка…';
 
-        compressPhoto(file, 1920, 0.85)
-            .then(function(compressedFile) {
-                if (ydStatus) ydStatus.textContent = '☁ Загрузка (' + Math.round(compressedFile.size/1024) + ' КБ)…';
-                return uploadPhotoToServer(plotNumber, readingValue, compressedFile);
-            })
-            .then(function() {
-                if (progress) progress.style.display = 'none';
-                if (success) success.style.display = 'block';
-                if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено на Яндекс.Диске';
-                if (takeBtn) { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
-                if (actions) actions.style.display = 'none';
-            })
-            .catch(function(err) {
-                if (progress) progress.style.display = 'none';
-                if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = '⚠️ ' + err.message; }
-                if (ydStatus) ydStatus.textContent = '☁ Ошибка загрузки';
-                if (takeBtn) takeBtn.style.display = 'block';
-            });
+        try {
+            await uploadPhotoToServer(plotNumber, readingValue, file);
+            if (progress) progress.style.display = 'none';
+            if (success)  success.style.display = 'block';
+            if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено на Яндекс.Диске';
+            if (takeBtn)  { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
+            if (actions)  actions.style.display = 'none';
+        } catch(err) {
+            if (progress) progress.style.display = 'none';
+            if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = '⚠️ ' + err.message; }
+            if (ydStatus) ydStatus.textContent = '☁ Ошибка загрузки';
+            if (takeBtn)  takeBtn.style.display = 'block';
+        }
     };
     input.click();
 }
@@ -2004,7 +1924,7 @@ function showSettingsModal() {
             cachedDebtMap.clear();
             cachedElectricityMap.clear();
             cachedBaseMap.clear();
-            var dataStatus = document.getElementById('dataStatus');
+            var dataStatus = document.getElementById('statusCard');
             if (dataStatus) dataStatus.classList.add('hidden');
             showToast('Кэш данных очищен');
             close();
@@ -2078,20 +1998,19 @@ function initMainApp() {
         console.warn('Initial sync failed, but UI is ready:', err);
     });
 
-    // Отмечаем, что инициализация завершена
-    window._appInitialized = true;
-    clearTimeout(window._initTimeout);
+    if (window._clearInitTimer) {
+        window._clearInitTimer();
+    }
 }
 
 /* ================================================================
-   СТАРТ
+   ЗАПУСК ПРИЛОЖЕНИЯ
    ================================================================ */
-(function() {
+function startApp() {
     try {
         if (isConsentAccepted()) {
             showMainApp();
             setStartupMessage('Приложение готово. Данные загружаются в фоне…');
-            // Небольшая задержка для стабилизации DOM
             setTimeout(function() {
                 try {
                     initMainApp();
@@ -2122,7 +2041,12 @@ function initMainApp() {
             errorMsg.innerHTML += '<br><br><button class="btn btn-primary" onclick="location.reload()">🔄 Перезагрузить</button>';
         }
     }
-})();
+}
+
+// Если библиотеки уже загружены — запускаем сразу
+if (window._librariesLoaded) {
+    startApp();
+}
 </script>
 </body>
 </html>
