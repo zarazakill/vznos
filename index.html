@@ -1,46 +1,5 @@
 <!DOCTYPE html>
 <html lang="ru">
-    <!-- Защита от циклической перезагрузки -->
-<script>
-// Предотвращаем бесконечную перезагрузку
-if (window.location.search.includes('reload=')) {
-    const reloadCount = parseInt(sessionStorage.getItem('reloadCount') || '0', 10);
-    if (reloadCount > 3) {
-        // Очищаем кеш и перезагружаем без параметра
-        sessionStorage.removeItem('reloadCount');
-        if ('caches' in window) {
-            caches.keys().then(keys => {
-                keys.forEach(key => caches.delete(key));
-            });
-        }
-        window.location.href = window.location.pathname;
-        throw new Error('Stopping infinite reload');
-    }
-    sessionStorage.setItem('reloadCount', String(reloadCount + 1));
-}
-
-// Сброс при успешной загрузке
-window.addEventListener('load', () => {
-    sessionStorage.removeItem('reloadCount');
-});
-
-// Глобальный перехват ошибок
-window.addEventListener('error', (e) => {
-    console.error('Global error caught:', e.error);
-    // Предотвращаем зависание при ошибках в async/await
-    if (e.error && e.error.message && e.error.message.includes('load')) {
-        // Попытка восстановления через 2 секунды
-        setTimeout(() => {
-            const errorState = document.getElementById('errorState');
-            if (errorState) {
-                errorState.classList.remove('hidden');
-                const errorMsg = document.getElementById('errorMsg');
-                if (errorMsg) errorMsg.textContent = '⚠️ Ошибка загрузки данных. Проверьте интернет-соединение.';
-            }
-        }, 2000);
-    }
-}, true);
-</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -51,13 +10,62 @@ window.addEventListener('error', (e) => {
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Берёзка-2">
 
-    <!-- ЛОКАЛЬНЫЕ БИБЛИОТЕКИ — НЕТ ЗАВИСИМОСТИ ОТ CDN -->
+    <!-- ЗАЩИТА ОТ ЦИКЛИЧЕСКОЙ ПЕРЕЗАГРУЗКИ -->
+    <script>
+    (function() {
+        // Предотвращаем бесконечную перезагрузку
+        var reloadCount = parseInt(sessionStorage.getItem('berezka2_reload_count') || '0', 10);
+        
+        if (window.location.search.includes('reload=')) {
+            if (reloadCount > 3) {
+                // Очищаем кеш и перезагружаем без параметра
+                sessionStorage.removeItem('berezka2_reload_count');
+                if ('caches' in window) {
+                    caches.keys().then(function(keys) {
+                        keys.forEach(function(key) { caches.delete(key); });
+                    }).catch(function() {});
+                }
+                var url = window.location.pathname + window.location.search.replace(/[&?]reload=\d+/, '');
+                window.location.href = url;
+                throw new Error('Stopping infinite reload');
+            }
+            sessionStorage.setItem('berezka2_reload_count', String(reloadCount + 1));
+        } else {
+            // Сброс при успешной загрузке
+            sessionStorage.removeItem('berezka2_reload_count');
+        }
+
+        // Защита от зависания инициализации
+        window._appInitialized = false;
+        window._initTimeout = setTimeout(function() {
+            if (!window._appInitialized) {
+                console.warn('Init timeout, forcing recovery');
+                window._appInitialized = true;
+                var errorState = document.getElementById('errorState');
+                if (errorState) {
+                    errorState.classList.remove('hidden');
+                    var errorMsg = document.getElementById('errorMsg');
+                    if (errorMsg) {
+                        errorMsg.textContent = '⚠️ Загрузка затянулась. Проверьте интернет-соединение.';
+                        errorMsg.innerHTML += '<br><br><button class="btn btn-primary" onclick="location.reload()">🔄 Перезагрузить</button>';
+                    }
+                }
+                var startup = document.getElementById('startupState');
+                if (startup) startup.classList.add('hidden');
+                var main = document.getElementById('mainApp');
+                if (main) main.classList.remove('hidden');
+            }
+        }, 10000);
+    })();
+    </script>
+
+    <!-- ЛОКАЛЬНЫЕ БИБЛИОТЕКИ -->
     <script src="./js/jszip.min.js"></script>
     <script src="./js/qrcode.min.js"></script>
 
     <style>
 /* ================================================================
-   DESIGN TOKENS — соответствуют values/colors.xml + dimens.xml
+   DESIGN TOKENS
    ================================================================ */
 :root {
     --green-50:  #F1F8E9;
@@ -817,7 +825,7 @@ body {
 
 <script>
 /* ================================================================
-   ПРОВЕРКА НАЛИЧИЯ БИБЛИОТЕК (локальные)
+   ПРОВЕРКА НАЛИЧИЯ БИБЛИОТЕК
    ================================================================ */
 function ensureJSZip() {
     if (typeof JSZip === 'undefined') {
@@ -834,154 +842,164 @@ function ensureQRCode() {
 }
 
 /* ================================================================
-   SERVICE WORKER + INDEXEDDB
+   SERVICE WORKER
    ================================================================ */
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
+    window.addEventListener('load', function() {
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('SW registered:', reg.scope))
-            .catch(err => console.error('SW registration failed:', err));
+            .then(function(reg) { console.log('SW registered:', reg.scope); })
+            .catch(function(err) { console.error('SW registration failed:', err); });
     });
 }
 
-const DB_NAME = 'Berezka2DB';
-const DB_VERSION = 2;
-let dbInstance = null;
+/* ================================================================
+   INDEXEDDB
+   ================================================================ */
+var DB_NAME = 'Berezka2DB';
+var DB_VERSION = 2;
+var dbInstance = null;
 
 function openDB() {
-    return new Promise((resolve, reject) => {
+    return new Promise(function(resolve, reject) {
         if (dbInstance) return resolve(dbInstance);
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onerror = () => reject(req.error);
-        req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
+        var req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onerror = function() { reject(req.error); };
+        req.onsuccess = function() { dbInstance = req.result; resolve(dbInstance); };
+        req.onupgradeneeded = function(e) {
+            var db = e.target.result;
             if (!db.objectStoreNames.contains('odsCache')) {
                 db.createObjectStore('odsCache', { keyPath: 'url' });
             }
             if (!db.objectStoreNames.contains('dataCache')) {
-                const store = db.createObjectStore('dataCache', { keyPath: 'key' });
+                var store = db.createObjectStore('dataCache', { keyPath: 'key' });
                 store.createIndex('type', 'type', { unique: false });
             }
         };
     });
 }
 
-// ================================================================
-// УНИВЕРСАЛЬНЫЙ fetch С ТАЙМАУТОМ
-// ================================================================
-function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(url, { ...options, signal: controller.signal })
-        .finally(() => clearTimeout(timeout));
+/* ================================================================
+   FETCH С ТАЙМАУТОМ
+   ================================================================ */
+function fetchWithTimeout(url, options, timeoutMs) {
+    timeoutMs = timeoutMs || 15000;
+    var controller = new AbortController();
+    var timeout = setTimeout(function() { controller.abort(); }, timeoutMs);
+    return fetch(url, Object.assign({}, options || {}, { signal: controller.signal }))
+        .finally(function() { clearTimeout(timeout); });
 }
 
-// ================================================================
-// КЭШИРОВАНИЕ ДАННЫХ
-// ================================================================
-async function saveDataCache(type, data) {
+/* ================================================================
+   КЭШИРОВАНИЕ ДАННЫХ
+   ================================================================ */
+function saveDataCache(type, data) {
     try {
-        const db = await openDB();
-        const tx = db.transaction('dataCache', 'readwrite');
-        const store = tx.objectStore('dataCache');
-        store.put({ key: type, type, data, timestamp: Date.now() });
-    } catch (e) { /* ignore */ }
-}
-
-async function getDataCache(type) {
-    try {
-        const db = await openDB();
-        const tx = db.transaction('dataCache', 'readonly');
-        const store = tx.objectStore('dataCache');
-        const result = await new Promise((res, rej) => {
-            const r = store.get(type);
-            r.onsuccess = () => res(r.result);
-            r.onerror = () => rej(r.error);
+        return openDB().then(function(db) {
+            var tx = db.transaction('dataCache', 'readwrite');
+            var store = tx.objectStore('dataCache');
+            store.put({ key: type, type: type, data: data, timestamp: Date.now() });
         });
-        if (result && (Date.now() - result.timestamp < 3600000)) {
-            return result.data;
-        }
-    } catch (e) { /* ignore */ }
-    return null;
+    } catch (e) { return Promise.resolve(); }
 }
 
-// ================================================================
-// СЖАТИЕ ФОТО НА КЛИЕНТЕ
-// ================================================================
-async function compressPhoto(file, maxWidth = 1920, quality = 0.85) {
+function getDataCache(type) {
     try {
-        let img;
-        try {
-            img = await createImageBitmap(file);
-        } catch (e) {
-            const imgEl = document.createElement('img');
-            const url = URL.createObjectURL(file);
-            await new Promise((resolve, reject) => {
-                imgEl.onload = resolve;
-                imgEl.onerror = reject;
-                imgEl.src = url;
+        return openDB().then(function(db) {
+            var tx = db.transaction('dataCache', 'readonly');
+            var store = tx.objectStore('dataCache');
+            return new Promise(function(resolve, reject) {
+                var r = store.get(type);
+                r.onsuccess = function() {
+                    var result = r.result;
+                    if (result && (Date.now() - result.timestamp < 3600000)) {
+                        resolve(result.data);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                r.onerror = function() { reject(r.error); };
             });
-            img = imgEl;
-            URL.revokeObjectURL(url);
-        }
-        const canvas = document.createElement('canvas');
-        const ratio = Math.min(maxWidth / img.width, 1);
-        canvas.width = Math.floor(img.width * ratio);
-        canvas.height = Math.floor(img.height * ratio);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        return new Promise((resolve, reject) => {
-            canvas.toBlob(blob => {
-                if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-                else reject(new Error('Canvas toBlob failed'));
-            }, 'image/jpeg', quality);
         });
-    } catch (e) {
-        console.warn('Compression failed, using original:', e);
-        return file;
-    }
+    } catch (e) { return Promise.resolve(null); }
+}
+
+/* ================================================================
+   СЖАТИЕ ФОТО
+   ================================================================ */
+function compressPhoto(file, maxWidth, quality) {
+    maxWidth = maxWidth || 1920;
+    quality = quality || 0.85;
+    return new Promise(function(resolve, reject) {
+        try {
+            var img = document.createElement('img');
+            var url = URL.createObjectURL(file);
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var ratio = Math.min(maxWidth / img.width, 1);
+                canvas.width = Math.floor(img.width * ratio);
+                canvas.height = Math.floor(img.height * ratio);
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(function(blob) {
+                    if (blob) {
+                        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+                    } else {
+                        reject(new Error('Canvas toBlob failed'));
+                    }
+                }, 'image/jpeg', quality);
+                URL.revokeObjectURL(url);
+            };
+            img.onerror = function() {
+                URL.revokeObjectURL(url);
+                reject(new Error('Failed to load image'));
+            };
+            img.src = url;
+        } catch (e) {
+            reject(e);
+        }
+    });
 }
 
 /* ================================================================
    КОНСТАНТЫ
    ================================================================ */
-const API_BASE_URL     = "https://wwcat.duckdns.org:12580";
-const CONSENT_VERSION  = "1.0";
-const CONSENT_KEY      = "snt_consent_accepted";
-const CONSENT_VER_KEY  = "snt_consent_version";
+var API_BASE_URL     = "https://wwcat.duckdns.org:12580";
+var CONSENT_VERSION  = "1.0";
+var CONSENT_KEY      = "snt_consent_accepted";
+var CONSENT_VER_KEY  = "snt_consent_version";
 
-const ORGANIZATION  = "СНТ «Берёзка-2»";
-const INN           = "5433118499";
-const PERSONAL_ACC  = "40703810644050040322";
-const BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
-const BIC           = "045004641";
-const CORRESP_ACC   = "30101810500000000641";
-const TARIFF        = 3.82;
+var ORGANIZATION  = "СНТ «Берёзка-2»";
+var INN           = "5433118499";
+var PERSONAL_ACC  = "40703810644050040322";
+var BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
+var BIC           = "045004641";
+var CORRESP_ACC   = "30101810500000000641";
+var TARIFF        = 3.82;
 
-const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
-const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
-const BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
+var DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
+var EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
+var BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
 
-let cachedDebtMap        = new Map();
-let cachedElectricityMap = new Map();
-let cachedBaseMap        = new Map();
-let currentPlotNumber    = "";
-let isBankExpanded       = true;
-let lastSyncTime         = null;
-let syncPromise          = null;
-let dataLoadStatus       = { base: 'idle', debt: 'idle', ee: 'idle' };
+var cachedDebtMap        = new Map();
+var cachedElectricityMap = new Map();
+var cachedBaseMap        = new Map();
+var currentPlotNumber    = "";
+var isBankExpanded       = true;
+var lastSyncTime         = null;
+var syncPromise          = null;
+var dataLoadStatus       = { base: 'idle', debt: 'idle', ee: 'idle' };
+var currentEeData        = null;
 
 /* ================================================================
    TOAST
    ================================================================ */
-let toastTimer;
+var toastTimer;
 function showToast(msg) {
-    const t = document.getElementById('toast');
+    var t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+    toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
 }
 
 /* ================================================================
@@ -994,78 +1012,92 @@ function formatNumber(v) {
     return v % 1 === 0 ? v.toString() : v.toFixed(2);
 }
 function numberToWords(amount) {
-    const rub = Math.floor(amount);
-    const kop = Math.round((amount - rub) * 100);
-    let rubWord;
+    var rub = Math.floor(amount);
+    var kop = Math.round((amount - rub) * 100);
+    var rubWord;
     if (rub % 100 >= 11 && rub % 100 <= 19)       rubWord = "рублей";
     else if (rub % 10 === 1)                         rubWord = "рубль";
     else if (rub % 10 >= 2 && rub % 10 <= 4)        rubWord = "рубля";
     else                                             rubWord = "рублей";
-    return `${rub} ${rubWord} ${String(kop).padStart(2, '0')} копеек`;
+    return rub + ' ' + rubWord + ' ' + String(kop).padStart(2, '0') + ' копеек';
 }
 function isPlotNumber(s) {
     return s && typeof s === 'string' && /^\d{1,3}[а-яёa-z]?$/i.test(s.trim());
 }
 function parseNumber(val) {
     if (val === undefined || val === null) return 0;
-    const s = val.toString().replace(",", ".").replace(/[^\d.-]/g, '');
+    var s = val.toString().replace(",", ".").replace(/[^\d.-]/g, '');
     if (!s) return 0;
-    const n = parseFloat(s);
+    var n = parseFloat(s);
     return isNaN(n) ? 0 : n;
 }
 function escapeHtml(str) {
     if (!str) return "";
-    return str.replace(/[&<>"]/g, m =>
-        ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[m]);
+    return str.replace(/[&<>"]/g, function(m) {
+        return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[m] || m;
+    });
 }
 
 /* ================================================================
    ПАРСИНГ ODS
    ================================================================ */
-async function fetchAndParseOds(url, parserFn) {
+function fetchAndParseOds(url, parserFn) {
     ensureJSZip();
-
-    const r = await fetchWithTimeout(url, { cache: "no-store" }, 15000);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const buf = await r.arrayBuffer();
-    const zip = await JSZip.loadAsync(buf);
-    const xml = await zip.file("content.xml").async("string");
-    return parserFn(xml);
+    return fetchWithTimeout(url, { cache: "no-store" }, 15000)
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.arrayBuffer();
+        })
+        .then(function(buf) {
+            return JSZip.loadAsync(buf);
+        })
+        .then(function(zip) {
+            return zip.file("content.xml").async("string");
+        })
+        .then(function(xml) {
+            return parserFn(xml);
+        });
 }
 
 function getAllTableRows(doc) {
-    const rows = [];
-    for (const el of doc.getElementsByTagName("*"))
-        if (el.localName === "table-row") rows.push(el);
+    var rows = [];
+    var els = doc.getElementsByTagName("*");
+    for (var i = 0; i < els.length; i++) {
+        if (els[i].localName === "table-row") rows.push(els[i]);
+    }
     return rows;
 }
 
 function getCellText(cell) {
-    let t = "";
-    for (const n of cell.childNodes)
-        if (n.localName === "p") t += n.textContent || "";
+    var t = "";
+    var children = cell.childNodes;
+    for (var i = 0; i < children.length; i++) {
+        if (children[i].localName === "p") t += children[i].textContent || "";
+    }
     return t.trim();
 }
 
 function expandRowCells(row) {
-    const cells = [];
-    for (const cell of row.childNodes) {
+    var cells = [];
+    var children = row.childNodes;
+    for (var i = 0; i < children.length; i++) {
+        var cell = children[i];
         if (cell.localName !== "table-cell" && cell.localName !== "covered-table-cell") continue;
-        const rep = Math.min(parseInt(cell.getAttribute("table:number-columns-repeated")) || 1, 30);
-        const text = getCellText(cell);
-        for (let r = 0; r < rep; r++) cells.push(text);
+        var rep = Math.min(parseInt(cell.getAttribute("table:number-columns-repeated")) || 1, 30);
+        var text = getCellText(cell);
+        for (var r = 0; r < rep; r++) cells.push(text);
     }
     return cells;
 }
 
 function parseBaseOds(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    const rows = getAllTableRows(doc);
-    const result = new Map();
-    for (let i = 8; i < rows.length; i++) {
-        const cells = expandRowCells(rows[i]);
+    var doc = new DOMParser().parseFromString(xml, "application/xml");
+    var rows = getAllTableRows(doc);
+    var result = new Map();
+    for (var i = 8; i < rows.length; i++) {
+        var cells = expandRowCells(rows[i]);
         if (!cells.length) continue;
-        const plotRaw = (cells[10] || "").trim();
+        var plotRaw = (cells[10] || "").trim();
         if (!plotRaw) continue;
         if (plotRaw.toLowerCase() === "итого") break;
         result.set(plotRaw.toLowerCase(), {
@@ -1082,36 +1114,39 @@ function parseBaseOds(xml) {
 }
 
 function parseDebitOds(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    const rows = getAllTableRows(doc);
-    const result = new Map();
-    let colPlot=0, colOwner=1, colDebt=7;
-    let headerFound=false, dataStarted=false, current=null;
-    for (const row of rows) {
-        const cells = expandRowCells(row);
+    var doc = new DOMParser().parseFromString(xml, "application/xml");
+    var rows = getAllTableRows(doc);
+    var result = new Map();
+    var colPlot=0, colOwner=1, colDebt=7;
+    var headerFound=false, dataStarted=false, current=null;
+    for (var i = 0; i < rows.length; i++) {
+        var cells = expandRowCells(rows[i]);
         if (!cells.length) continue;
-        const col0 = (cells[0]||"").trim();
-        const col0l = col0.toLowerCase();
+        var col0 = (cells[0] || "").trim();
+        var col0l = col0.toLowerCase();
         if (!headerFound) {
-            const joined = cells.join(" ").toLowerCase();
+            var joined = cells.join(" ").toLowerCase();
             if (joined.includes("владельц") || joined.includes("номер")) {
-                cells.forEach((v,i) => {
-                    const vl = v.toLowerCase();
-                    if (vl === "номер" || v === "№") colPlot = i;
-                    if (vl.includes("владельц")) colOwner = i;
+                cells.forEach(function(v, idx) {
+                    var vl = v.toLowerCase();
+                    if (vl === "номер" || v === "№") colPlot = idx;
+                    if (vl.includes("владельц")) colOwner = idx;
                 });
                 headerFound = true;
             }
             continue;
         }
-        if (!dataStarted) { if (isPlotNumber(col0)) dataStarted = true; else continue; }
+        if (!dataStarted) {
+            if (isPlotNumber(col0)) dataStarted = true;
+            else continue;
+        }
         if (col0l === "итого" || col0l.startsWith("итог")) break;
         if (!col0) continue;
-        const isPlotRow = isPlotNumber(col0) && (cells[colOwner]||"").trim();
+        var isPlotRow = isPlotNumber(col0) && (cells[colOwner] || "").trim();
         if (isPlotRow) {
             if (current && current.totalDebt > 0.01) result.set(current.plotNumber, current);
-            const debtEnd = parseNumber(cells[colDebt]);
-            const overpayEnd = parseNumber(cells[8]);
+            var debtEnd = parseNumber(cells[colDebt]);
+            var overpayEnd = parseNumber(cells[8]);
             current = {
                 plotNumber: col0.toLowerCase(), owner: "",
                 totalDebt: debtEnd, overpayEnd: overpayEnd,
@@ -1119,9 +1154,9 @@ function parseDebitOds(xml) {
                 membershipDebt:0, targetDebt:0, arrearsDebt:0, workDebt:0, electricityDebt:0
             };
         } else if (current && col0) {
-            const amount = parseNumber(cells[colDebt]);
+            var amount = parseNumber(cells[colDebt]);
             if (amount > 0.01) {
-                const cat = col0.toLowerCase();
+                var cat = col0.toLowerCase();
                 if (cat.includes("членские взносы"))                                   current.membershipDebt += amount;
                 else if (cat.includes("целевые"))                                       current.targetDebt    += amount;
                 else if (cat.includes("задолженность прошлых лет") && !cat.includes("отработка")) current.arrearsDebt += amount;
@@ -1135,16 +1170,16 @@ function parseDebitOds(xml) {
 }
 
 function parseElectricityOds(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    const rows = getAllTableRows(doc);
-    const result = new Map();
-    let headerFound = false;
-    for (const row of rows) {
-        const cells = expandRowCells(row);
+    var doc = new DOMParser().parseFromString(xml, "application/xml");
+    var rows = getAllTableRows(doc);
+    var result = new Map();
+    var headerFound = false;
+    for (var i = 0; i < rows.length; i++) {
+        var cells = expandRowCells(rows[i]);
         if (!cells.length) continue;
-        const col0 = (cells[0]||"").trim();
+        var col0 = (cells[0] || "").trim();
         if (!headerFound) {
-            const c0l = col0.toLowerCase();
+            var c0l = col0.toLowerCase();
             if (c0l.includes("участок") || c0l.includes("номер") || c0l === "№" || isPlotNumber(col0)) {
                 headerFound = true;
                 if (!isPlotNumber(col0)) continue;
@@ -1167,96 +1202,126 @@ function parseElectricityOds(xml) {
 /* ================================================================
    QR
    ================================================================ */
-function sanitizePurpose(t) { return t.replace(/[|;\n\r\t]/g,' ').replace(/\s+/g,' ').trim(); }
+function sanitizePurpose(t) {
+    return t.replace(/[|;\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+}
 function formatAmountShort(a) {
     if (a === Math.floor(a)) return Math.floor(a).toString();
     return a.toFixed(2).replace('.', ',');
 }
 function buildDetailedPurpose(debt) {
-    const parts = [];
-    if (debt.membershipDebt > 0.01) parts.push(`Членские взносы: ${formatAmountShort(debt.membershipDebt)}р`);
-    if (debt.targetDebt > 0.01)     parts.push(`Целевые взносы: ${formatAmountShort(debt.targetDebt)}р`);
-    if (debt.arrearsDebt > 0.01)    parts.push(`Задолженность прошлых лет: ${formatAmountShort(debt.arrearsDebt)}р`);
-    if (debt.workDebt > 0.01)       parts.push(`Отработка: ${formatAmountShort(debt.workDebt)}р`);
-    if (debt.electricityDebt > 0.01) parts.push(`Электроэнергия: ${formatAmountShort(debt.electricityDebt)}р`);
-    const safePlot = escapeHtml(debt.plotNumber);
-    const suffix = ` уч.${safePlot}`;
-    let result = parts.join(", ") + suffix;
-    if (result.length > 210) result = `Оплата взносов уч.${safePlot}`;
+    var parts = [];
+    if (debt.membershipDebt > 0.01) parts.push('Членские взносы: ' + formatAmountShort(debt.membershipDebt) + 'р');
+    if (debt.targetDebt > 0.01)     parts.push('Целевые взносы: ' + formatAmountShort(debt.targetDebt) + 'р');
+    if (debt.arrearsDebt > 0.01)    parts.push('Задолженность прошлых лет: ' + formatAmountShort(debt.arrearsDebt) + 'р');
+    if (debt.workDebt > 0.01)       parts.push('Отработка: ' + formatAmountShort(debt.workDebt) + 'р');
+    if (debt.electricityDebt > 0.01) parts.push('Электроэнергия: ' + formatAmountShort(debt.electricityDebt) + 'р');
+    var safePlot = escapeHtml(debt.plotNumber);
+    var suffix = ' уч.' + safePlot;
+    var result = parts.join(', ') + suffix;
+    if (result.length > 210) result = 'Оплата взносов уч.' + safePlot;
     return result;
 }
 function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpose) {
-    const sumKop = Math.round(amount * 100);
-    let purpose;
+    var sumKop = Math.round(amount * 100);
+    var purpose;
     if (customPurpose && customPurpose.trim()) {
-        purpose = sanitizePurpose(customPurpose) + ` уч.${plotNumber}`;
+        purpose = sanitizePurpose(customPurpose) + ' уч.' + plotNumber;
     } else if (isElectricity) {
-        const ee = window.currentEeData;
-        const consumption = amount / (ee?.tariff || 3.82);
-        const consumptionInt = Math.round(consumption);
-        const amountStr = formatAmountShort(amount);
-        purpose = `Электроэнергия ${amountStr}р (${consumptionInt}кВт·ч) уч.${plotNumber}`;
+        var ee = window.currentEeData;
+        var consumption = amount / (ee && ee.tariff ? ee.tariff : 3.82);
+        var consumptionInt = Math.round(consumption);
+        var amountStr = formatAmountShort(amount);
+        purpose = 'Электроэнергия ' + amountStr + 'р (' + consumptionInt + 'кВт·ч) уч.' + plotNumber;
     } else if (debtData) {
         purpose = buildDetailedPurpose(debtData);
     } else {
-        purpose = `Оплата взносов уч.${plotNumber}`;
+        purpose = 'Оплата взносов уч.' + plotNumber;
     }
-    return `ST00012|Name=${ORGANIZATION}|PersonalAcc=${PERSONAL_ACC}|BankName=${BANK_NAME}|BIC=${BIC}|CorrespAcc=${CORRESP_ACC}|PayeeINN=${INN}|Purpose=${sanitizePurpose(purpose)}|Sum=${sumKop}`;
+    return 'ST00012|Name=' + ORGANIZATION + '|PersonalAcc=' + PERSONAL_ACC + '|BankName=' + BANK_NAME + '|BIC=' + BIC + '|CorrespAcc=' + CORRESP_ACC + '|PayeeINN=' + INN + '|Purpose=' + sanitizePurpose(purpose) + '|Sum=' + sumKop;
 }
-async function generateQR(text) {
+function generateQR(text) {
     ensureQRCode();
-    return await QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' });
+    return new Promise(function(resolve, reject) {
+        try {
+            QRCode.toDataURL(text, { width: 280, margin: 1, errorCorrectionLevel: 'H' }, function(err, url) {
+                if (err) reject(err);
+                else resolve(url);
+            });
+        } catch(e) {
+            reject(e);
+        }
+    });
 }
-async function generateAndShowQR(type, btn, qrText) {
-    const containerId = type === 'debt' ? 'debtQrContainer' : type === 'ee' ? 'eeQrContainer' : 'manualQrContainer';
-    const btnGroupId  = type === 'debt' ? 'debtQrButtons'   : type === 'ee' ? 'eeQrButtons'   : 'manualQrButtons';
-    const container = document.getElementById(containerId);
+function generateAndShowQR(type, btn, qrText) {
+    var containerId = type === 'debt' ? 'debtQrContainer' : type === 'ee' ? 'eeQrContainer' : 'manualQrContainer';
+    var btnGroupId  = type === 'debt' ? 'debtQrButtons'   : type === 'ee' ? 'eeQrButtons'   : 'manualQrButtons';
+    var container = document.getElementById(containerId);
     if (!container) return;
-    document.getElementById(`${type}QrImg`)?.remove();
-    const orig = btn.textContent;
-    btn.textContent = "⏳ Генерация…";
+    var oldImg = document.getElementById(type + 'QrImg');
+    if (oldImg) oldImg.remove();
+    var orig = btn.textContent;
+    btn.textContent = '⏳ Генерация…';
     btn.disabled = true;
-    try {
-        const dataUrl = await generateQR(qrText);
-        const img = Object.assign(document.createElement('img'), {
-            id: `${type}QrImg`, src: dataUrl,
-            className: 'qr-image', alt: 'QR-код для оплаты'
+    generateQR(qrText)
+        .then(function(dataUrl) {
+            var img = document.createElement('img');
+            img.id = type + 'QrImg';
+            img.src = dataUrl;
+            img.className = 'qr-image';
+            img.alt = 'QR-код для оплаты';
+            container.appendChild(img);
+            var bg = document.getElementById(btnGroupId);
+            if (bg) bg.classList.add('visible');
+        })
+        .catch(function(e) {
+            showToast('Ошибка QR: ' + e.message);
+        })
+        .finally(function() {
+            btn.textContent = orig;
+            btn.disabled = false;
         });
-        container.appendChild(img);
-        const bg = document.getElementById(btnGroupId);
-        if (bg) bg.classList.add('visible');
-    } catch(e) { showToast("Ошибка QR: " + e.message); }
-    finally { btn.textContent = orig; btn.disabled = false; }
 }
-window.shareQR = async function(imgId) {
-    const img = document.getElementById(imgId);
+window.shareQR = function(imgId) {
+    var img = document.getElementById(imgId);
     if (!img) return;
-    try {
-        const blob = await fetch(img.src).then(r => r.blob());
-        const file = new File([blob], "qr_payment.png", { type: "image/png" });
-        if (navigator.share) await navigator.share({ files: [file], title: "QR-код оплаты" });
-        else { Object.assign(document.createElement('a'), { download:"qr_payment.png", href:img.src }).click(); }
-    } catch(e) { console.error(e); }
+    fetch(img.src)
+        .then(function(r) { return r.blob(); })
+        .then(function(blob) {
+            var file = new File([blob], "qr_payment.png", { type: "image/png" });
+            if (navigator.share) {
+                return navigator.share({ files: [file], title: "QR-код оплаты" });
+            } else {
+                var a = document.createElement('a');
+                a.download = "qr_payment.png";
+                a.href = img.src;
+                a.click();
+            }
+        })
+        .catch(function(e) { console.error(e); });
 };
 window.saveQR = function(imgId) {
-    const img = document.getElementById(imgId);
+    var img = document.getElementById(imgId);
     if (!img) return;
-    Object.assign(document.createElement('a'), { download:"qr_payment.png", href:img.src }).click();
+    var a = document.createElement('a');
+    a.download = "qr_payment.png";
+    a.href = img.src;
+    a.click();
 };
 
 /* ================================================================
-   НЕЗАВИСИМАЯ ЗАГРУЗКА ДАННЫХ
+   ЗАГРУЗКА ДАННЫХ
    ================================================================ */
 function updateDataStatus() {
-    const statusEl = document.getElementById('statusCount');
-    const timeEl = document.getElementById('statusTime');
+    var statusEl = document.getElementById('statusCount');
+    var timeEl = document.getElementById('statusTime');
     if (!statusEl || !timeEl) return;
 
-    const baseOk = dataLoadStatus.base === 'ok';
-    const debtOk = dataLoadStatus.debt === 'ok';
-    const eeOk = dataLoadStatus.ee === 'ok';
+    var baseOk = dataLoadStatus.base === 'ok';
+    var debtOk = dataLoadStatus.debt === 'ok';
+    var eeOk = dataLoadStatus.ee === 'ok';
 
-    let parts = [];
+    var parts = [];
     if (baseOk) parts.push('✅ База');
     else if (dataLoadStatus.base === 'loading') parts.push('⏳ База');
     else if (dataLoadStatus.base === 'error') parts.push('⚠️ База');
@@ -1284,152 +1349,172 @@ function updateDataStatus() {
     }
 }
 
-async function loadSingleOds(url, parserFn, cacheKey, statusKey) {
+function loadSingleOds(url, parserFn, cacheKey, statusKey) {
     dataLoadStatus[statusKey] = 'loading';
     updateDataStatus();
 
-    try {
-        const cached = await getDataCache(cacheKey);
-        if (cached) {
-            const data = parserFn(cached);
-            dataLoadStatus[statusKey] = 'ok';
-            updateDataStatus();
-            fetchAndParseOds(url, parserFn)
-                .then(freshData => {
-                    saveDataCache(cacheKey, freshData);
-                    if (statusKey === 'base') cachedBaseMap = freshData;
-                    else if (statusKey === 'debt') cachedDebtMap = freshData;
-                    else if (statusKey === 'ee') cachedElectricityMap = freshData;
-                    lastSyncTime = new Date();
+    return getDataCache(cacheKey)
+        .then(function(cached) {
+            if (cached) {
+                try {
+                    var data = parserFn(cached);
                     dataLoadStatus[statusKey] = 'ok';
                     updateDataStatus();
-                    if (currentPlotNumber) loadPlotData(currentPlotNumber, true);
-                })
-                .catch(err => {
-                    console.warn(`Фоновое обновление ${statusKey} failed:`, err);
+                    // Фоновая загрузка
+                    fetchAndParseOds(url, parserFn)
+                        .then(function(freshData) {
+                            saveDataCache(cacheKey, freshData);
+                            if (statusKey === 'base') cachedBaseMap = freshData;
+                            else if (statusKey === 'debt') cachedDebtMap = freshData;
+                            else if (statusKey === 'ee') cachedElectricityMap = freshData;
+                            lastSyncTime = new Date();
+                            dataLoadStatus[statusKey] = 'ok';
+                            updateDataStatus();
+                            if (currentPlotNumber) loadPlotData(currentPlotNumber, true);
+                        })
+                        .catch(function(err) {
+                            console.warn('Фоновое обновление ' + statusKey + ' failed:', err);
+                        });
+                    return data;
+                } catch(e) {
+                    console.warn('Cached data parse error:', e);
+                    // fall through to fetch fresh
+                }
+            }
+            return fetchAndParseOds(url, parserFn)
+                .then(function(freshData) {
+                    dataLoadStatus[statusKey] = 'ok';
+                    lastSyncTime = new Date();
+                    saveDataCache(cacheKey, freshData);
+                    updateDataStatus();
+                    return freshData;
                 });
-            return data;
-        }
-
-        const freshData = await fetchAndParseOds(url, parserFn);
-        dataLoadStatus[statusKey] = 'ok';
-        lastSyncTime = new Date();
-        saveDataCache(cacheKey, freshData);
-        updateDataStatus();
-        return freshData;
-    } catch (err) {
-        dataLoadStatus[statusKey] = 'error';
-        updateDataStatus();
-        const cached = await getDataCache(cacheKey);
-        if (cached) {
-            const data = parserFn(cached);
-            dataLoadStatus[statusKey] = 'ok';
+        })
+        .catch(function(err) {
+            dataLoadStatus[statusKey] = 'error';
             updateDataStatus();
-            return data;
-        }
-        throw err;
-    }
+            return getDataCache(cacheKey)
+                .then(function(cached) {
+                    if (cached) {
+                        var data = parserFn(cached);
+                        dataLoadStatus[statusKey] = 'ok';
+                        updateDataStatus();
+                        return data;
+                    }
+                    throw err;
+                });
+        });
 }
 
-async function syncAllData() {
+function syncAllData() {
     if (syncPromise) return syncPromise;
 
-    syncPromise = (async () => {
-        try {
-            const results = await Promise.allSettled([
-                loadSingleOds(BASE_URL, parseBaseOds, 'base', 'base'),
-                loadSingleOds(DEBIT_URL, parseDebitOds, 'debt', 'debt'),
-                loadSingleOds(EE_URL, parseElectricityOds, 'ee', 'ee')
-            ]);
+    syncPromise = Promise.allSettled([
+        loadSingleOds(BASE_URL, parseBaseOds, 'base', 'base'),
+        loadSingleOds(DEBIT_URL, parseDebitOds, 'debt', 'debt'),
+        loadSingleOds(EE_URL, parseElectricityOds, 'ee', 'ee')
+    ])
+    .then(function(results) {
+        var baseResult = results[0];
+        var debtResult = results[1];
+        var eeResult = results[2];
 
-            const baseResult = results[0];
-            const debtResult = results[1];
-            const eeResult = results[2];
-
-            if (baseResult.status === 'fulfilled') {
-                cachedBaseMap = baseResult.value;
-                dataLoadStatus.base = 'ok';
-            } else {
-                dataLoadStatus.base = 'error';
-                console.warn('Base load failed:', baseResult.reason);
-            }
-
-            if (debtResult.status === 'fulfilled') {
-                cachedDebtMap = debtResult.value;
-                dataLoadStatus.debt = 'ok';
-            } else {
-                dataLoadStatus.debt = 'error';
-                console.warn('Debt load failed:', debtResult.reason);
-            }
-
-            if (eeResult.status === 'fulfilled') {
-                cachedElectricityMap = eeResult.value;
-                dataLoadStatus.ee = 'ok';
-            } else {
-                dataLoadStatus.ee = 'error';
-                console.warn('EE load failed:', eeResult.reason);
-            }
-
-            lastSyncTime = new Date();
-            updateDataStatus();
-
-            if (currentPlotNumber) {
-                loadPlotData(currentPlotNumber, true);
-            }
-
-            return { base: cachedBaseMap, debt: cachedDebtMap, ee: cachedElectricityMap };
-        } catch (err) {
-            console.error('Sync failed:', err);
-            const errorState = document.getElementById('errorState');
-            const errorMsg = document.getElementById('errorMsg');
-            if (errorState && errorMsg) {
-                errorState.classList.remove('hidden');
-                errorMsg.textContent = `Ошибка загрузки данных: ${err.message}`;
-            }
-            throw err;
-        } finally {
-            syncPromise = null;
+        if (baseResult.status === 'fulfilled') {
+            cachedBaseMap = baseResult.value;
+            dataLoadStatus.base = 'ok';
+        } else {
+            dataLoadStatus.base = 'error';
+            console.warn('Base load failed:', baseResult.reason);
         }
-    })();
+
+        if (debtResult.status === 'fulfilled') {
+            cachedDebtMap = debtResult.value;
+            dataLoadStatus.debt = 'ok';
+        } else {
+            dataLoadStatus.debt = 'error';
+            console.warn('Debt load failed:', debtResult.reason);
+        }
+
+        if (eeResult.status === 'fulfilled') {
+            cachedElectricityMap = eeResult.value;
+            dataLoadStatus.ee = 'ok';
+        } else {
+            dataLoadStatus.ee = 'error';
+            console.warn('EE load failed:', eeResult.reason);
+        }
+
+        lastSyncTime = new Date();
+        updateDataStatus();
+
+        if (currentPlotNumber) {
+            loadPlotData(currentPlotNumber, true);
+        }
+
+        return { base: cachedBaseMap, debt: cachedDebtMap, ee: cachedElectricityMap };
+    })
+    .catch(function(err) {
+        console.error('Sync failed:', err);
+        var errorState = document.getElementById('errorState');
+        var errorMsg = document.getElementById('errorMsg');
+        if (errorState && errorMsg) {
+            errorState.classList.remove('hidden');
+            errorMsg.textContent = 'Ошибка загрузки данных: ' + err.message;
+        }
+        throw err;
+    })
+    .finally(function() {
+        syncPromise = null;
+    });
 
     return syncPromise;
 }
 
-async function loadPlotData(plotNumber, fromCache = false) {
-    const normalized = plotNumber.trim().toLowerCase();
+function loadPlotData(plotNumber, fromCache) {
+    fromCache = fromCache || false;
+    var normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
 
     ['debtCard','electricityCard','manualPaymentCard','bankDetailsCard',
-     'warningCard','instructionCard'].forEach(id => {
-        const el = document.getElementById(id);
+     'warningCard','instructionCard'].forEach(function(id) {
+        var el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 
-    const notFound = document.getElementById('notFoundBlock');
+    var notFound = document.getElementById('notFoundBlock');
     if (notFound) notFound.classList.add('hidden');
 
     try {
-        const noDataLoaded =
+        var noDataLoaded =
             cachedBaseMap.size === 0 &&
             cachedDebtMap.size === 0 &&
             cachedElectricityMap.size === 0;
 
         if (noDataLoaded) {
-            const sync = syncAllData();
-            const timeEl = document.getElementById('statusTime');
+            var timeEl = document.getElementById('statusTime');
             if (timeEl) timeEl.textContent = 'Данные загружаются…';
-            await Promise.race([
-                sync,
-                new Promise(resolve => setTimeout(resolve, 250))
-            ]);
+            // Запускаем синхронизацию без ожидания
+            syncAllData();
+            // Попытка получить данные после короткой задержки
+            return new Promise(function(resolve) {
+                setTimeout(function() {
+                    // Проверяем ещё раз после задержки
+                    var debt = cachedDebtMap.get(normalized);
+                    var ee = cachedElectricityMap.get(normalized);
+                    var member = cachedBaseMap.get(normalized);
+                    if (debt || ee || member) {
+                        renderData(normalized, debt, ee, member);
+                    }
+                    resolve();
+                }, 500);
+            });
         }
 
-        const debt   = cachedDebtMap.get(normalized);
-        const ee     = cachedElectricityMap.get(normalized);
-        const member = cachedBaseMap.get(normalized);
+        var debt = cachedDebtMap.get(normalized);
+        var ee = cachedElectricityMap.get(normalized);
+        var member = cachedBaseMap.get(normalized);
 
         if (!debt && !ee && !member) {
-            const stillLoading =
+            var stillLoading =
                 dataLoadStatus.base === 'loading' ||
                 dataLoadStatus.debt === 'loading' ||
                 dataLoadStatus.ee === 'loading';
@@ -1441,51 +1526,55 @@ async function loadPlotData(plotNumber, fromCache = false) {
             return;
         }
 
-        if (notFound) notFound.classList.add('hidden');
-
-        const bankCard = document.getElementById('bankDetailsCard');
-        if (bankCard) bankCard.classList.remove('hidden');
-        const warningCard = document.getElementById('warningCard');
-        if (warningCard) warningCard.classList.remove('hidden');
-        const instructionCard = document.getElementById('instructionCard');
-        if (instructionCard) instructionCard.classList.remove('hidden');
-        const errorState = document.getElementById('errorState');
-        if (errorState) errorState.classList.add('hidden');
-
-        renderBankDetails();
-        if (debt) renderDebtCard(debt);
-        if (ee)   renderElectricityCard(ee);
-        renderManualPaymentCard(member, debt, ee);
+        renderData(normalized, debt, ee, member);
 
     } catch(err) {
-        const debt = cachedDebtMap.get(normalized);
-        const ee = cachedElectricityMap.get(normalized);
+        console.error('loadPlotData error:', err);
+        var debt = cachedDebtMap.get(normalized);
+        var ee = cachedElectricityMap.get(normalized);
         if (debt || ee) {
-            const bankCard = document.getElementById('bankDetailsCard');
-            if (bankCard) bankCard.classList.remove('hidden');
             renderBankDetails();
             if (debt) renderDebtCard(debt);
             if (ee) renderElectricityCard(ee);
         }
-        const errorState = document.getElementById('errorState');
-        const errorMsg = document.getElementById('errorMsg');
+        var errorState = document.getElementById('errorState');
+        var errorMsg = document.getElementById('errorMsg');
         if (errorState && errorMsg) {
             errorState.classList.remove('hidden');
-            errorMsg.textContent = `⚠️ ${err.message}`;
+            errorMsg.textContent = '⚠️ ' + err.message;
         }
     }
+}
+
+function renderData(normalized, debt, ee, member) {
+    var notFound = document.getElementById('notFoundBlock');
+    if (notFound) notFound.classList.add('hidden');
+
+    var bankCard = document.getElementById('bankDetailsCard');
+    if (bankCard) bankCard.classList.remove('hidden');
+    var warningCard = document.getElementById('warningCard');
+    if (warningCard) warningCard.classList.remove('hidden');
+    var instructionCard = document.getElementById('instructionCard');
+    if (instructionCard) instructionCard.classList.remove('hidden');
+    var errorState = document.getElementById('errorState');
+    if (errorState) errorState.classList.add('hidden');
+
+    renderBankDetails();
+    if (debt) renderDebtCard(debt);
+    if (ee) renderElectricityCard(ee);
+    renderManualPaymentCard(member, debt, ee);
 }
 
 /* ================================================================
    БАНК
    ================================================================ */
 function renderBankDetails() {
-    const org = document.getElementById('bankOrg');
-    const inn = document.getElementById('bankInn');
-    const acc = document.getElementById('bankAccount');
-    const name = document.getElementById('bankName');
-    const bic = document.getElementById('bankBic');
-    const corr = document.getElementById('bankCorresp');
+    var org = document.getElementById('bankOrg');
+    var inn = document.getElementById('bankInn');
+    var acc = document.getElementById('bankAccount');
+    var name = document.getElementById('bankName');
+    var bic = document.getElementById('bankBic');
+    var corr = document.getElementById('bankCorresp');
 
     if (org) org.textContent = ORGANIZATION;
     if (inn) inn.textContent = INN;
@@ -1494,25 +1583,32 @@ function renderBankDetails() {
     if (bic) bic.textContent = BIC;
     if (corr) corr.textContent = CORRESP_ACC;
 
-    document.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.onclick = () => {
-            const text = document.getElementById(btn.dataset.copy)?.textContent;
-            if (text) navigator.clipboard.writeText(text).then(() => showToast(`Скопировано: ${text}`));
+    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+        btn.onclick = function() {
+            var el = document.getElementById(btn.dataset.copy);
+            var text = el ? el.textContent : '';
+            if (text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    showToast('Скопировано: ' + text);
+                }).catch(function() {});
+            }
         };
     });
 
-    const copyAll = document.getElementById('copyAllBtn');
+    var copyAll = document.getElementById('copyAllBtn');
     if (copyAll) {
-        copyAll.onclick = () => {
-            const text = `Получатель: ${ORGANIZATION}\nИНН: ${INN}\nР/счёт: ${PERSONAL_ACC}\nБанк: ${BANK_NAME}\nБИК: ${BIC}\nК/счёт: ${CORRESP_ACC}`;
-            navigator.clipboard.writeText(text).then(() => showToast("Реквизиты скопированы"));
+        copyAll.onclick = function() {
+            var text = 'Получатель: ' + ORGANIZATION + '\nИНН: ' + INN + '\nР/счёт: ' + PERSONAL_ACC + '\nБанк: ' + BANK_NAME + '\nБИК: ' + BIC + '\nК/счёт: ' + CORRESP_ACC;
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('Реквизиты скопированы');
+            }).catch(function() {});
         };
     }
 
-    const toggleBtn = document.getElementById('toggleBankBtn');
-    const content = document.getElementById('bankDetailsContent');
+    var toggleBtn = document.getElementById('toggleBankBtn');
+    var content = document.getElementById('bankDetailsContent');
     if (toggleBtn && content) {
-        toggleBtn.onclick = () => {
+        toggleBtn.onclick = function() {
             isBankExpanded = !isBankExpanded;
             content.style.display = isBankExpanded ? '' : 'none';
             toggleBtn.textContent = isBankExpanded ? 'скрыть ▲' : 'показать ▼';
@@ -1524,152 +1620,146 @@ function renderBankDetails() {
    КАРТОЧКА ДОЛГА
    ================================================================ */
 function renderDebtCard(debt) {
-    const c = document.getElementById('debtCard');
+    var c = document.getElementById('debtCard');
     if (!c) return;
     c.classList.remove('hidden');
 
-    let html = `<div class="card-body">
-        <div class="card-title">💰 Задолженность</div>
-        <div class="plot-sub">Участок №${escapeHtml(debt.plotNumber)}</div>`;
+    var html = '<div class="card-body">' +
+        '<div class="card-title">💰 Задолженность</div>' +
+        '<div class="plot-sub">Участок №' + escapeHtml(debt.plotNumber) + '</div>';
 
     if (debt.hasDebt) {
-        html += `<div class="debt-total">Задолженность: ${formatMoney(debt.totalDebt)} ₽</div>
-        <div>`;
-        if (debt.membershipDebt > 0.01)  html += `<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">${formatMoney(debt.membershipDebt)} ₽</span></div>`;
-        if (debt.targetDebt > 0.01)      html += `<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">${formatMoney(debt.targetDebt)} ₽</span></div>`;
-        if (debt.arrearsDebt > 0.01)     html += `<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">${formatMoney(debt.arrearsDebt)} ₽</span></div>`;
-        if (debt.workDebt > 0.01)        html += `<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">${formatMoney(debt.workDebt)} ₽</span></div>`;
-        if (debt.electricityDebt > 0.01) html += `<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">${formatMoney(debt.electricityDebt)} ₽</span></div>`;
-        html += `</div>
-        <div class="debt-words">Прописью: ${numberToWords(debt.totalDebt)}</div>
-        <button id="debtQrBtn" class="btn btn-primary mt-md">📱 QR для оплаты</button>
-        <div id="debtQrContainer"></div>
-        <div id="debtQrButtons" class="qr-buttons mt-sm">
-            <button class="btn btn-blue" onclick="shareQR('debtQrImg')">↗ Поделиться</button>
-            <button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR('debtQrImg')">💾 Сохранить</button>
-        </div>`;
+        html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div>' +
+            '<div>';
+        if (debt.membershipDebt > 0.01)  html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
+        if (debt.targetDebt > 0.01)      html += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
+        if (debt.arrearsDebt > 0.01)     html += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
+        if (debt.workDebt > 0.01)        html += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
+        if (debt.electricityDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
+        html += '</div>' +
+            '<div class="debt-words">Прописью: ' + numberToWords(debt.totalDebt) + '</div>' +
+            '<button id="debtQrBtn" class="btn btn-primary mt-md">📱 QR для оплаты</button>' +
+            '<div id="debtQrContainer"></div>' +
+            '<div id="debtQrButtons" class="qr-buttons mt-sm">' +
+            '<button class="btn btn-blue" onclick="shareQR(\'debtQrImg\')">↗ Поделиться</button>' +
+            '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'debtQrImg\')">💾 Сохранить</button>' +
+            '</div>';
     } else if (debt.hasOverpayment) {
-        html += `<div class="debt-total green">Переплата: ${formatMoney(debt.overpayEnd)} ₽</div>`;
+        html += '<div class="debt-total green">Переплата: ' + formatMoney(debt.overpayEnd) + ' ₽</div>';
     } else {
-        html += `<div class="debt-total green">✓ Задолженностей нет</div>`;
+        html += '<div class="debt-total green">✓ Задолженностей нет</div>';
     }
-    html += `</div>`;
+    html += '</div>';
     c.innerHTML = html;
 
-    const qrBtn = document.getElementById('debtQrBtn');
+    var qrBtn = document.getElementById('debtQrBtn');
     if (qrBtn && debt.hasDebt) {
-        const qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
-        qrBtn.onclick = () => generateAndShowQR('debt', qrBtn, qrText);
+        var qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
+        qrBtn.onclick = function() { generateAndShowQR('debt', qrBtn, qrText); };
     }
 }
 
 /* ================================================================
    КАРТОЧКА ЭЭ
    ================================================================ */
-let currentEeData = null;
 function renderElectricityCard(ee) {
     currentEeData = ee;
-    const c = document.getElementById('electricityCard');
+    var c = document.getElementById('electricityCard');
     if (!c) return;
     c.classList.remove('hidden');
 
-    c.innerHTML = `<div class="card-body">
-        <div class="card-title blue">⚡ Электроэнергия</div>
-        <div class="plot-sub">Участок №${escapeHtml(ee.plotNumber)}</div>
+    c.innerHTML = '<div class="card-body">' +
+        '<div class="card-title blue">⚡ Электроэнергия</div>' +
+        '<div class="plot-sub">Участок №' + escapeHtml(ee.plotNumber) + '</div>' +
+        '<div class="debt-line"><span class="debt-line-label">Текущие показания</span><strong>' + formatNumber(ee.currentReading) + ' кВт·ч</strong></div>' +
+        '<div class="debt-line"><span class="debt-line-label">Дата снятия</span><span>' + escapeHtml(ee.readingDateStr || "не указана") + '</span></div>' +
+        '<div class="debt-line"><span class="debt-line-label">Тариф</span><span>' + TARIFF.toFixed(2) + ' ₽/кВт·ч</span></div>' +
+        '<label class="manual-label mt-md">Введите новые показания:</label>' +
+        '<input type="number" id="newReadingInput" class="reading-input" placeholder="' + ee.currentReading + '" step="any" inputmode="decimal">' +
+        '<div id="calcAmountBlock" class="calc-block"></div>' +
+        '<button id="genEeQrBtn" class="btn btn-primary" disabled>📱 QR для оплаты э/э</button>' +
+        '<div id="eeQrContainer"></div>' +
+        '<div id="eeQrButtons" class="qr-buttons mt-sm">' +
+        '<button class="btn btn-blue" onclick="shareQR(\'eeQrImg\')">↗ Поделиться</button>' +
+        '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'eeQrImg\')">💾 Сохранить</button>' +
+        '</div>' +
+        '<div class="card-title dark mt-lg" style="margin-top:var(--sp-xl);">📸 Фото счётчика</div>' +
+        '<img id="photoPreview" class="photo-preview" alt="Фото счётчика">' +
+        '<div id="photoUploadProgress" class="photo-progress">⏳ Загрузка на Яндекс.Диск…</div>' +
+        '<div id="photoUploadSuccess" class="photo-success">✓ Фото сохранено на Яндекс.Диске</div>' +
+        '<div id="photoUploadError" class="photo-error"></div>' +
+        '<button id="takePhotoBtn" class="btn btn-blue mt-md">📷 Сфотографировать счётчик</button>' +
+        '<div id="photoActions" class="photo-actions">' +
+        '<button id="uploadPhotoBtn" class="btn btn-blue" style="flex:1;">☁ Загрузить</button>' +
+        '<button id="retakePhotoBtn" class="btn btn-retake" style="flex:1;">↺ Переснять</button>' +
+        '</div>' +
+        '<div id="ydStatus" class="yd-status">☁ Яндекс.Диск</div>' +
+        '</div>';
 
-        <div class="debt-line"><span class="debt-line-label">Текущие показания</span><strong>${formatNumber(ee.currentReading)} кВт·ч</strong></div>
-        <div class="debt-line"><span class="debt-line-label">Дата снятия</span><span>${escapeHtml(ee.readingDateStr || "не указана")}</span></div>
-        <div class="debt-line"><span class="debt-line-label">Тариф</span><span>${TARIFF.toFixed(2)} ₽/кВт·ч</span></div>
-
-        <label class="manual-label mt-md">Введите новые показания:</label>
-        <input type="number" id="newReadingInput" class="reading-input"
-               placeholder="${ee.currentReading}" step="any" inputmode="decimal">
-        <div id="calcAmountBlock" class="calc-block"></div>
-        <button id="genEeQrBtn" class="btn btn-primary" disabled>📱 QR для оплаты э/э</button>
-        <div id="eeQrContainer"></div>
-        <div id="eeQrButtons" class="qr-buttons mt-sm">
-            <button class="btn btn-blue" onclick="shareQR('eeQrImg')">↗ Поделиться</button>
-            <button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR('eeQrImg')">💾 Сохранить</button>
-        </div>
-
-        <div class="card-title dark mt-lg" style="margin-top:var(--sp-xl);">📸 Фото счётчика</div>
-        <img id="photoPreview" class="photo-preview" alt="Фото счётчика">
-        <div id="photoUploadProgress" class="photo-progress">⏳ Загрузка на Яндекс.Диск…</div>
-        <div id="photoUploadSuccess" class="photo-success">✓ Фото сохранено на Яндекс.Диске</div>
-        <div id="photoUploadError"   class="photo-error"></div>
-        <button id="takePhotoBtn" class="btn btn-blue mt-md">📷 Сфотографировать счётчик</button>
-        <div id="photoActions" class="photo-actions">
-            <button id="uploadPhotoBtn" class="btn btn-blue" style="flex:1;">☁ Загрузить</button>
-            <button id="retakePhotoBtn" class="btn btn-retake" style="flex:1;">↺ Переснять</button>
-        </div>
-        <div id="ydStatus" class="yd-status">☁ Яндекс.Диск</div>
-    </div>`;
-
-    const input  = document.getElementById('newReadingInput');
-    const calc   = document.getElementById('calcAmountBlock');
-    const genBtn = document.getElementById('genEeQrBtn');
+    var input  = document.getElementById('newReadingInput');
+    var calc   = document.getElementById('calcAmountBlock');
+    var genBtn = document.getElementById('genEeQrBtn');
 
     if (input && calc && genBtn) {
         input.addEventListener('input', function() {
-            const newVal = parseFloat(this.value);
+            var newVal = parseFloat(this.value);
             if (isNaN(newVal) || newVal <= ee.currentReading) {
                 calc.style.display = 'none';
                 genBtn.disabled = true;
                 return;
             }
-            const amount = (newVal - ee.currentReading) * TARIFF;
-            calc.textContent = `📊 Сумма к оплате: ${formatAmountShort(amount)} ₽`;
+            var amount = (newVal - ee.currentReading) * TARIFF;
+            calc.textContent = '📊 Сумма к оплате: ' + formatAmountShort(amount) + ' ₽';
             calc.style.display = 'block';
             genBtn.disabled = false;
-            genBtn.onclick = () => generateAndShowQR('ee', genBtn, buildPaymentQR(ee.plotNumber, amount, null, true));
+            genBtn.onclick = function() {
+                generateAndShowQR('ee', genBtn, buildPaymentQR(ee.plotNumber, amount, null, true));
+            };
         });
     }
 
-    const takeBtn = document.getElementById('takePhotoBtn');
-    if (takeBtn) takeBtn.onclick = () => takePhoto(currentPlotNumber);
+    var takeBtn = document.getElementById('takePhotoBtn');
+    if (takeBtn) takeBtn.onclick = function() { takePhoto(currentPlotNumber); };
 }
 
 /* ================================================================
    КАРТОЧКА РУЧНОЙ ОПЛАТЫ
    ================================================================ */
 function renderManualPaymentCard(member, debt, ee) {
-    const c = document.getElementById('manualPaymentCard');
+    var c = document.getElementById('manualPaymentCard');
     if (!c) return;
     c.classList.remove('hidden');
 
-    c.innerHTML = `<div class="card-body">
-        <div class="card-title">💳 Произвольная оплата</div>
-        <div class="plot-sub">Участок №${escapeHtml(currentPlotNumber)}</div>
+    c.innerHTML = '<div class="card-body">' +
+        '<div class="card-title">💳 Произвольная оплата</div>' +
+        '<div class="plot-sub">Участок №' + escapeHtml(currentPlotNumber) + '</div>' +
+        '<label class="manual-label">Сумма к оплате (₽)</label>' +
+        '<input type="number" id="manualAmountInput" class="manual-input" placeholder="0.00" step="any" inputmode="decimal">' +
+        '<label class="manual-label">Назначение платежа (необязательно)</label>' +
+        '<input type="text" id="manualPurposeInput" class="manual-input" placeholder="Оплата взносов…">' +
+        '<button id="manualGenerateBtn" class="btn btn-primary" disabled>📱 Сгенерировать QR</button>' +
+        '<div id="manualQrContainer"></div>' +
+        '<div id="manualQrButtons" class="qr-buttons mt-sm">' +
+        '<button class="btn btn-blue" onclick="shareQR(\'manualQrImg\')">↗ Поделиться</button>' +
+        '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'manualQrImg\')">💾 Сохранить</button>' +
+        '</div>' +
+        '</div>';
 
-        <label class="manual-label">Сумма к оплате (₽)</label>
-        <input type="number" id="manualAmountInput" class="manual-input"
-               placeholder="0.00" step="any" inputmode="decimal">
-        <label class="manual-label">Назначение платежа (необязательно)</label>
-        <input type="text"   id="manualPurposeInput" class="manual-input"
-               placeholder="Оплата взносов…">
-        <button id="manualGenerateBtn" class="btn btn-primary" disabled>📱 Сгенерировать QR</button>
-        <div id="manualQrContainer"></div>
-        <div id="manualQrButtons" class="qr-buttons mt-sm">
-            <button class="btn btn-blue" onclick="shareQR('manualQrImg')">↗ Поделиться</button>
-            <button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR('manualQrImg')">💾 Сохранить</button>
-        </div>
-    </div>`;
-
-    const amountInput  = document.getElementById('manualAmountInput');
-    const generateBtn  = document.getElementById('manualGenerateBtn');
+    var amountInput  = document.getElementById('manualAmountInput');
+    var generateBtn  = document.getElementById('manualGenerateBtn');
 
     if (amountInput && generateBtn) {
-        const updateBtn = () => {
-            const amount = parseFloat(amountInput.value);
-            const ok = !isNaN(amount) && amount > 0;
+        var updateBtn = function() {
+            var amount = parseFloat(amountInput.value);
+            var ok = !isNaN(amount) && amount > 0;
             generateBtn.disabled = !ok;
-            generateBtn.textContent = ok ? "📱 Сгенерировать QR" : "📱 Введите сумму";
+            generateBtn.textContent = ok ? '📱 Сгенерировать QR' : '📱 Введите сумму';
         };
         amountInput.addEventListener('input', updateBtn);
-        generateBtn.onclick = () => {
-            const amount = parseFloat(amountInput.value);
+        generateBtn.onclick = function() {
+            var amount = parseFloat(amountInput.value);
             if (!amount || amount <= 0) return;
-            const purpose = document.getElementById('manualPurposeInput')?.value.trim() || '';
+            var purpose = document.getElementById('manualPurposeInput') ? document.getElementById('manualPurposeInput').value.trim() : '';
             generateAndShowQR('manual', generateBtn, buildPaymentQR(currentPlotNumber, amount, null, false, purpose));
         };
     }
@@ -1678,39 +1768,47 @@ function renderManualPaymentCard(member, debt, ee) {
 /* ================================================================
    ФОТО
    ================================================================ */
-async function uploadPhotoToServer(plotNumber, readingValue, file) {
-    const fd = new FormData();
+function uploadPhotoToServer(plotNumber, readingValue, file) {
+    var fd = new FormData();
     fd.append('plot_number', plotNumber);
     fd.append('reading_value', readingValue);
     fd.append('photo', file);
-    const r = await fetchWithTimeout(`${API_BASE_URL}/upload`, { method:'POST', body:fd }, 30000);
-    if (!r.ok) {
-        let msg = `HTTP ${r.status}`;
-        try { const e = await r.json(); msg = e.error || msg; } catch(e) {}
-        throw new Error(msg);
-    }
-    return r.json();
+    return fetchWithTimeout(API_BASE_URL + '/upload', { method: 'POST', body: fd }, 30000)
+        .then(function(r) {
+            if (!r.ok) {
+                return r.json().then(function(data) {
+                    throw new Error(data.error || 'HTTP ' + r.status);
+                }).catch(function() {
+                    throw new Error('HTTP ' + r.status);
+                });
+            }
+            return r.json();
+        });
 }
 
 function takePhoto(plotNumber) {
-    const input = Object.assign(document.createElement('input'), {
-        type:'file', accept:'image/*', capture:'environment'
-    });
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
         if (!file) return;
-        const readingValue = document.getElementById('newReadingInput')?.value || "";
-        const preview   = document.getElementById('photoPreview');
-        const takeBtn   = document.getElementById('takePhotoBtn');
-        const progress  = document.getElementById('photoUploadProgress');
-        const success   = document.getElementById('photoUploadSuccess');
-        const errorDiv  = document.getElementById('photoUploadError');
-        const actions   = document.getElementById('photoActions');
-        const ydStatus  = document.getElementById('ydStatus');
+        var readingValue = document.getElementById('newReadingInput') ? document.getElementById('newReadingInput').value : '';
+        var preview   = document.getElementById('photoPreview');
+        var takeBtn   = document.getElementById('takePhotoBtn');
+        var progress  = document.getElementById('photoUploadProgress');
+        var success   = document.getElementById('photoUploadSuccess');
+        var errorDiv  = document.getElementById('photoUploadError');
+        var actions   = document.getElementById('photoActions');
+        var ydStatus  = document.getElementById('ydStatus');
 
         if (preview) {
-            const reader = new FileReader();
-            reader.onload = ev => { preview.src = ev.target.result; preview.style.display = 'block'; };
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+            };
             reader.readAsDataURL(file);
         }
 
@@ -1721,23 +1819,24 @@ function takePhoto(plotNumber) {
         if (actions) actions.style.display = 'flex';
         if (ydStatus) ydStatus.textContent = '☁ Сжатие и загрузка…';
 
-        try {
-            const compressedFile = await compressPhoto(file, 1920, 0.85);
-            if (ydStatus) ydStatus.textContent = `☁ Загрузка (${Math.round(compressedFile.size/1024)} КБ)…`;
-
-            await uploadPhotoToServer(plotNumber, readingValue, compressedFile);
-
-            if (progress) progress.style.display = 'none';
-            if (success) success.style.display = 'block';
-            if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено на Яндекс.Диске';
-            if (takeBtn) { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
-            if (actions) actions.style.display = 'none';
-        } catch(err) {
-            if (progress) progress.style.display = 'none';
-            if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = `⚠️ ${err.message}`; }
-            if (ydStatus) ydStatus.textContent = '☁ Ошибка загрузки';
-            if (takeBtn) takeBtn.style.display = 'block';
-        }
+        compressPhoto(file, 1920, 0.85)
+            .then(function(compressedFile) {
+                if (ydStatus) ydStatus.textContent = '☁ Загрузка (' + Math.round(compressedFile.size/1024) + ' КБ)…';
+                return uploadPhotoToServer(plotNumber, readingValue, compressedFile);
+            })
+            .then(function() {
+                if (progress) progress.style.display = 'none';
+                if (success) success.style.display = 'block';
+                if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено на Яндекс.Диске';
+                if (takeBtn) { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
+                if (actions) actions.style.display = 'none';
+            })
+            .catch(function(err) {
+                if (progress) progress.style.display = 'none';
+                if (errorDiv) { errorDiv.style.display = 'block'; errorDiv.textContent = '⚠️ ' + err.message; }
+                if (ydStatus) ydStatus.textContent = '☁ Ошибка загрузки';
+                if (takeBtn) takeBtn.style.display = 'block';
+            });
     };
     input.click();
 }
@@ -1746,16 +1845,22 @@ function takePhoto(plotNumber) {
    СОГЛАСИЕ
    ================================================================ */
 function isConsentAccepted() {
-    return localStorage.getItem(CONSENT_KEY) === "true" &&
-           localStorage.getItem(CONSENT_VER_KEY) === CONSENT_VERSION;
+    try {
+        return localStorage.getItem(CONSENT_KEY) === "true" &&
+               localStorage.getItem(CONSENT_VER_KEY) === CONSENT_VERSION;
+    } catch(e) { return false; }
 }
 function saveConsent() {
-    localStorage.setItem(CONSENT_KEY, "true");
-    localStorage.setItem(CONSENT_VER_KEY, CONSENT_VERSION);
+    try {
+        localStorage.setItem(CONSENT_KEY, "true");
+        localStorage.setItem(CONSENT_VER_KEY, CONSENT_VERSION);
+    } catch(e) {}
 }
 function revokeConsent() {
-    localStorage.removeItem(CONSENT_KEY);
-    localStorage.removeItem(CONSENT_VER_KEY);
+    try {
+        localStorage.removeItem(CONSENT_KEY);
+        localStorage.removeItem(CONSENT_VER_KEY);
+    } catch(e) {}
     cachedDebtMap.clear();
     cachedElectricityMap.clear();
     cachedBaseMap.clear();
@@ -1763,59 +1868,58 @@ function revokeConsent() {
 }
 
 function showConsentScreen() {
-    const overlay = document.createElement('div');
+    var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-    <div class="modal-sheet">
-        <div class="modal-header">
-            <div style="font-size:36px;margin-bottom:8px;">🌿</div>
-            <h2>СНТ «Берёзка-2»</h2>
-            <p>Согласие с условиями использования</p>
-        </div>
-        <div class="modal-body">
-            <p style="margin-bottom:16px;font-size:14px;color:var(--text-secondary);line-height:1.6;">
-                Для продолжения необходимо подтвердить согласие с условиями. Оператор: СНТ «Берёзка-2» (ИНН 5433118499)
-            </p>
-            <div class="consent-block">
-                <div class="consent-block-title">🔐 Персональные данные</div>
-                <div class="consent-check-row">
-                    <input type="checkbox" id="c1">
-                    <label for="c1">Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152 «О персональных данных»</label>
-                </div>
-            </div>
-            <div class="consent-block">
-                <div class="consent-block-title">📋 Пользовательское соглашение</div>
-                <div class="consent-check-row">
-                    <input type="checkbox" id="c2">
-                    <label for="c2">Я ознакомился(ась) с Пользовательским соглашением и Политикой конфиденциальности и принимаю их условия</label>
-                </div>
-            </div>
-            <div class="consent-block">
-                <div class="consent-block-title">👤 Подтверждение</div>
-                <div class="consent-check-row">
-                    <input type="checkbox" id="c3">
-                    <label for="c3">Мне исполнилось 18 лет, и я являюсь членом СНТ «Берёзка-2» или его уполномоченным представителем</label>
-                </div>
-            </div>
-            <p style="font-size:11px;color:var(--text-hint);margin-top:12px;line-height:1.5;">
-                Дата принятия согласия фиксируется. Вы вправе отозвать согласие в настройках приложения.
-            </p>
-        </div>
-        <div class="modal-footer">
-            <button id="acceptBtn" class="btn btn-primary-lg" disabled>✓ Принять и продолжить</button>
-            <button id="declineBtn" class="btn btn-text">Отказаться и закрыть</button>
-        </div>
-    </div>`;
+    overlay.innerHTML = '<div class="modal-sheet">' +
+        '<div class="modal-header">' +
+        '<div style="font-size:36px;margin-bottom:8px;">🌿</div>' +
+        '<h2>СНТ «Берёзка-2»</h2>' +
+        '<p>Согласие с условиями использования</p>' +
+        '</div>' +
+        '<div class="modal-body">' +
+        '<p style="margin-bottom:16px;font-size:14px;color:var(--text-secondary);line-height:1.6;">' +
+        'Для продолжения необходимо подтвердить согласие с условиями. Оператор: СНТ «Берёзка-2» (ИНН 5433118499)' +
+        '</p>' +
+        '<div class="consent-block">' +
+        '<div class="consent-block-title">🔐 Персональные данные</div>' +
+        '<div class="consent-check-row">' +
+        '<input type="checkbox" id="c1">' +
+        '<label for="c1">Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152 «О персональных данных»</label>' +
+        '</div>' +
+        '</div>' +
+        '<div class="consent-block">' +
+        '<div class="consent-block-title">📋 Пользовательское соглашение</div>' +
+        '<div class="consent-check-row">' +
+        '<input type="checkbox" id="c2">' +
+        '<label for="c2">Я ознакомился(ась) с Пользовательским соглашением и Политикой конфиденциальности и принимаю их условия</label>' +
+        '</div>' +
+        '</div>' +
+        '<div class="consent-block">' +
+        '<div class="consent-block-title">👤 Подтверждение</div>' +
+        '<div class="consent-check-row">' +
+        '<input type="checkbox" id="c3">' +
+        '<label for="c3">Мне исполнилось 18 лет, и я являюсь членом СНТ «Берёзка-2» или его уполномоченным представителем</label>' +
+        '</div>' +
+        '</div>' +
+        '<p style="font-size:11px;color:var(--text-hint);margin-top:12px;line-height:1.5;">' +
+        'Дата принятия согласия фиксируется. Вы вправе отозвать согласие в настройках приложения.' +
+        '</p>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+        '<button id="acceptBtn" class="btn btn-primary-lg" disabled>✓ Принять и продолжить</button>' +
+        '<button id="declineBtn" class="btn btn-text">Отказаться и закрыть</button>' +
+        '</div>' +
+        '</div>';
     document.body.appendChild(overlay);
 
-    const c1 = document.getElementById('c1');
-    const c2 = document.getElementById('c2');
-    const c3 = document.getElementById('c3');
-    const accept = document.getElementById('acceptBtn');
-    const decline = document.getElementById('declineBtn');
+    var c1 = document.getElementById('c1');
+    var c2 = document.getElementById('c2');
+    var c3 = document.getElementById('c3');
+    var accept = document.getElementById('acceptBtn');
+    var decline = document.getElementById('declineBtn');
 
-    const update = () => {
-        const ok = c1?.checked && c2?.checked && c3?.checked;
+    var update = function() {
+        var ok = c1 && c1.checked && c2 && c2.checked && c3 && c3.checked;
         if (accept) { accept.disabled = !ok; accept.style.opacity = ok ? '1' : '0.4'; }
     };
 
@@ -1824,7 +1928,7 @@ function showConsentScreen() {
     if (c3) c3.onchange = update;
 
     if (accept) {
-        accept.onclick = () => {
+        accept.onclick = function() {
             saveConsent();
             overlay.remove();
             showMainApp();
@@ -1833,8 +1937,10 @@ function showConsentScreen() {
     }
 
     if (decline) {
-        decline.onclick = () => {
-            if (confirm('Без согласия использование приложения невозможно. Закрыть?')) window.close();
+        decline.onclick = function() {
+            if (confirm('Без согласия использование приложения невозможно. Закрыть?')) {
+                window.close();
+            }
         };
     }
 }
@@ -1843,63 +1949,62 @@ function showConsentScreen() {
    НАСТРОЙКИ
    ================================================================ */
 function showSettingsModal() {
-    const overlay = document.createElement('div');
+    var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    overlay.innerHTML = `
-    <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div class="modal-header"><h2>⚙️ Настройки</h2></div>
-        <div class="modal-body">
-            <div class="modal-row">
-                <div class="modal-row-info">
-                    <strong>Статус согласия</strong>
-                    <small>ФЗ-152 «О персональных данных»</small>
-                </div>
-                <span style="background:var(--green-50);color:var(--green-700);padding:4px 14px;border-radius:24px;font-size:13px;font-weight:600;">✓ Принято</span>
-            </div>
-            <div class="modal-row">
-                <div class="modal-row-info">
-                    <strong>Отозвать согласие</strong>
-                    <small>После отзыва приложение запросит повторное согласие</small>
-                </div>
-                <button id="revokeBtn" class="btn btn-danger" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;">Отозвать</button>
-            </div>
-            <div class="modal-row">
-                <div class="modal-row-info">
-                    <strong>Очистить кэш</strong>
-                    <small>Сбросить загруженные данные</small>
-                </div>
-                <button id="clearBtn" class="btn" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;background:var(--orange-600);color:white;">Очистить</button>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button id="closeModalBtn" class="btn btn-secondary">Закрыть</button>
-        </div>
-    </div>`;
+    overlay.innerHTML = '<div class="modal-sheet">' +
+        '<div class="modal-handle"></div>' +
+        '<div class="modal-header"><h2>⚙️ Настройки</h2></div>' +
+        '<div class="modal-body">' +
+        '<div class="modal-row">' +
+        '<div class="modal-row-info">' +
+        '<strong>Статус согласия</strong>' +
+        '<small>ФЗ-152 «О персональных данных»</small>' +
+        '</div>' +
+        '<span style="background:var(--green-50);color:var(--green-700);padding:4px 14px;border-radius:24px;font-size:13px;font-weight:600;">✓ Принято</span>' +
+        '</div>' +
+        '<div class="modal-row">' +
+        '<div class="modal-row-info">' +
+        '<strong>Отозвать согласие</strong>' +
+        '<small>После отзыва приложение запросит повторное согласие</small>' +
+        '</div>' +
+        '<button id="revokeBtn" class="btn btn-danger" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;">Отозвать</button>' +
+        '</div>' +
+        '<div class="modal-row">' +
+        '<div class="modal-row-info">' +
+        '<strong>Очистить кэш</strong>' +
+        '<small>Сбросить загруженные данные</small>' +
+        '</div>' +
+        '<button id="clearBtn" class="btn" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;background:var(--orange-600);color:white;">Очистить</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+        '<button id="closeModalBtn" class="btn btn-secondary">Закрыть</button>' +
+        '</div>' +
+        '</div>';
     document.body.appendChild(overlay);
 
-    const close = () => overlay.remove();
-    const closeBtn = document.getElementById('closeModalBtn');
+    var close = function() { overlay.remove(); };
+    var closeBtn = document.getElementById('closeModalBtn');
     if (closeBtn) closeBtn.onclick = close;
 
-    overlay.onclick = e => { if (e.target === overlay) close(); };
+    overlay.onclick = function(e) { if (e.target === overlay) close(); };
 
-    const revokeBtn = document.getElementById('revokeBtn');
+    var revokeBtn = document.getElementById('revokeBtn');
     if (revokeBtn) {
-        revokeBtn.onclick = () => {
+        revokeBtn.onclick = function() {
             if (confirm('Отозвать согласие на обработку персональных данных?\n\nПосле отзыва потребуется повторное согласие.')) {
                 revokeConsent();
             }
         };
     }
 
-    const clearBtn = document.getElementById('clearBtn');
+    var clearBtn = document.getElementById('clearBtn');
     if (clearBtn) {
-        clearBtn.onclick = () => {
+        clearBtn.onclick = function() {
             cachedDebtMap.clear();
             cachedElectricityMap.clear();
             cachedBaseMap.clear();
-            const dataStatus = document.getElementById('dataStatus');
+            var dataStatus = document.getElementById('dataStatus');
             if (dataStatus) dataStatus.classList.add('hidden');
             showToast('Кэш данных очищен');
             close();
@@ -1908,16 +2013,16 @@ function showSettingsModal() {
 }
 
 /* ================================================================
-   ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ UI
+   UI
    ================================================================ */
 function setStartupMessage(message) {
-    const el = document.getElementById('startupMessage');
+    var el = document.getElementById('startupMessage');
     if (el) el.textContent = message;
 }
 
 function showMainApp() {
-    const startup = document.getElementById('startupState');
-    const main = document.getElementById('mainApp');
+    var startup = document.getElementById('startupState');
+    var main = document.getElementById('mainApp');
     if (startup) startup.classList.add('hidden');
     if (main) main.classList.remove('hidden');
 }
@@ -1928,73 +2033,96 @@ function showMainApp() {
 function initMainApp() {
     showMainApp();
 
-    const searchBtn = document.getElementById('searchBtn');
-    const plotInput = document.getElementById('plotInput');
-    const retryBtn = document.getElementById('retryBtn');
+    var searchBtn = document.getElementById('searchBtn');
+    var plotInput = document.getElementById('plotInput');
+    var retryBtn = document.getElementById('retryBtn');
 
     if (plotInput) {
         plotInput.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9а-яёa-z]/gi, '').toLowerCase();
         });
-        plotInput.onkeydown = e => { if (e.key === 'Enter' && searchBtn) searchBtn.click(); };
+        plotInput.onkeydown = function(e) {
+            if (e.key === 'Enter' && searchBtn) searchBtn.click();
+        };
     }
 
     if (searchBtn) {
-        searchBtn.onclick = () => {
+        searchBtn.onclick = function() {
             if (!plotInput) return;
-            const v = plotInput.value.trim();
+            var v = plotInput.value.trim();
             if (v && isPlotNumber(v)) {
-                const errorState = document.getElementById('errorState');
+                var errorState = document.getElementById('errorState');
                 if (errorState) errorState.classList.add('hidden');
                 loadPlotData(v);
             } else {
                 plotInput.focus();
-                showToast("Введите корректный номер участка (например: 5, 4а)");
+                showToast('Введите корректный номер участка (например: 5, 4а)');
             }
         };
     }
 
-    const settingsBtn = document.getElementById('settingsBtn');
+    var settingsBtn = document.getElementById('settingsBtn');
     if (settingsBtn) settingsBtn.onclick = showSettingsModal;
 
     if (retryBtn) {
-        retryBtn.onclick = () => {
+        retryBtn.onclick = function() {
             if (!plotInput) return;
-            const v = plotInput.value.trim();
+            var v = plotInput.value.trim();
             if (v && isPlotNumber(v)) loadPlotData(v);
-            else syncAllData().catch(console.warn);
+            else syncAllData().catch(function(e) { console.warn(e); });
         };
     }
 
     updateDataStatus();
-    syncAllData().catch(err => {
+    syncAllData().catch(function(err) {
         console.warn('Initial sync failed, but UI is ready:', err);
     });
+
+    // Отмечаем, что инициализация завершена
+    window._appInitialized = true;
+    clearTimeout(window._initTimeout);
 }
 
-// ================================================================
-// СТАРТ
-// ================================================================
-try {
-    if (isConsentAccepted()) {
+/* ================================================================
+   СТАРТ
+   ================================================================ */
+(function() {
+    try {
+        if (isConsentAccepted()) {
+            showMainApp();
+            setStartupMessage('Приложение готово. Данные загружаются в фоне…');
+            // Небольшая задержка для стабилизации DOM
+            setTimeout(function() {
+                try {
+                    initMainApp();
+                } catch(e) {
+                    console.error('Init error:', e);
+                    showToast('Ошибка инициализации. Перезагрузите страницу.');
+                    var errorState = document.getElementById('errorState');
+                    var errorMsg = document.getElementById('errorMsg');
+                    if (errorState && errorMsg) {
+                        errorState.classList.remove('hidden');
+                        errorMsg.textContent = '⚠️ ' + e.message;
+                    }
+                }
+            }, 300);
+        } else {
+            var startup = document.getElementById('startupState');
+            if (startup) startup.classList.add('hidden');
+            showConsentScreen();
+        }
+    } catch(err) {
+        console.error('Application startup failed:', err);
         showMainApp();
-        setStartupMessage('Приложение готово. Данные загружаются в фоне…');
-        initMainApp();
-    } else {
-        const startup = document.getElementById('startupState');
-        if (startup) startup.classList.add('hidden');
-        showConsentScreen();
+        var errorState = document.getElementById('errorState');
+        var errorMsg = document.getElementById('errorMsg');
+        if (errorState && errorMsg) {
+            errorState.classList.remove('hidden');
+            errorMsg.textContent = '⚠️ Ошибка запуска: ' + (err.message || 'Неизвестная ошибка');
+            errorMsg.innerHTML += '<br><br><button class="btn btn-primary" onclick="location.reload()">🔄 Перезагрузить</button>';
+        }
     }
-} catch (err) {
-    console.error('Application startup failed:', err);
-    showMainApp();
-    const errorState = document.getElementById('errorState');
-    const errorMsg = document.getElementById('errorMsg');
-    if (errorState && errorMsg) {
-        errorState.classList.remove('hidden');
-        errorMsg.textContent = `Ошибка запуска: ${err.message}`;
-    }
-}
+})();
 </script>
 </body>
 </html>
