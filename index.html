@@ -1315,10 +1315,10 @@ function parseDebitOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР EE — ПО СТРУКТУРЕ ФАЙЛА (ИЗ ee.xlsx)
+// ПАРСЕР EE — ПОИСК ДАТЫ ПО ФОРМАТУ
 // ================================================================
 function parseElectricityOds(xml) {
-    debug('📊 Парсинг EE (по структуре файла)…', 'info');
+    debug('📊 Парсинг EE (поиск даты по формату)…', 'info');
     var result = new Map();
     
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
@@ -1368,37 +1368,53 @@ function parseElectricityOds(xml) {
         var plotNum = col0.toLowerCase();
         
         // ============================================================
-        // ПРАВИЛЬНАЯ СТРУКТУРА (из ee.xlsx):
-        // 0: Номер участка
-        // 1: Владелец
-        // 2: Адрес
-        // 3: Счетчик
-        // 4: Дата последних показаний  ← ДАТА!
-        // 5: Показания на начало
-        // 6: Показания на конец
-        // 7: Общий расход
-        // 8: Долг
-        // 9: Переплата
-        // 10: Начислено
-        // 11: Оплачено
-        // 12: Долг
-        // 13: Переплата
+        // ПОИСК ДАННЫХ
         // ============================================================
         
         var owner = (cells[1] || '').trim();
-        var dateStr = (cells[4] || '').trim();  // ← ДАТА в столбце 4!
-        var currentReading = parseNumber(cells[6] || '0');  // ← Показания на конец в столбце 6!
         
-        // Если показания не найдены — ищем в столбце 5 (на начало)
-        if (currentReading === 0) {
-            currentReading = parseNumber(cells[5] || '0');
+        // ============================================================
+        // ПОИСК ДАТЫ — ИЩЕМ ЯЧЕЙКУ С ФОРМАТОМ ДД.ММ.ГГ ИЛИ ДД.ММ.ГГГГ
+        // ============================================================
+        var dateStr = 'не указана';
+        var dateRegex = /^\d{1,2}[\.\/\-]\d{1,2}(?:[\.\/\-]\d{2,4})?$/;
+        
+        // Проверяем все ячейки, кроме первой (номер участка)
+        for (var j = 1; j < cells.length; j++) {
+            var val = cells[j] || '';
+            if (dateRegex.test(val.trim())) {
+                dateStr = val.trim();
+                debug('   📅 Найдена дата в столбце ' + j + ': "' + dateStr + '"', 'info');
+                break;
+            }
         }
         
-        // Если всё ещё 0 — ищем по всей строке
+        // ============================================================
+        // ПОИСК ПОКАЗАНИЙ — ИЩЕМ САМОЕ БОЛЬШОЕ ЧИСЛО > 100
+        // ============================================================
+        var currentReading = 0;
+        var maxNum = 0;
+        
+        for (var j = 1; j < cells.length; j++) {
+            var val = cells[j] || '';
+            // Пропускаем ячейку с датой
+            if (dateRegex.test(val.trim())) continue;
+            
+            var num = parseNumber(val);
+            // Показания обычно > 100 и < 1 000 000
+            if (num > 100 && num < 1000000 && num > maxNum) {
+                maxNum = num;
+            }
+        }
+        currentReading = maxNum;
+        
+        // Если всё ещё нет — ищем любое число > 10
         if (currentReading === 0) {
-            for (var j = 0; j < cells.length; j++) {
-                var num = parseNumber(cells[j]);
-                if (num > 10 && num < 100000) {
+            for (var j = 1; j < cells.length; j++) {
+                var val = cells[j] || '';
+                if (dateRegex.test(val.trim())) continue;
+                var num = parseNumber(val);
+                if (num > 10 && num < 1000000) {
                     currentReading = num;
                     break;
                 }
@@ -1410,10 +1426,10 @@ function parseElectricityOds(xml) {
         result.set(plotNum, {
             plotNumber: plotNum,
             owner: owner,
-            readingDateStr: dateStr || 'не указана',
-            previousReading: parseNumber(cells[5] || '0'),
+            readingDateStr: dateStr,
+            previousReading: 0,
             currentReading: currentReading,
-            consumption: parseNumber(cells[7] || '0'),
+            consumption: 0,
             tariff: TARIFF
         });
     }
