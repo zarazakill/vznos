@@ -1,5 +1,46 @@
 <!DOCTYPE html>
 <html lang="ru">
+    <!-- Защита от циклической перезагрузки -->
+<script>
+// Предотвращаем бесконечную перезагрузку
+if (window.location.search.includes('reload=')) {
+    const reloadCount = parseInt(sessionStorage.getItem('reloadCount') || '0', 10);
+    if (reloadCount > 3) {
+        // Очищаем кеш и перезагружаем без параметра
+        sessionStorage.removeItem('reloadCount');
+        if ('caches' in window) {
+            caches.keys().then(keys => {
+                keys.forEach(key => caches.delete(key));
+            });
+        }
+        window.location.href = window.location.pathname;
+        throw new Error('Stopping infinite reload');
+    }
+    sessionStorage.setItem('reloadCount', String(reloadCount + 1));
+}
+
+// Сброс при успешной загрузке
+window.addEventListener('load', () => {
+    sessionStorage.removeItem('reloadCount');
+});
+
+// Глобальный перехват ошибок
+window.addEventListener('error', (e) => {
+    console.error('Global error caught:', e.error);
+    // Предотвращаем зависание при ошибках в async/await
+    if (e.error && e.error.message && e.error.message.includes('load')) {
+        // Попытка восстановления через 2 секунды
+        setTimeout(() => {
+            const errorState = document.getElementById('errorState');
+            if (errorState) {
+                errorState.classList.remove('hidden');
+                const errorMsg = document.getElementById('errorMsg');
+                if (errorMsg) errorMsg.textContent = '⚠️ Ошибка загрузки данных. Проверьте интернет-соединение.';
+            }
+        }, 2000);
+    }
+}, true);
+</script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
