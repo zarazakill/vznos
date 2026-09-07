@@ -1173,25 +1173,124 @@ function parseDebitOds(xml) {
             };
         } else if (current && col0) {
             var amount = parseNumber(cells[colDebt] || cells[7] || '0');
-            if (amount > 0.01) {
-                var cat = col0.toLowerCase();
-                if (cat.includes('членские взносы')) {
-                    current.membershipDebt += amount;
-                } else if (cat.includes('целевые')) {
-                    current.targetDebt += amount;
-                } else if (cat.includes('задолженность прошлых лет') && !cat.includes('отработка')) {
-                    current.arrearsDebt += amount;
-                } else if (cat.includes('отработка')) {
-                    current.workDebt += amount;
-                } else if (cat.includes('электроэнергия')) {
-                    current.electricityDebt += amount;
+function parseDebitOds(xml) {
+    debug('📊 Парсинг DEBIT (RegExp v2)…', 'info');
+    var result = new Map();
+    
+    var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
+    var cellRegex = /<table:table-cell[^>]*>([\s\S]*?)<\/table:table-cell>/gi;
+    var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
+    
+    var rows = xml.match(rowRegex) || [];
+    var dataStarted = false;
+    var current = null;
+    
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var cells = [];
+        var cellMatches = row.match(cellRegex) || [];
+        
+        for (var j = 0; j < cellMatches.length; j++) {
+            var cellText = '';
+            var pMatches = cellMatches[j].match(pRegex) || [];
+            for (var k = 0; k < pMatches.length; k++) {
+                var text = pMatches[k].replace(/<[^>]+>/g, '').trim();
+                if (text) cellText += text + ' ';
+            }
+            cells.push(cellText.trim());
+        }
+        
+        if (cells.length < 3) continue;
+        
+        var col0 = (cells[0] || '').trim();
+        var col0l = col0.toLowerCase();
+        
+        // Пропускаем пустые строки
+        if (!col0) continue;
+        
+        // Начинаем сбор данных — ищем номер участка
+        if (!dataStarted) {
+            // Проверяем, является ли первая ячейка номером участка
+            if (isPlotNumber(col0)) {
+                dataStarted = true;
+                // Пропускаем строки с "Итого" или "ИТОГО"
+                if (col0l === 'итого' || col0l.startsWith('итог')) {
+                    dataStarted = false;
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        }
+        
+        // Останавливаемся на "итого"
+        if (col0l === 'итого' || col0l.startsWith('итог')) {
+            break;
+        }
+        
+        // Проверяем, что это строка с участком
+        if (!isPlotNumber(col0)) continue;
+        
+        // Ищем нужные столбцы
+        var plotKey = col0.toLowerCase();
+        var owner = '';
+        var debtEnd = 0;
+        var overpayEnd = 0;
+        
+        // Перебираем все ячейки для поиска данных
+        for (var j = 0; j < cells.length; j++) {
+            var val = cells[j] || '';
+            var valLower = val.toLowerCase();
+            
+            // Ищем владельца (обычно во 2-м или 3-м столбце)
+            if (j === 1 || j === 2) {
+                if (val && !isPlotNumber(val) && !/^\d+$/.test(val)) {
+                    owner = val;
+                }
+            }
+            
+            // Ищем сумму долга (обычно в 7-м или 8-м столбце)
+            if (j === 7 || j === 8) {
+                var num = parseNumber(val);
+                if (num > 0) debtEnd += num;
+            }
+            
+            // Ищем переплату (обычно в 8-м или 9-м столбце)
+            if (j === 8 || j === 9) {
+                var num = parseNumber(val);
+                if (num > 0 && num < 1000000) overpayEnd = num;
+            }
+        }
+        
+        // Если не нашли долг в стандартных столбцах — ищем по всему ряду
+        if (debtEnd === 0) {
+            for (var j = 0; j < cells.length; j++) {
+                var val = cells[j] || '';
+                var num = parseNumber(val);
+                if (num > 0 && num < 1000000) {
+                    debtEnd = num;
+                    break;
                 }
             }
         }
-    }
-    
-    if (current && current.totalDebt > 0.01) {
-        result.set(current.plotNumber, current);
+        
+        // Создаём запись
+        current = {
+            plotNumber: plotKey,
+            owner: owner,
+            totalDebt: debtEnd,
+            overpayEnd: overpayEnd,
+            hasDebt: debtEnd > 0.01,
+            hasOverpayment: overpayEnd > 0.01,
+            membershipDebt: debtEnd > 0.01 ? debtEnd : 0,
+            targetDebt: 0,
+            arrearsDebt: 0,
+            workDebt: 0,
+            electricityDebt: 0
+        };
+        
+        result.set(plotKey, current);
+        debug('   📝 Найден участок ' + plotKey + ': долг ' + debtEnd, 'info');
     }
     
     debug('   ✅ DEBIT: ' + result.size + ' записей', 'ok');
