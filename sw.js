@@ -1,11 +1,8 @@
-// sw.js - ИСПРАВЛЕННАЯ ВЕРСИЯ
-const CACHE_NAME = 'berezka2-v2.3';
-const STATIC_CACHE = 'berezka2-static-v2.3';
-const DATA_CACHE = 'berezka2-data-v2.3';
-
-// НЕ КЕШИРУЕМ index.html для избежания проблем с обновлением
+// sw.js - Service Worker для кеширования и офлайн-доступа
+const CACHE_NAME = 'berezka2-v2.2';
 const urlsToCache = [
-    './manifest.json',
+    './',
+    './index.html',
     './favicon.ico',
     './favicon-16x16.png',
     './favicon-32x32.png',
@@ -13,174 +10,65 @@ const urlsToCache = [
     './favicon-192x192.png',
     './favicon-512x512.png',
     './apple-touch-icon.png',
-    './js/jszip.min.js',
-    './js/qrcode.min.js'
+    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    'https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js'
 ];
 
-// ============================================================
-// УСТАНОВКА
-// ============================================================
+// Установка Service Worker
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(STATIC_CACHE)
-        .then(cache => {
-            console.log('SW: кеширование статики');
-            return cache.addAll(urlsToCache);
-        })
+        caches.open(CACHE_NAME)
+        .then(cache => cache.addAll(urlsToCache))
         .then(() => self.skipWaiting())
-        .catch(err => console.warn('SW: ошибка установки:', err))
+        .catch(err => console.warn('SW install error:', err))
     );
 });
 
-// ============================================================
-// АКТИВАЦИЯ — ОЧИЩАЕМ СТАРЫЙ КЕШ
-// ============================================================
+// Активация и очистка старых кешей
 self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys()
-        .then(cacheNames => {
+        caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(name => {
-                    if (name !== STATIC_CACHE && name !== DATA_CACHE) {
-                        console.log('SW: удаление старого кеша:', name);
+                    if (name !== CACHE_NAME) {
+                        console.log('SW: deleting old cache:', name);
                         return caches.delete(name);
                     }
-                    return Promise.resolve();
                 })
             );
-        })
-        .then(() => {
-            console.log('SW: clients.claim()');
-            return self.clients.claim();
-        })
+        }).then(() => self.clients.claim())
     );
 });
 
-// ============================================================
-// FETCH С ТАЙМАУТОМ
-// ============================================================
-function fetchWithTimeout(request, timeoutMs = 15000) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    return fetch(request, { signal: controller.signal })
-        .finally(() => clearTimeout(timer));
-}
-
-// ============================================================
-// FETCH
-// ============================================================
+// Стратегия: сначала сеть, при ошибке — кеш
 self.addEventListener('fetch', event => {
     const request = event.request;
-    const url = new URL(request.url);
 
-    // Только GET
-    if (request.method !== 'GET') return;
-
-    // Не вмешиваемся в chrome-extension и внешние API
-    if (url.protocol === 'chrome-extension:') return;
-    if (url.hostname.includes('yandex.net') || url.hostname.includes('duckdns.org')) {
+    // Пропускаем запросы к расширениям Chrome и POST-запросы
+    if (request.url.startsWith('chrome-extension://') ||
+        request.method !== 'GET') {
         return;
     }
 
-    // ============================================================
-    // СТАТИКА — КЕШ ПЕРВЫЙ
-    // ============================================================
-    const isStatic = urlsToCache.some(u => {
-        const path = new URL(u, self.location.href).pathname;
-        return url.pathname === path;
-    }) || url.pathname.includes('/favicon') || url.pathname.endsWith('.png') || url.pathname.endsWith('.jpg');
-
-    if (isStatic) {
-        event.respondWith(
-            caches.match(request)
-            .then(cached => cached || fetchWithTimeout(request))
-            .catch(() => new Response('Resource unavailable', { status: 503 }))
-        );
+    // Пропускаем ODS файлы (загружаются напрямую, не кешируются)
+    if (request.url.toLowerCase().includes('.ods')) {
         return;
     }
 
-    // ============================================================
-    // ODS — СЕТЬ ПЕРВАЯ, КЕШ КАК ЗАПАС
-    // ============================================================
-    if (url.pathname.toLowerCase().endsWith('.ods')) {
-        event.respondWith(
-            fetchWithTimeout(request, 15000)
-            .then(response => {
-                if (response && response.ok) {
-                    const cloned = response.clone();
-                    event.waitUntil(
-                        caches.open(DATA_CACHE).then(cache => cache.put(request, cloned))
-                    );
-                }
-                return response;
-            })
-            .catch(() => {
-                return caches.match(request).then(cached => {
-                    if (cached) return cached;
-                    // Возвращаем корректную ошибку, а не undefined
-                    return new Response(
-                        JSON.stringify({ error: 'offline' }),
-                        {
-                            status: 503,
-                            headers: { 'Content-Type': 'application/json; charset=utf-8' }
-                        }
-                    );
-                });
-            })
-        );
-        return;
-    }
-
-    // ============================================================
-    // index.html — ВСЕГДА ИЗ СЕТИ (НЕ КЕШИРУЕМ)
-    // ============================================================
-    if (url.pathname === '/' || url.pathname.endsWith('/index.html') || url.pathname.endsWith('/')) {
-        event.respondWith(
-            fetchWithTimeout(request, 10000)
-            .then(response => {
-                // Добавляем заголовки для предотвращения кеширования
-                const newHeaders = new Headers(response.headers);
-                newHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-                newHeaders.set('Pragma', 'no-cache');
-                newHeaders.set('Expires', '0');
-                return new Response(response.body, {
-                    status: response.status,
-                    statusText: response.statusText,
-                    headers: newHeaders
-                });
-            })
-            .catch(() => {
-                return caches.match(request).then(cached => {
-                    if (cached) return cached;
-                    return new Response('Network unavailable', { status: 503 });
-                });
-            })
-        );
-        return;
-    }
-
-    // ============================================================
-    // ВСЁ ОСТАЛЬНОЕ — СЕТЬ С ЗАПАСНЫМ КЕШЕМ
-    // ============================================================
     event.respondWith(
-        fetchWithTimeout(request, 10000)
+        fetch(request)
         .then(response => {
-            if (response && response.ok && sameOrigin(url)) {
-                event.waitUntil(
-                    caches.open(DATA_CACHE).then(cache => cache.put(request, response.clone()))
-                );
+            // Кешируем успешные GET-ответы
+            if (response && response.ok) {
+                const responseClone = response.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(request, responseClone);
+                }).catch(() => {});
             }
             return response;
         })
         .catch(() => {
-            return caches.match(request).then(cached => {
-                if (cached) return cached;
-                return new Response('Network unavailable', { status: 503 });
-            });
+            return caches.match(request);
         })
     );
 });
-
-function sameOrigin(url) {
-    return url.origin === self.location.origin;
-}
