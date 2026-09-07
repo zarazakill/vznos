@@ -1,8 +1,9 @@
 // sw.js - Service Worker для кеширования и офлайн-доступа
-const CACHE_NAME = 'berezka2-v2.2';
+const CACHE_NAME = 'berezka2-v2.3';
 const urlsToCache = [
     './',
     './index.html',
+    './manifest.json',
     './favicon.ico',
     './favicon-16x16.png',
     './favicon-32x32.png',
@@ -52,6 +53,11 @@ self.addEventListener('fetch', event => {
 
     // Пропускаем ODS файлы (загружаются напрямую, не кешируются)
     if (request.url.toLowerCase().includes('.ods')) {
+        return;
+    }
+
+    // Пропускаем API запросы к Яндекс.Диску и DuckDNS
+    if (request.url.includes('yandex.net') || request.url.includes('duckdns.org')) {
         return;
     }
 
