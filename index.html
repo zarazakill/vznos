@@ -1130,7 +1130,7 @@ function parseBaseOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР DEBIT (ИСПРАВЛЕННЫЙ — ПРАВИЛЬНО ЧИТАЕТ СУММЫ И КАТЕГОРИИ)
+// ПАРСЕР DEBIT (УЛУЧШЕННЫЙ — ПРАВИЛЬНО ПАРСИТ КАТЕГОРИИ)
 // ================================================================
 function parseDebitOds(xml) {
     var result = new Map();
@@ -1145,11 +1145,12 @@ function parseDebitOds(xml) {
     var current = null;
     var colPlot = -1, colOwner = -1, colDebtStart = -1, colOverpayStart = -1, colDebtEnd = -1, colOverpayEnd = -1;
     
+    // Собираем все строки в массив
+    var allRows = [];
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
         var cells = [];
         var cellMatches = row.match(cellRegex) || [];
-        
         for (var j = 0; j < cellMatches.length; j++) {
             var cellText = '';
             var pMatches = cellMatches[j].match(pRegex) || [];
@@ -1159,104 +1160,97 @@ function parseDebitOds(xml) {
             }
             cells.push(cellText.trim());
         }
-        
-        if (cells.length < 2) continue;
-        
+        if (cells.length >= 2) {
+            allRows.push(cells);
+        }
+    }
+    
+    // Ищем заголовок
+    for (var i = 0; i < allRows.length; i++) {
+        var cells = allRows[i];
+        var joined = cells.join(' ').toLowerCase();
+        if (joined.includes('номер') || joined.includes('владельц') || joined.includes('долг')) {
+            for (var idx = 0; idx < cells.length; idx++) {
+                var val = cells[idx].toLowerCase();
+                if (val === 'номер' || val === '№' || val.includes('участок') || val.includes('уч')) {
+                    colPlot = idx;
+                }
+                if (val.includes('владельц') || val.includes('фио') || val.includes('фамил')) {
+                    colOwner = idx;
+                }
+                if (val === 'долг' || val.includes('долг на начало')) {
+                    colDebtStart = idx;
+                }
+                if (val === 'переплата' || val.includes('переплат на начало')) {
+                    colOverpayStart = idx;
+                }
+                if (val === 'долг' || val.includes('долг на конец')) {
+                    colDebtEnd = idx;
+                }
+                if (val === 'переплата' || val.includes('переплат на конец')) {
+                    colOverpayEnd = idx;
+                }
+            }
+            if (colDebtEnd === -1) colDebtEnd = colDebtStart;
+            if (colOverpayEnd === -1) colOverpayEnd = colOverpayStart;
+            headerFound = true;
+            break;
+        }
+    }
+    
+    if (!headerFound) {
+        colPlot = 0;
+        colOwner = 1;
+        colDebtStart = 3;
+        colOverpayStart = 4;
+        colDebtEnd = 7;
+        colOverpayEnd = 8;
+    }
+    
+    // Парсим строки
+    for (var i = 0; i < allRows.length; i++) {
+        var cells = allRows[i];
         var col0 = (cells[0] || '').trim();
         var col0l = col0.toLowerCase();
         
-        // Ищем заголовок таблицы
-        if (!headerFound) {
-            var joined = cells.join(' ').toLowerCase();
-            if (joined.includes('номер') || joined.includes('владельц') || joined.includes('долг')) {
-                for (var idx = 0; idx < cells.length; idx++) {
-                    var val = cells[idx].toLowerCase();
-                    if (val === 'номер' || val === '№' || val.includes('участок') || val.includes('уч')) {
-                        colPlot = idx;
-                    }
-                    if (val.includes('владельц') || val.includes('фио') || val.includes('фамил')) {
-                        colOwner = idx;
-                    }
-                    if (val === 'долг' || val.includes('долг на начало')) {
-                        colDebtStart = idx;
-                    }
-                    if (val === 'переплата' || val.includes('переплат на начало')) {
-                        colOverpayStart = idx;
-                    }
-                    if (val === 'долг' || val.includes('долг на конец')) {
-                        colDebtEnd = idx;
-                    }
-                    if (val === 'переплата' || val.includes('переплат на конец')) {
-                        colOverpayEnd = idx;
-                    }
-                }
-                if (colDebtEnd === -1) colDebtEnd = colDebtStart;
-                if (colOverpayEnd === -1) colOverpayEnd = colOverpayStart;
-                headerFound = true;
-                continue;
-            }
-            continue;
-        }
-        
-        // Пропускаем служебные строки
         if (!col0 || col0l === 'документ' || col0l === 'взнос' || col0l === 'итого') {
             continue;
-        }
-        
-        // Начинаем сбор данных
-        if (!dataStarted) {
-            if (isPlotNumber(col0)) {
-                dataStarted = true;
-            } else {
-                continue;
-            }
         }
         
         var isMainRow = isPlotNumber(col0);
         
         if (isMainRow) {
-            // Сохраняем предыдущий участок
-            if (current && current.totalDebt > 0) {
-                // Если у участка нет категорий, но есть долг — записываем как членские взносы
-                if (current.membershipDebt === 0 && current.targetDebt === 0 && 
-                    current.arrearsDebt === 0 && current.workDebt === 0 && 
-                    current.electricityDebt === 0 && current.totalDebt > 0) {
-                    current.membershipDebt = current.totalDebt;
+            if (current) {
+                if (current.totalDebt > 0) {
+                    result.set(current.plotNumber, current);
                 }
-                result.set(current.plotNumber, current);
             }
             
             var plotKey = col0.toLowerCase();
             var owner = (colOwner >= 0 && colOwner < cells.length) ? cells[colOwner] : '';
             
-            var debtStart = 0;
-            var overpayStart = 0;
             var debtEnd = 0;
             var overpayEnd = 0;
             
-            if (colDebtStart >= 0 && colDebtStart < cells.length) {
-                debtStart = parseNumber(cells[colDebtStart]);
-            }
-            if (colOverpayStart >= 0 && colOverpayStart < cells.length) {
-                overpayStart = parseNumber(cells[colOverpayStart]);
-            }
             if (colDebtEnd >= 0 && colDebtEnd < cells.length) {
                 debtEnd = parseNumber(cells[colDebtEnd]);
-            } else {
-                debtEnd = debtStart;
+            }
+            if (debtEnd === 0 && colDebtStart >= 0 && colDebtStart < cells.length) {
+                debtEnd = parseNumber(cells[colDebtStart]);
             }
             if (colOverpayEnd >= 0 && colOverpayEnd < cells.length) {
                 overpayEnd = parseNumber(cells[colOverpayEnd]);
-            } else {
-                overpayEnd = overpayStart;
+            }
+            if (overpayEnd === 0 && colOverpayStart >= 0 && colOverpayStart < cells.length) {
+                overpayEnd = parseNumber(cells[colOverpayStart]);
             }
             
-            if (debtStart === 0 && overpayStart === 0 && debtEnd === 0) {
+            if (debtEnd === 0 && overpayEnd === 0) {
                 for (var j = 3; j < cells.length; j++) {
                     var num = parseNumber(cells[j]);
                     if (num > 0.01 && num < 1000000) {
-                        if (debtStart === 0) debtStart = num;
-                        else if (debtEnd === 0) debtEnd = num;
+                        if (debtEnd === 0) debtEnd = num;
+                        else if (overpayEnd === 0 && num > 0) overpayEnd = num;
                     }
                 }
             }
@@ -1264,27 +1258,35 @@ function parseDebitOds(xml) {
             current = {
                 plotNumber: plotKey,
                 owner: owner,
-                totalDebt: debtEnd > 0 ? debtEnd : debtStart,
-                overpayEnd: overpayEnd > 0 ? overpayEnd : overpayStart,
-                hasDebt: (debtEnd > 0.01 || debtStart > 0.01),
-                hasOverpayment: (overpayEnd > 0.01 || overpayStart > 0.01),
+                totalDebt: debtEnd,
+                overpayEnd: overpayEnd,
+                hasDebt: debtEnd > 0.01,
+                hasOverpayment: overpayEnd > 0.01,
                 membershipDebt: 0,
                 targetDebt: 0,
                 arrearsDebt: 0,
                 workDebt: 0,
                 electricityDebt: 0,
-                _rawDebt: debtEnd > 0 ? debtEnd : debtStart,
-                _rawOverpay: overpayEnd > 0 ? overpayEnd : overpayStart
+                _rawDebt: debtEnd,
+                _rawOverpay: overpayEnd
             };
             
-        } else if (current && col0) {
-            // Это строка-подкатегория
+        } else if (current && col0 && !col0l.includes('взнос') && !col0l.includes('документ')) {
             var amount = 0;
-            for (var j = 3; j < cells.length; j++) {
+            for (var j = Math.max(3, colDebtStart); j < Math.min(cells.length, 9); j++) {
                 var num = parseNumber(cells[j]);
                 if (num > 0.01 && num < 1000000) {
                     amount = num;
                     break;
+                }
+            }
+            if (amount === 0) {
+                for (var j = 3; j < cells.length; j++) {
+                    var num = parseNumber(cells[j]);
+                    if (num > 0.01 && num < 1000000) {
+                        amount = num;
+                        break;
+                    }
                 }
             }
             
@@ -1308,16 +1310,8 @@ function parseDebitOds(xml) {
         }
     }
     
-    // Сохраняем последний участок
-    if (current) {
-        if (current.membershipDebt === 0 && current.targetDebt === 0 && 
-            current.arrearsDebt === 0 && current.workDebt === 0 && 
-            current.electricityDebt === 0 && current.totalDebt > 0) {
-            current.membershipDebt = current.totalDebt;
-        }
-        if (current.totalDebt > 0) {
-            result.set(current.plotNumber, current);
-        }
+    if (current && current.totalDebt > 0) {
+        result.set(current.plotNumber, current);
     }
     
     return result;
@@ -1728,7 +1722,7 @@ function renderBankDetails() {
 }
 
 // ================================================================
-// КАРТОЧКА ДОЛГА (С ДЕТАЛИЗАЦИЕЙ КАК НА СКРИНШОТЕ)
+// КАРТОЧКА ДОЛГА (С ПОЛНОЙ ДЕТАЛИЗАЦИЕЙ)
 // ================================================================
 function renderDebtCard(debt) {
     var c = document.getElementById('debtCard');
@@ -1740,54 +1734,42 @@ function renderDebtCard(debt) {
         '<div class="plot-sub">Участок №' + escapeHtml(debt.plotNumber) + '</div>';
     
     if (debt.hasDebt) {
-        // Общая сумма
         html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div>';
         
-        // ============================================================
-        // ДЕТАЛИЗАЦИЯ ПО КАТЕГОРИЯМ (как на скриншоте)
-        // ============================================================
+        // Детализация по категориям
         var hasDetails = false;
         
-        // Членские взносы
         if (debt.membershipDebt > 0.01) {
             html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
-        // Целевые взносы
         if (debt.targetDebt > 0.01) {
             html += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
-        // Задолженность прошлых лет
         if (debt.arrearsDebt > 0.01) {
             html += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
-        // Отработка
         if (debt.workDebt > 0.01) {
             html += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
-        // Электроэнергия
         if (debt.electricityDebt > 0.01) {
             html += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
         
-        // Если нет детализации, но есть долг — показываем общую сумму
         if (!hasDetails) {
             html += '<div class="debt-line"><span class="debt-line-label">Общая задолженность</span><span class="debt-line-amount">' + formatMoney(debt.totalDebt) + ' ₽</span></div>';
         }
         
-        // ============================================================
-        // ИТОГО К ОПЛАТЕ (как на скриншоте)
-        // ============================================================
+        // Итого к оплате
         html += '<div class="debt-line" style="border-top:2px solid var(--gray-300);margin-top:4px;padding-top:8px;font-weight:700;">' +
             '<span class="debt-line-label">Итого к оплате</span>' +
             '<span class="debt-line-amount" style="font-size:16px;">' + formatMoney(debt.totalDebt) + ' ₽</span>' +
             '</div>';
         
-        // Пропись суммы
         html += '<div class="debt-words">Прописью: ' + numberToWords(debt.totalDebt) + '</div>' +
             '<button id="debtQrBtn" class="btn btn-primary mt-md">📱 QR для оплаты</button>' +
             '<div id="debtQrContainer"></div>' +
