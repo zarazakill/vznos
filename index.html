@@ -1721,24 +1721,62 @@ function renderBankDetails() {
 }
 
 // ================================================================
-// КАРТОЧКА ДОЛГА
+// КАРТОЧКА ДОЛГА (С РАЗБИВКОЙ ПО КАТЕГОРИЯМ)
 // ================================================================
 function renderDebtCard(debt) {
     var c = document.getElementById('debtCard');
     if (!c) return;
     c.classList.remove('hidden');
+    
     var html = '<div class="card-body">' +
         '<div class="card-title">💰 Задолженность</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(debt.plotNumber) + '</div>';
+    
     if (debt.hasDebt) {
-        html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div><div>';
-        if (debt.membershipDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
-        if (debt.targetDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
-        if (debt.arrearsDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
-        if (debt.workDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
-        if (debt.electricityDebt > 0.01) html += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
-        html += '</div>' +
-            '<div class="debt-words">Прописью: ' + numberToWords(debt.totalDebt) + '</div>' +
+        // Общая сумма долга
+        html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div>';
+        
+        // ============================================================
+        // РАЗБИВКА ПО КАТЕГОРИЯМ
+        // ============================================================
+        var hasDetails = false;
+        var detailHtml = '<div style="margin-top:8px;">';
+        
+        // Членские взносы
+        if (debt.membershipDebt > 0.01) {
+            detailHtml += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
+            hasDetails = true;
+        }
+        // Целевые взносы
+        if (debt.targetDebt > 0.01) {
+            detailHtml += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
+            hasDetails = true;
+        }
+        // Задолженность прошлых лет
+        if (debt.arrearsDebt > 0.01) {
+            detailHtml += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
+            hasDetails = true;
+        }
+        // Отработка
+        if (debt.workDebt > 0.01) {
+            detailHtml += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
+            hasDetails = true;
+        }
+        // Электроэнергия
+        if (debt.electricityDebt > 0.01) {
+            detailHtml += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
+            hasDetails = true;
+        }
+        
+        // Если нет детализации, но есть общий долг — показываем общую сумму
+        if (!hasDetails) {
+            detailHtml += '<div class="debt-line"><span class="debt-line-label">Общая задолженность</span><span class="debt-line-amount">' + formatMoney(debt.totalDebt) + ' ₽</span></div>';
+        }
+        detailHtml += '</div>';
+        html += detailHtml;
+        
+        // Пропись суммы
+        html += '<div class="debt-words">Прописью: ' + numberToWords(debt.totalDebt) + '</div>' +
             '<button id="debtQrBtn" class="btn btn-primary mt-md">📱 QR для оплаты</button>' +
             '<div id="debtQrContainer"></div>' +
             '<div id="debtQrButtons" class="qr-buttons mt-sm">' +
@@ -1751,6 +1789,7 @@ function renderDebtCard(debt) {
     }
     html += '</div>';
     c.innerHTML = html;
+    
     var qrBtn = document.getElementById('debtQrBtn');
     if (qrBtn && debt.hasDebt) {
         var qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
