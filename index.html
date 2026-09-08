@@ -1130,7 +1130,7 @@ function parseBaseOds(xml) {
 }
 
 // ================================================================
-// ПАРСЕР DEBIT (ИСПРАВЛЕННЫЙ — С АВТОМАТИЧЕСКИМ ЗАПОЛНЕНИЕМ КАТЕГОРИЙ)
+// ПАРСЕР DEBIT (ИСПРАВЛЕННЫЙ — ПРАВИЛЬНО ЧИТАЕТ СУММЫ И КАТЕГОРИИ)
 // ================================================================
 function parseDebitOds(xml) {
     var result = new Map();
@@ -1728,7 +1728,7 @@ function renderBankDetails() {
 }
 
 // ================================================================
-// КАРТОЧКА ДОЛГА (С РАЗБИВКОЙ ПО КАТЕГОРИЯМ)
+// КАРТОЧКА ДОЛГА (С ДЕТАЛИЗАЦИЕЙ КАК НА СКРИНШОТЕ)
 // ================================================================
 function renderDebtCard(debt) {
     var c = document.getElementById('debtCard');
@@ -1740,38 +1740,54 @@ function renderDebtCard(debt) {
         '<div class="plot-sub">Участок №' + escapeHtml(debt.plotNumber) + '</div>';
     
     if (debt.hasDebt) {
+        // Общая сумма
         html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div>';
         
+        // ============================================================
+        // ДЕТАЛИЗАЦИЯ ПО КАТЕГОРИЯМ (как на скриншоте)
+        // ============================================================
         var hasDetails = false;
-        var detailHtml = '<div style="margin-top:8px;">';
         
+        // Членские взносы
         if (debt.membershipDebt > 0.01) {
-            detailHtml += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
+            html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
+        // Целевые взносы
         if (debt.targetDebt > 0.01) {
-            detailHtml += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
+            html += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
+        // Задолженность прошлых лет
         if (debt.arrearsDebt > 0.01) {
-            detailHtml += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
+            html += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
+        // Отработка
         if (debt.workDebt > 0.01) {
-            detailHtml += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
+            html += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
+        // Электроэнергия
         if (debt.electricityDebt > 0.01) {
-            detailHtml += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
+            html += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
             hasDetails = true;
         }
         
+        // Если нет детализации, но есть долг — показываем общую сумму
         if (!hasDetails) {
-            detailHtml += '<div class="debt-line"><span class="debt-line-label">Общая задолженность</span><span class="debt-line-amount">' + formatMoney(debt.totalDebt) + ' ₽</span></div>';
+            html += '<div class="debt-line"><span class="debt-line-label">Общая задолженность</span><span class="debt-line-amount">' + formatMoney(debt.totalDebt) + ' ₽</span></div>';
         }
-        detailHtml += '</div>';
-        html += detailHtml;
         
+        // ============================================================
+        // ИТОГО К ОПЛАТЕ (как на скриншоте)
+        // ============================================================
+        html += '<div class="debt-line" style="border-top:2px solid var(--gray-300);margin-top:4px;padding-top:8px;font-weight:700;">' +
+            '<span class="debt-line-label">Итого к оплате</span>' +
+            '<span class="debt-line-amount" style="font-size:16px;">' + formatMoney(debt.totalDebt) + ' ₽</span>' +
+            '</div>';
+        
+        // Пропись суммы
         html += '<div class="debt-words">Прописью: ' + numberToWords(debt.totalDebt) + '</div>' +
             '<button id="debtQrBtn" class="btn btn-primary mt-md">📱 QR для оплаты</button>' +
             '<div id="debtQrContainer"></div>' +
