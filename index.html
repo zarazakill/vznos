@@ -20,7 +20,7 @@
             font-size: 11px;
             padding: 10px 14px;
             border-radius: 12px;
-            max-height: 180px; overflow-y: auto;
+            max-height: 70vh; overflow-y: auto;
             z-index: 99999;
             border: 2px solid #0f0;
             box-shadow: 0 4px 20px rgba(0,0,0,0.8);
@@ -32,7 +32,7 @@
         #debugPanel .debug-ok { color: #44ff44; }
         #debugPanel .debug-warn { color: #ffaa44; }
         #debugPanel .debug-info { color: #44aaff; }
-        #debugPanel .debug-title { color: #ffffff; font-weight: bold; }
+        #debugPanel .debug-title { color: #ffffff; font-weight: bold; background: #333; padding: 2px 4px; display: inline-block; }
         #debugToggle {
             position: fixed; bottom: 10px; right: 10px;
             background: rgba(0,0,0,0.7);
@@ -54,17 +54,27 @@
 </head>
 <body>
 
-<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ (СКРЫТА) -->
+<!-- ОТЛАДОЧНАЯ ПАНЕЛЬ -->
 <div id="debugPanel">
-    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <span class="debug-title">🔍 ОТЛАДКА</span>
         <span id="debugTime" style="color:#888;font-size:10px;"></span>
-        <button onclick="document.getElementById('debugPanel').style.display='none'; document.getElementById('debugToggle').style.display='none';" style="background:none;border:none;color:#888;font-size:14px;cursor:pointer;">✕</button>
+        <button onclick="document.getElementById('debugPanel').style.display='none'; document.getElementById('debugToggle').style.display='none';" style="background:none;border:none;color:#888;font-size:16px;cursor:pointer;padding:0 6px;">✕</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #0f0;">
+        <button onclick="debugOdsStructure('https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods','DEBIT')" 
+                style="background:#0f0;color:#000;border:none;padding:5px 10px;border-radius:4px;font-family:monospace;font-size:11px;cursor:pointer;font-weight:bold;">🔬 DEBIT</button>
+        <button onclick="debugOdsStructure('https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods','EE')" 
+                style="background:#0f0;color:#000;border:none;padding:5px 10px;border-radius:4px;font-family:monospace;font-size:11px;cursor:pointer;font-weight:bold;">🔬 EE</button>
+        <button onclick="debugOdsStructure('https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods','BASE')" 
+                style="background:#0f0;color:#000;border:none;padding:5px 10px;border-radius:4px;font-family:monospace;font-size:11px;cursor:pointer;font-weight:bold;">🔬 BASE</button>
+        <button onclick="document.getElementById('debugLog').innerHTML=''" 
+                style="background:#f44;color:#fff;border:none;padding:5px 10px;border-radius:4px;font-family:monospace;font-size:11px;cursor:pointer;">🗑 Очистить</button>
     </div>
     <div id="debugLog"></div>
 </div>
 
-<!-- КНОПКА ОТЛАДКИ (СКРЫТАЯ) -->
+<!-- КНОПКА ОТЛАДКИ -->
 <button id="debugToggle">🐞</button>
 
 <!-- ОТЛАДЧИК -->
@@ -122,15 +132,14 @@
         isDebugVisible = !isDebugVisible;
         debugPanel.style.display = isDebugVisible ? 'block' : 'none';
         debugToggle.style.display = isDebugVisible ? 'flex' : 'none';
-        if (isDebugVisible) debug('👁 Отладка включена', 'info');
     };
 
     window.addEventListener('error', function(e) {
-        debug('❌ ОШИБКА: ' + (e.message || e.error?.message || 'Неизвестная ошибка'), 'error');
+        debug('❌ ОШИБКА: ' + (e.message || 'Неизвестная'), 'error');
     });
 
     window.addEventListener('unhandledrejection', function(e) {
-        debug('❌ НЕОБРАБОТАННЫЙ ПРОМИС: ' + (e.reason?.message || e.reason || 'Unknown'), 'error');
+        debug('❌ ПРОМИС: ' + (e.reason?.message || e.reason || 'Unknown'), 'error');
     });
 
     debug('✅ Отладчик готов', 'ok');
@@ -185,7 +194,6 @@
     --sp-md:  12px;  --sp-lg: 16px;  --sp-xl: 20px;
     --sp-xxl: 24px;  --sp-3xl: 32px;
     --card-radius: 16px;
-    --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
     --card-shadow-md: 0 4px 16px rgba(0,0,0,0.10);
     --btn-radius: 12px;
     --btn-height: 48px;
@@ -219,7 +227,6 @@ body {
 .header-title {
     font-size: 22px;
     font-weight: 700;
-    letter-spacing: -0.3px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -246,10 +253,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s;
     -webkit-tap-highlight-color: transparent;
 }
-.settings-btn:hover { background: rgba(255,255,255,0.28); }
 
 .content {
     padding: var(--sp-lg);
@@ -272,12 +277,8 @@ body {
     font-weight: 700;
     color: var(--green-700);
     margin-bottom: var(--sp-md);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 .card-title.blue  { color: var(--blue-600); }
-.card-title.red   { color: var(--color-error); }
 .card-title.dark  { color: var(--text-primary); }
 
 .btn {
@@ -295,23 +296,18 @@ body {
     font-weight: 600;
     cursor: pointer;
     text-align: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: opacity 0.15s, transform 0.1s;
     -webkit-tap-highlight-color: transparent;
     -webkit-appearance: none;
 }
 .btn:active { opacity: 0.85; transform: scale(0.98); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.btn-primary   { background: var(--green-700); color: white; }
+.btn-primary { background: var(--green-700); color: white; }
 .btn-primary-lg { background: var(--green-700); color: white; min-height: var(--btn-height-lg); font-size: 15px; }
 .btn-secondary { background: transparent; color: var(--green-700); border: 1.5px solid var(--green-700); }
-.btn-blue   { background: var(--blue-600);  color: white; }
+.btn-blue { background: var(--blue-600); color: white; }
 .btn-danger { background: var(--color-error); color: white; }
-.btn-text   { background: transparent; color: var(--text-secondary); font-size: 14px; }
-.btn-gray   { background: var(--gray-200); color: var(--gray-800); }
+.btn-text { background: transparent; color: var(--text-secondary); font-size: 14px; }
 
 .search-label {
     font-size: 11px;
@@ -325,7 +321,6 @@ body {
 .search-heading {
     font-size: 16px;
     font-weight: 700;
-    color: var(--text-primary);
     margin-bottom: var(--sp-lg);
 }
 
@@ -341,7 +336,6 @@ body {
     color: var(--text-primary);
     font-family: inherit;
     outline: none;
-    transition: border-color 0.15s;
     -webkit-appearance: none;
 }
 .search-input:focus { border-color: var(--green-400); }
@@ -376,7 +370,6 @@ body {
     text-align: center;
     padding: var(--sp-3xl) var(--sp-lg);
     color: var(--text-secondary);
-    font-size: 14px;
 }
 .state-loading .spinner {
     width: 36px; height: 36px;
@@ -394,7 +387,6 @@ body {
     border-radius: var(--card-radius);
     padding: var(--sp-lg);
     color: var(--color-error);
-    font-size: 14px;
 }
 .state-error .error-text { margin-bottom: var(--sp-md); line-height: 1.5; }
 
@@ -402,7 +394,6 @@ body {
     text-align: center;
     padding: var(--sp-3xl) var(--sp-lg);
     color: var(--text-secondary);
-    font-size: 15px;
     line-height: 1.7;
 }
 
@@ -455,7 +446,6 @@ body {
     font-family: inherit;
     outline: none;
     margin: var(--sp-md) 0;
-    transition: border-color 0.15s;
     -webkit-appearance: none;
 }
 .reading-input:focus { border-color: var(--green-400); }
@@ -482,11 +472,9 @@ body {
     font-family: inherit;
     outline: none;
     margin: var(--sp-xs) 0 var(--sp-md);
-    transition: border-color 0.15s;
     -webkit-appearance: none;
 }
 .manual-input:focus { border-color: var(--green-400); }
-.manual-input::placeholder { color: var(--text-hint); }
 .manual-label {
     font-size: 12px;
     font-weight: 500;
@@ -553,7 +541,6 @@ body {
     cursor: pointer;
     padding: 4px;
     flex-shrink: 0;
-    -webkit-tap-highlight-color: transparent;
 }
 .copy-all-btn {
     display: block;
@@ -567,10 +554,7 @@ body {
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    transition: background 0.15s;
 }
-.copy-all-btn:hover { background: var(--green-50); }
 
 .bank-header {
     display: flex;
@@ -635,9 +619,7 @@ body {
     justify-content: center;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    animation: fadeIn 0.2s ease-out;
 }
-@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
 .modal-sheet {
     background: var(--bg-card);
@@ -646,11 +628,8 @@ body {
     max-width: 600px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.3);
-    animation: slideUp 0.25s ease-out;
     padding-bottom: env(safe-area-inset-bottom);
 }
-@keyframes slideUp { from { transform:translateY(40px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 
 .modal-handle {
     width: 40px; height: 4px;
@@ -664,7 +643,6 @@ body {
     padding: var(--sp-xl);
     color: white;
     text-align: center;
-    border-radius: 28px 28px 0 0;
 }
 .modal-header h2 { font-size: 18px; }
 .modal-header p  { font-size: 13px; color: #C8E6C9; margin-top: 3px; }
@@ -717,12 +695,10 @@ body {
     accent-color: var(--green-700);
     flex-shrink: 0;
     margin-top: 1px;
-    cursor: pointer;
 }
 .consent-check-row label {
     font-size: 14px;
     line-height: 1.45;
-    cursor: pointer;
 }
 
 .toast {
@@ -815,8 +791,7 @@ body {
                            placeholder="15" autocomplete="off"
                            inputmode="text" enterkeyhint="search"
                            aria-label="Номер участка">
-                    <button id="searchBtn" class="btn btn-primary-lg mt-md"
-                            aria-label="Показать данные по участку">
+                    <button id="searchBtn" class="btn btn-primary-lg mt-md">
                         Показать данные по участку
                     </button>
                 </div>
@@ -853,14 +828,14 @@ body {
                         <div class="bank-row">
                             <span class="bank-label">Р/счёт:</span>
                             <span class="bank-value" id="bankAccount"></span>
-                            <button class="copy-btn" data-copy="bankAccount" aria-label="Скопировать расчётный счёт">📋</button>
+                            <button class="copy-btn" data-copy="bankAccount">📋</button>
                         </div>
                         <div class="bank-row"><span class="bank-label">Банк:</span><span class="bank-value" id="bankName"></span></div>
                         <div class="bank-row"><span class="bank-label">БИК:</span><span class="bank-value" id="bankBic"></span></div>
                         <div class="bank-row">
                             <span class="bank-label">К/счёт:</span>
                             <span class="bank-value" id="bankCorresp"></span>
-                            <button class="copy-btn" data-copy="bankCorresp" aria-label="Скопировать корр. счёт">📋</button>
+                            <button class="copy-btn" data-copy="bankCorresp">📋</button>
                         </div>
                         <button id="copyAllBtn" class="copy-all-btn">📋 Скопировать все реквизиты</button>
                     </div>
@@ -869,15 +844,15 @@ body {
 
             <div id="warningCard" class="warning-block hidden">
                 <strong>⚠️ Внимание! Проверьте реквизиты</strong>
-                Перед совершением платежа внимательно проверьте все реквизиты получателя. QR-код сформирован автоматически на основе данных системы.
-                <div class="warning-footer">⚡ Ответственность за правильность реквизитов и совершённый платёж лежит на плательщике.</div>
+                Перед совершением платежа внимательно проверьте все реквизиты получателя.
+                <div class="warning-footer">⚡ Ответственность за правильность реквизитов лежит на плательщике.</div>
             </div>
 
             <div id="instructionCard" class="instruction-block hidden">
                 <strong>💡 Как оплатить через QR-код</strong>
-                <div class="step"><div class="step-num">1</div><div>Сгенерируйте QR-код — нажмите кнопку «QR для оплаты» ниже</div></div>
-                <div class="step"><div class="step-num">2</div><div>Поделитесь QR-кодом — выберите банковское приложение (СберБанк, Т-Банк, ВТБ и др.)</div></div>
-                <div class="step"><div class="step-num">3</div><div>Или сохраните и отсканируйте — в банке выберите «Оплатить по QR» → «Загрузить из галереи»</div></div>
+                <div class="step"><div class="step-num">1</div><div>Сгенерируйте QR-код — нажмите «QR для оплаты»</div></div>
+                <div class="step"><div class="step-num">2</div><div>Поделитесь QR-кодом через банковское приложение</div></div>
+                <div class="step"><div class="step-num">3</div><div>Или сохраните и отсканируйте в банке</div></div>
             </div>
 
             <div id="debtCard" class="card hidden"></div>
@@ -890,7 +865,7 @@ body {
 </div>
 <script>
 // ================================================================
-// КОНФИГУРАЦИЯ И КОНСТАНТЫ
+// КОНСТАНТЫ
 // ================================================================
 const API_BASE_URL     = "https://wwcat.duckdns.org:12580";
 const CONSENT_VERSION  = "1.0";
@@ -905,7 +880,6 @@ const BIC           = "045004641";
 const CORRESP_ACC   = "30101810500000000641";
 const TARIFF        = 3.82;
 
-// Ссылки на файлы (ODS формат)
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
 const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
 const BASE_URL  = "https://raw.githubusercontent.com/zarazakill/vznos/main/base.ods";
@@ -926,33 +900,26 @@ var currentEeData        = null;
 function formatMoney(amount) {
     return new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
 }
-
 function formatNumber(v) {
     return v % 1 === 0 ? v.toString() : v.toFixed(2);
 }
-
-// Форматирование суммы для QR (без копеек если целое, иначе с копейками через запятую)
 function formatAmountShort(a) {
     if (a === Math.floor(a)) return Math.floor(a).toString();
     return a.toFixed(2).replace('.', ',');
 }
-
 function numberToWords(amount) {
     var rub = Math.floor(amount);
     var kop = Math.round((amount - rub) * 100);
     var rubWord;
-    if (rub % 100 >= 11 && rub % 100 <= 19)       rubWord = "рублей";
-    else if (rub % 10 === 1)                         rubWord = "рубль";
-    else if (rub % 10 >= 2 && rub % 10 <= 4)        rubWord = "рубля";
-    else                                             rubWord = "рублей";
+    if (rub % 100 >= 11 && rub % 100 <= 19) rubWord = "рублей";
+    else if (rub % 10 === 1) rubWord = "рубль";
+    else if (rub % 10 >= 2 && rub % 10 <= 4) rubWord = "рубля";
+    else rubWord = "рублей";
     return rub + ' ' + rubWord + ' ' + String(kop).padStart(2, '0') + ' копеек';
 }
-
 function isPlotNumber(s) {
-    // Проверяет формат: число + опционально буква (например: 15, 4а, 10а, 150)
     return s && typeof s === 'string' && /^\d{1,4}[а-яёa-z]?$/i.test(s.trim());
 }
-
 function parseNumber(val) {
     if (val === undefined || val === null) return 0;
     var s = String(val).replace(",", ".").replace(/[^\d.-]/g, '');
@@ -960,30 +927,25 @@ function parseNumber(val) {
     var n = parseFloat(s);
     return isNaN(n) ? 0 : n;
 }
-
 function escapeHtml(str) {
     if (!str) return "";
     return str.replace(/[&<>"]/g, function(m) {
         return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[m] || m;
     });
 }
-
 function formatDateDisplay(dateStr) {
     if (!dateStr || dateStr === "не указана") return "не указана";
     dateStr = dateStr.trim();
-    // Попытка распарсить DD.MM.YY или DD/MM/YY
-    var russianDateRegex = /^(\d{1,2})[\.\/\-](\d{1,2})(?:[\.\/\-](\d{2,4}))?$/;
-    var match = dateStr.match(russianDateRegex);
-    if (match) {
-        var day = match[1].padStart(2, '0');
-        var month = match[2].padStart(2, '0');
-        var year = match[3] || new Date().getFullYear().toString().slice(-2);
-        if (year.length === 2) year = '20' + year;
-        return day + '.' + month + '.' + year;
+    var m = dateStr.match(/^(\d{1,2})[\.\/\-](\d{1,2})(?:[\.\/\-](\d{2,4}))?$/);
+    if (m) {
+        var d = m[1].padStart(2, '0');
+        var mo = m[2].padStart(2, '0');
+        var y = m[3] || new Date().getFullYear().toString().slice(-2);
+        if (y.length === 2) y = '20' + y;
+        return d + '.' + mo + '.' + y;
     }
     return dateStr;
 }
-
 function showToast(msg) {
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -993,35 +955,142 @@ function showToast(msg) {
 }
 
 // ================================================================
-// ПАРСЕРЫ ODS (XML ВНУТРИ ZIP)
+// 🔬 ДИАГНОСТИКА ODS — показывает реальную структуру файла
 // ================================================================
+async function debugOdsStructure(url, label) {
+    debug('═══════════════════════════════', 'title');
+    debug('🔬 ДИАГНОСТИКА ' + label, 'title');
+    debug('═══════════════════════════════', 'title');
+    
+    try {
+        var response = await fetch(url);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        
+        var buf = await response.arrayBuffer();
+        debug('📦 Размер: ' + buf.byteLength + ' байт', 'info');
+        
+        var zip = await JSZip.loadAsync(buf);
+        debug('📂 Файлы: ' + Object.keys(zip.files).join(', '), 'info');
+        
+        var contentXml = zip.file("content.xml");
+        if (!contentXml) throw new Error('content.xml не найден');
+        
+        var xml = await contentXml.async("string");
+        debug('📄 content.xml: ' + xml.length + ' символов', 'info');
+        
+        // Считаем таблицы
+        var tableMatches = xml.match(/<table:table[\s>]/gi) || [];
+        debug('📊 Таблиц: ' + tableMatches.length, 'info');
+        
+        // Смотрим первый фрагмент XML
+        debug('━━━ ПЕРВЫЕ 800 СИМВОЛОВ XML ━━━', 'title');
+        var sample = xml.substring(0, 800);
+        debug(sample, 'info');
+        
+        // Ищем sample строки
+        var rowRegex = /<table:table-row[^>]*>[\s\S]*?<\/table:table-row>/i;
+        var rowMatch = xml.match(rowRegex);
+        if (rowMatch) {
+            debug('━━━ ПРИМЕР СТРОКИ (сырой XML) ━━━', 'title');
+            debug(rowMatch[0].substring(0, 1000), 'info');
+        }
+        
+        // Парсим через extractOdsRows
+        var rows = extractOdsRows(xml);
+        debug('━━━ extractOdsRows: ' + rows.length + ' строк ━━━', 'title');
+        
+        // Первые 30 строк
+        debug('━━━ ПЕРВЫЕ 30 СТРОК ━━━', 'title');
+        for (var i = 0; i < Math.min(30, rows.length); i++) {
+            var preview = rows[i].map(function(c, idx) {
+                var val = (c || '').substring(0, 25);
+                return '[' + idx + ']' + val;
+            }).join(' | ');
+            debug('R' + i + ' (' + rows[i].length + '): ' + preview, 'info');
+        }
+        
+        // Ищем участки 15, 16, 17
+        debug('━━━ ПОИСК УЧАСТКОВ 15/16/17 ━━━', 'title');
+        for (var i = 0; i < rows.length; i++) {
+            var c0 = (rows[i][0] || '').trim();
+            if (c0 === '15' || c0 === '16' || c0 === '17') {
+                debug('✅ R' + i + ' — УЧАСТОК "' + c0 + '":', 'ok');
+                for (var j = 0; j < rows[i].length; j++) {
+                    debug('   [' + j + '] = "' + rows[i][j] + '"', 'info');
+                }
+                for (var k = i + 1; k < Math.min(i + 9, rows.length); k++) {
+                    var next = rows[k].map(function(c, idx) { return '[' + idx + ']' + c; }).join(' | ');
+                    debug('   ↓ R' + k + ': ' + next, 'info');
+                }
+                break;
+            }
+        }
+        
+        debug('═══════════════════════════════', 'title');
+        
+    } catch (err) {
+        debug('❌ Диагностика: ' + err.message, 'error');
+    }
+}
 
-// Базовый парсер ячеек ODS
+// ================================================================
+// ПАРСЕР ЯЧЕЕК ODS (ОБРАБАТЫВАЕТ number-columns-repeated И АТРИБУТЫ)
+// ================================================================
 function extractOdsRows(xml) {
     var rows = [];
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
-    var cellRegex = /<table:table-cell[^>]*>([\s\S]*?)<\/table:table-cell>/gi;
-    var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
-    
     var rowMatches = xml.match(rowRegex) || [];
+    
     for (var i = 0; i < rowMatches.length; i++) {
-        var row = rowMatches[i];
+        var rowXml = rowMatches[i];
         var cells = [];
-        var cellMatches = row.match(cellRegex) || [];
-        for (var j = 0; j < cellMatches.length; j++) {
+        var cellRegex = /<table:table-cell([^>]*)>([\s\S]*?)<\/table:table-cell>|<table:table-cell([^>]*)\/>/gi;
+        var cellMatch;
+        
+        while ((cellMatch = cellRegex.exec(rowXml)) !== null) {
+            var attrs = cellMatch[1] || cellMatch[3] || '';
+            var inner = cellMatch[2] || '';
+            
+            // Извлекаем значение из text:p
             var cellText = '';
-            var pMatches = cellMatches[j].match(pRegex) || [];
-            for (var k = 0; k < pMatches.length; k++) {
-                var text = pMatches[k].replace(/<[^>]+>/g, '').trim();
-                if (text) cellText += text + ' ';
+            var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
+            var pMatch;
+            while ((pMatch = pRegex.exec(inner)) !== null) {
+                var txt = pMatch[1].replace(/<[^>]+>/g, '').trim();
+                if (txt) cellText += (cellText ? ' ' : '') + txt;
             }
-            cells.push(cellText.trim());
+            
+            // Если text:p пусто — проверяем office:value (число без text:p)
+            if (!cellText) {
+                var valMatch = attrs.match(/office:value(?:-type)?="([^"]+)"/);
+                if (valMatch) {
+                    cellText = valMatch[1];
+                }
+            }
+            
+            // Проверяем number-columns-repeated
+            var repMatch = attrs.match(/table:number-columns-repeated="(\d+)"/);
+            var rep = repMatch ? Math.min(parseInt(repMatch[1]), 50) : 1;
+            
+            // Пропускаем пустые repeated ячейки (это "растяжка" на весь ряд)
+            if (cellText === '' && rep > 1) {
+                cells.push('');
+                continue;
+            }
+            
+            for (var r = 0; r < rep; r++) {
+                cells.push(cellText);
+            }
         }
+        
         if (cells.length > 0) rows.push(cells);
     }
     return rows;
 }
 
+// ================================================================
+// ПАРСЕР BASE
+// ================================================================
 function parseBaseOds(xml) {
     var result = new Map();
     var rows = extractOdsRows(xml);
@@ -1034,7 +1103,7 @@ function parseBaseOds(xml) {
         if (!dataStarted) {
             if (/участок|номер|№/i.test(col0) || isPlotNumber(col0)) {
                 dataStarted = true;
-                if (!isPlotNumber(col0)) continue; 
+                if (!isPlotNumber(col0)) continue;
             } else continue;
         }
         
@@ -1056,19 +1125,22 @@ function parseBaseOds(xml) {
     return result;
 }
 
-// ГЛАВНЫЙ ПАРСЕР ДОЛГОВ (АДАПТИРОВАН ПОД ВАШ ФОРМАТ)
+// ================================================================
+// ПАРСЕР DEBIT (С ГИБКИМ ПОИСКОМ КАТЕГОРИЙ)
+// ================================================================
 function parseDebitOds(xml) {
     debug('📊 Парсинг DEBIT…', 'info');
     var result = new Map();
     var rows = extractOdsRows(xml);
     var current = null;
     
+    debug('   📊 Всего строк: ' + rows.length, 'info');
+    
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i];
         var col0 = (cells[0] || '').trim();
         var col0l = col0.toLowerCase();
         
-        // Пропускаем заголовки и мусор
         if (!col0) continue;
         if (['документ', 'взнос', 'итого', 'номер', 'владельцы участка', 'адрес', 
              'долг', 'переплата', 'начислено', 'оплачено'].indexOf(col0l) !== -1) continue;
@@ -1079,30 +1151,31 @@ function parseDebitOds(xml) {
         var isMainRow = isPlotNumber(col0);
         
         if (isMainRow) {
-            // Сохраняем предыдущий участок
             if (current && current.totalDebt > 0) {
-                // Если детализация пустая, но долг есть - пишем всё в членские
                 if (current.membershipDebt === 0 && current.targetDebt === 0 && 
                     current.arrearsDebt === 0 && current.workDebt === 0 && 
                     current.electricityDebt === 0) {
                     current.membershipDebt = current.totalDebt;
                 }
                 result.set(current.plotNumber, current);
+                
+                if (current.plotNumber === '15' || current.plotNumber === '16') {
+                    debug('   📝 ' + current.plotNumber + ': долг=' + current.totalDebt.toFixed(2) + 
+                          ' | член=' + current.membershipDebt.toFixed(2) + 
+                          ' | целе=' + current.targetDebt.toFixed(2) + 
+                          ' | прошл=' + current.arrearsDebt.toFixed(2) + 
+                          ' | отраб=' + current.workDebt.toFixed(2) + 
+                          ' | эл=' + current.electricityDebt.toFixed(2), 'ok');
+                }
             }
             
-            // Ищем общий долг. Обычно в колонке 3 (D) или 7 (H)
+            // Ищем общий долг
             var totalDebt = 0;
-            if (cells[3] !== undefined) totalDebt = parseNumber(cells[3]);
-            if (totalDebt === 0 && cells[7] !== undefined) totalDebt = parseNumber(cells[7]);
-            
-            // Fallback: ищем первое большое число в строке
-            if (totalDebt === 0) {
-                for (var j = 2; j < cells.length; j++) {
-                    var num = parseNumber(cells[j]);
-                    if (num > 0.01 && num < 10000000) {
-                        totalDebt = num;
-                        break;
-                    }
+            for (var j = 3; j < cells.length; j++) {
+                var num = parseNumber(cells[j]);
+                if (num > 0.01 && num < 10000000) {
+                    totalDebt = num;
+                    break;
                 }
             }
             
@@ -1121,11 +1194,15 @@ function parseDebitOds(xml) {
             };
             
         } else if (current) {
-            // Это строка-подкатегория (Членские, Целевые и т.д.)
-            // Сумма обычно в той же колонке где был общий долг (3 или 7)
+            // Строка-категория — ищем сумму в ЛЮБОМ столбце
             var amount = 0;
-            if (cells[3] !== undefined) amount = parseNumber(cells[3]);
-            if (amount === 0 && cells[7] !== undefined) amount = parseNumber(cells[7]);
+            for (var j = 1; j < cells.length; j++) {
+                var num = parseNumber(cells[j]);
+                if (num > 0.01 && num < 10000000) {
+                    amount = num;
+                    break;
+                }
+            }
             
             if (amount > 0.01) {
                 var cat = col0l;
@@ -1147,7 +1224,6 @@ function parseDebitOds(xml) {
         }
     }
     
-    // Не забываем последний участок
     if (current && current.totalDebt > 0) {
         if (current.membershipDebt === 0 && current.targetDebt === 0 && 
             current.arrearsDebt === 0 && current.workDebt === 0 && 
@@ -1161,6 +1237,9 @@ function parseDebitOds(xml) {
     return result;
 }
 
+// ================================================================
+// ПАРСЕР EE
+// ================================================================
 function parseElectricityOds(xml) {
     var result = new Map();
     var rows = extractOdsRows(xml);
@@ -1194,14 +1273,14 @@ function parseElectricityOds(xml) {
             }
         }
         
-        // Ищем максимальное число (текущие показания)
+        // Ищем показания (максимальное число)
         var currentReading = 0;
         var maxNum = 0;
         for (var j = 1; j < cells.length; j++) {
             var val = cells[j] || '';
             if (dateRegex.test(val.trim())) continue;
             var num = parseNumber(val);
-            if (num > 100 && num < 1000000 && num > maxNum) { maxNum = num; }
+            if (num > 100 && num < 1000000 && num > maxNum) maxNum = num;
         }
         currentReading = maxNum;
         
@@ -1232,10 +1311,30 @@ function fetchAndParseOds(url, parserFn) {
         .then(function(buf) { return JSZip.loadAsync(buf); })
         .then(function(zip) {
             var file = zip.file("content.xml");
-            if (!file) throw new Error('content.xml не найден в архиве');
+            if (!file) throw new Error('content.xml не найден');
             return file.async("string");
         })
         .then(function(xml) { return parserFn(xml); });
+}
+
+function updateDataStatus() {
+    var statusEl = document.getElementById('statusCount');
+    var timeEl = document.getElementById('statusTime');
+    if (!statusEl || !timeEl) return;
+    var parts = [];
+    ['base', 'debt', 'ee'].forEach(function(key) {
+        var label = key === 'base' ? 'База' : key === 'debt' ? 'Долги' : 'ЭЭ';
+        var st = dataLoadStatus[key];
+        if (st === 'ok') parts.push('✅ ' + label);
+        else if (st === 'loading') parts.push('⏳ ' + label);
+        else if (st === 'error') parts.push('⚠️ ' + label);
+        else parts.push('⬜ ' + label);
+    });
+    statusEl.textContent = parts.join(' · ');
+    timeEl.textContent = lastSyncTime 
+        ? 'Обновлено: ' + lastSyncTime.toLocaleDateString('ru-RU') + ' ' + 
+          lastSyncTime.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})
+        : 'Данные не загружены';
 }
 
 function loadSingleOds(url, parserFn, statusKey) {
@@ -1281,59 +1380,18 @@ function syncAllData() {
     return syncPromise;
 }
 
-// ================================================================
-// ЛОГИКА ОТОБРАЖЕНИЯ
-// ================================================================
-function setLoading(msg) {
-    var s = document.getElementById('loadingState');
-    if (s) { s.classList.remove('hidden'); document.getElementById('loadingMsg').textContent = msg; }
-    document.getElementById('errorState')?.classList.add('hidden');
-    document.getElementById('notFoundBlock')?.classList.add('hidden');
-}
-
-function hideLoading() {
-    document.getElementById('loadingState')?.classList.add('hidden');
-}
-
-function showError(msg) {
-    hideLoading();
-    var s = document.getElementById('errorState');
-    if (s) {
-        document.getElementById('errorMsg').textContent = msg;
-        s.classList.remove('hidden');
-    }
-}
-
-function updateDataStatus() {
-    var statusEl = document.getElementById('statusCount');
-    var timeEl = document.getElementById('statusTime');
-    if (!statusEl || !timeEl) return;
-    
-    var parts = [];
-    ['base', 'debt', 'ee'].forEach(function(key) {
-        var label = key === 'base' ? 'База' : key === 'debt' ? 'Долги' : 'ЭЭ';
-        var st = dataLoadStatus[key];
-        if (st === 'ok') parts.push('✅ ' + label);
-        else if (st === 'loading') parts.push('⏳ ' + label);
-        else if (st === 'error') parts.push('⚠️ ' + label);
-        else parts.push('⬜ ' + label);
-    });
-    
-    statusEl.textContent = parts.join(' · ');
-    timeEl.textContent = lastSyncTime 
-        ? 'Обновлено: ' + lastSyncTime.toLocaleDateString('ru-RU') + ' ' + lastSyncTime.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})
-        : (dataLoadStatus.base === 'loading' ? 'Загрузка…' : 'Данные не загружены');
-}
-
 function loadPlotData(plotNumber, fromCache) {
     var normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
     debug('🔍 Поиск участка: ' + normalized, 'info');
     
-    // Скрываем все карточки
     ['debtCard','electricityCard','manualPaymentCard','bankDetailsCard','warningCard','instructionCard']
-        .forEach(function(id) { document.getElementById(id)?.classList.add('hidden'); });
-    document.getElementById('notFoundBlock')?.classList.add('hidden');
+        .forEach(function(id) { 
+            var el = document.getElementById(id);
+            if (el) el.classList.add('hidden'); 
+        });
+    var nf = document.getElementById('notFoundBlock');
+    if (nf) nf.classList.add('hidden');
     
     try {
         if (cachedBaseMap.size === 0 && cachedDebtMap.size === 0 && cachedElectricityMap.size === 0) {
@@ -1346,15 +1404,16 @@ function loadPlotData(plotNumber, fromCache) {
         var member = cachedBaseMap.get(normalized);
         
         if (!debt && !ee && !member) {
-            var stillLoading = Object.values(dataLoadStatus).some(function(s){return s==='loading'});
+            var stillLoading = dataLoadStatus.base === 'loading' || 
+                dataLoadStatus.debt === 'loading' || dataLoadStatus.ee === 'loading';
             if (stillLoading) { showToast('Данные ещё загружаются…'); return; }
-            document.getElementById('notFoundBlock')?.classList.remove('hidden');
+            if (nf) nf.classList.remove('hidden');
             return;
         }
         
-        // Показываем общие блоки
         ['bankDetailsCard','warningCard','instructionCard'].forEach(function(id){
-            document.getElementById(id)?.classList.remove('hidden');
+            var el = document.getElementById(id);
+            if (el) el.classList.remove('hidden');
         });
         renderBankDetails();
         
@@ -1365,34 +1424,25 @@ function loadPlotData(plotNumber, fromCache) {
         debug('✅ Данные отображены', 'ok');
     } catch(err) {
         debug('❌ loadPlotData: ' + err.message, 'error');
-        showError('Ошибка отображения: ' + err.message);
     }
 }
 
 // ================================================================
-// ГЕНЕРАЦИЯ QR КОДА (С УЧЕТОМ ЛИМИТОВ БАНКА)
+// QR
 // ================================================================
 function sanitizePurpose(t) { 
-    // Удаляем запрещенные символы для банковского протокола
     return t.replace(/[|;\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim(); 
 }
 
-// Формирует строку назначения платежа с сокращениями для QR
 function buildDetailedPurpose(debt) {
     var parts = [];
-    // Используем сокращения чтобы влезть в 210 символов
     if (debt.membershipDebt > 0.01) parts.push('Членские: ' + formatAmountShort(debt.membershipDebt) + 'р');
-    if (debt.targetDebt > 0.01)     parts.push('Целевые: ' + formatAmountShort(debt.targetDebt) + 'р');
-    if (debt.arrearsDebt > 0.01)    parts.push('Прошлых лет: ' + formatAmountShort(debt.arrearsDebt) + 'р');
-    if (debt.workDebt > 0.01)       parts.push('Отработка: ' + formatAmountShort(debt.workDebt) + 'р');
+    if (debt.targetDebt > 0.01) parts.push('Целевые: ' + formatAmountShort(debt.targetDebt) + 'р');
+    if (debt.arrearsDebt > 0.01) parts.push('Прошлых лет: ' + formatAmountShort(debt.arrearsDebt) + 'р');
+    if (debt.workDebt > 0.01) parts.push('Отработка: ' + formatAmountShort(debt.workDebt) + 'р');
     if (debt.electricityDebt > 0.01) parts.push('Э/э: ' + formatAmountShort(debt.electricityDebt) + 'р');
-    
     if (parts.length === 0) parts.push('Оплата взносов: ' + formatAmountShort(debt.totalDebt) + 'р');
-    
-    var suffix = ', уч. ' + debt.plotNumber;
-    var result = parts.join(', ') + suffix;
-    
-    // Жесткое обрезание под стандарт СТ00012 (210 символов)
+    var result = parts.join(', ') + ', уч. ' + debt.plotNumber;
     if (result.length > 210) result = result.slice(0, 209) + '…';
     return result;
 }
@@ -1400,20 +1450,18 @@ function buildDetailedPurpose(debt) {
 function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpose) {
     var sumKop = Math.round(amount * 100);
     var purpose;
-    
     if (customPurpose && customPurpose.trim()) {
         purpose = sanitizePurpose(customPurpose) + ' уч.' + plotNumber;
     } else if (isElectricity) {
         var ee = window.currentEeData;
         var consumption = amount / (ee && ee.tariff ? ee.tariff : 3.82);
-        purpose = 'Электроэнергия ' + formatAmountShort(amount) + 'р (' + Math.round(consumption) + 'кВт·ч) уч.' + plotNumber;
+        purpose = 'Электроэнергия ' + formatAmountShort(amount) + 'р (' + 
+                  Math.round(consumption) + 'кВт·ч) уч.' + plotNumber;
     } else if (debtData) {
         purpose = buildDetailedPurpose(debtData);
     } else {
         purpose = 'Оплата взносов уч.' + plotNumber;
     }
-    
-    // Формат ГОСТ Р 56042-2014
     return 'ST00012|Name=' + ORGANIZATION + 
            '|PersonalAcc=' + PERSONAL_ACC + 
            '|BankName=' + BANK_NAME + 
@@ -1426,38 +1474,34 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpo
 
 async function generateAndShowQR(type, btn, qrText) {
     var containerId = type === 'debt' ? 'debtQrContainer' : type === 'ee' ? 'eeQrContainer' : 'manualQrContainer';
-    var btnGroupId  = type === 'debt' ? 'debtQrButtons'   : type === 'ee' ? 'eeQrButtons'   : 'manualQrButtons';
+    var btnGroupId = type === 'debt' ? 'debtQrButtons' : type === 'ee' ? 'eeQrButtons' : 'manualQrButtons';
     var container = document.getElementById(containerId);
     if (!container) return;
-    
-    document.getElementById(type + 'QrImg')?.remove();
+    var oldImg = document.getElementById(type + 'QrImg');
+    if (oldImg) oldImg.remove();
     var orig = btn.textContent;
     btn.textContent = '⏳ Генерация…';
     btn.disabled = true;
-    
     try {
-        if (typeof QRCode === 'undefined') throw new Error('Библиотека QRCode не загружена');
+        if (typeof QRCode === 'undefined') throw new Error('QRCode не загружен');
         var dataUrl = await new Promise(function(resolve, reject) {
-            QRCode.toDataURL(qrText, { width: 280, margin: 1, errorCorrectionLevel: 'H' }, function(err, url) {
-                if (err) reject(err); else resolve(url);
-            });
+            QRCode.toDataURL(qrText, { width: 280, margin: 1, errorCorrectionLevel: 'H' }, 
+                function(err, url) { if (err) reject(err); else resolve(url); });
         });
-        
         var img = document.createElement('img');
         img.id = type + 'QrImg';
         img.src = dataUrl;
         img.className = 'qr-image';
         img.alt = 'QR-код для оплаты';
         container.appendChild(img);
-        
-        document.getElementById(btnGroupId)?.classList.add('visible');
-        debug('✅ QR сгенерирован: ' + qrText.substring(0, 50) + '...', 'ok');
-    } catch(e) { 
-        showToast('Ошибка QR: ' + e.message); 
-        debug('❌ QR ошибка: ' + e.message, 'error');
-    } finally { 
-        btn.textContent = orig; 
-        btn.disabled = false; 
+        var bg = document.getElementById(btnGroupId);
+        if (bg) bg.classList.add('visible');
+        debug('✅ QR сгенерирован: ' + qrText.substring(0, 80) + '...', 'ok');
+    } catch(e) {
+        showToast('Ошибка QR: ' + e.message);
+    } finally {
+        btn.textContent = orig;
+        btn.disabled = false;
     }
 }
 
@@ -1482,7 +1526,7 @@ window.saveQR = function(imgId) {
 };
 
 // ================================================================
-// РЕНДЕРИНГ КАРТОЧЕК
+// РЕНДЕРИНГ
 // ================================================================
 function renderBankDetails() {
     document.getElementById('bankOrg').textContent = ORGANIZATION;
@@ -1499,10 +1543,15 @@ function renderBankDetails() {
         };
     });
     
-    document.getElementById('copyAllBtn').onclick = function() {
-        var text = 'Получатель: ' + ORGANIZATION + '\nИНН: ' + INN + '\nР/счёт: ' + PERSONAL_ACC + '\nБанк: ' + BANK_NAME + '\nБИК: ' + BIC + '\nК/счёт: ' + CORRESP_ACC;
-        navigator.clipboard.writeText(text).then(function() { showToast('Реквизиты скопированы'); });
-    };
+    var copyAll = document.getElementById('copyAllBtn');
+    if (copyAll) {
+        copyAll.onclick = function() {
+            var text = 'Получатель: ' + ORGANIZATION + '\nИНН: ' + INN + 
+                       '\nР/счёт: ' + PERSONAL_ACC + '\nБанк: ' + BANK_NAME + 
+                       '\nБИК: ' + BIC + '\nК/счёт: ' + CORRESP_ACC;
+            navigator.clipboard.writeText(text).then(function() { showToast('Реквизиты скопированы'); });
+        };
+    }
     
     var toggleBtn = document.getElementById('toggleBankBtn');
     var content = document.getElementById('bankDetailsContent');
@@ -1528,7 +1577,6 @@ function renderDebtCard(debt) {
         html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div>';
         
         var hasDetails = false;
-        // Полные названия для экрана (не для QR)
         if (debt.membershipDebt > 0.01) {
             html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
             hasDetails = true;
@@ -1601,17 +1649,17 @@ function renderElectricityCard(ee) {
         '<div id="eeQrButtons" class="qr-buttons mt-sm">' +
         '<button class="btn btn-blue" onclick="shareQR(\'eeQrImg\')">↗ Поделиться</button>' +
         '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'eeQrImg\')">💾 Сохранить</button></div>' +
-        '<div class="card-title dark mt-lg" style="margin-top:var(--sp-xl);">📸 Фото счётчика</div>' +
+        '<div class="card-title dark mt-lg">📸 Фото счётчика</div>' +
         '<img id="photoPreview" class="photo-preview" alt="Фото счётчика">' +
-        '<div id="photoUploadProgress" class="photo-progress">⏳ Загрузка на Яндекс.Диск…</div>' +
-        '<div id="photoUploadSuccess" class="photo-success">✓ Фото сохранено на Яндекс.Диске</div>' +
+        '<div id="photoUploadProgress" class="photo-progress">⏳ Загрузка…</div>' +
+        '<div id="photoUploadSuccess" class="photo-success">✓ Фото сохранено</div>' +
         '<div id="photoUploadError" class="photo-error"></div>' +
         '<button id="takePhotoBtn" class="btn btn-blue mt-md">📷 Сфотографировать счётчик</button>' +
         '<div id="photoActions" class="photo-actions">' +
         '<button id="uploadPhotoBtn" class="btn btn-blue" style="flex:1;">☁ Загрузить</button>' +
         '<button id="retakePhotoBtn" class="btn btn-retake" style="flex:1;">↺ Переснять</button></div>' +
         '<div id="ydStatus" class="yd-status">☁ Яндекс.Диск</div></div>';
-        
+    
     var input = document.getElementById('newReadingInput');
     var calc = document.getElementById('calcAmountBlock');
     var genBtn = document.getElementById('genEeQrBtn');
@@ -1654,10 +1702,9 @@ function renderManualPaymentCard(member, debt, ee) {
         '<div id="manualQrButtons" class="qr-buttons mt-sm">' +
         '<button class="btn btn-blue" onclick="shareQR(\'manualQrImg\')">↗ Поделиться</button>' +
         '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'manualQrImg\')">💾 Сохранить</button></div></div>';
-        
+    
     var amountInput = document.getElementById('manualAmountInput');
     var generateBtn = document.getElementById('manualGenerateBtn');
-    
     if (amountInput && generateBtn) {
         var updateBtn = function() {
             var amount = parseFloat(amountInput.value);
@@ -1668,14 +1715,16 @@ function renderManualPaymentCard(member, debt, ee) {
         generateBtn.onclick = function() {
             var amount = parseFloat(amountInput.value);
             if (!amount || amount <= 0) return;
-            var purpose = document.getElementById('manualPurposeInput') ? document.getElementById('manualPurposeInput').value.trim() : '';
-            generateAndShowQR('manual', generateBtn, buildPaymentQR(currentPlotNumber, amount, null, false, purpose));
+            var purpose = document.getElementById('manualPurposeInput') ? 
+                          document.getElementById('manualPurposeInput').value.trim() : '';
+            generateAndShowQR('manual', generateBtn, 
+                buildPaymentQR(currentPlotNumber, amount, null, false, purpose));
         };
     }
 }
 
 // ================================================================
-// ФОТО И ЗАГРУЗКА
+// ФОТО
 // ================================================================
 async function uploadPhotoToServer(plotNumber, readingValue, file) {
     var fd = new FormData();
@@ -1699,7 +1748,8 @@ function takePhoto(plotNumber) {
     input.onchange = async function(e) {
         var file = e.target.files[0];
         if (!file) return;
-        var readingValue = document.getElementById('newReadingInput') ? document.getElementById('newReadingInput').value : '';
+        var readingValue = document.getElementById('newReadingInput') ? 
+                           document.getElementById('newReadingInput').value : '';
         var preview = document.getElementById('photoPreview');
         var takeBtn = document.getElementById('takePhotoBtn');
         var progress = document.getElementById('photoUploadProgress');
@@ -1725,7 +1775,7 @@ function takePhoto(plotNumber) {
             await uploadPhotoToServer(plotNumber, readingValue, file);
             if (progress) progress.style.display = 'none';
             if (success) success.style.display = 'block';
-            if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено на Яндекс.Диске';
+            if (ydStatus) ydStatus.textContent = '☁✓ Фото сохранено';
             if (takeBtn) { takeBtn.style.display = 'block'; takeBtn.textContent = '📷 Сфотографировать ещё раз'; }
             if (actions) actions.style.display = 'none';
         } catch(err) {
@@ -1737,9 +1787,8 @@ function takePhoto(plotNumber) {
     };
     input.click();
 }
-
 // ================================================================
-// СОГЛАСИЕ И НАСТРОЙКИ
+// СОГЛАСИЕ
 // ================================================================
 function isConsentAccepted() {
     try {
@@ -1772,11 +1821,11 @@ function showConsentScreen() {
     overlay.innerHTML = '<div class="modal-sheet">' +
         '<div class="modal-header"><div style="font-size:36px;margin-bottom:8px;">🌿</div><h2>СНТ «Берёзка-2»</h2><p>Согласие с условиями использования</p></div>' +
         '<div class="modal-body">' +
-        '<p style="margin-bottom:16px;font-size:14px;color:var(--text-secondary);line-height:1.6;">Для продолжения необходимо подтвердить согласие с условиями. Оператор: СНТ «Берёзка-2» (ИНН 5433118499)</p>' +
+        '<p style="margin-bottom:16px;font-size:14px;color:var(--text-secondary);line-height:1.6;">Для продолжения необходимо подтвердить согласие. Оператор: СНТ «Берёзка-2» (ИНН 5433118499)</p>' +
         '<div class="consent-block"><div class="consent-block-title">🔐 Персональные данные</div><div class="consent-check-row"><input type="checkbox" id="c1"><label for="c1">Я согласен(а) на обработку моих персональных данных в соответствии с ФЗ-152 «О персональных данных»</label></div></div>' +
-        '<div class="consent-block"><div class="consent-block-title">📋 Пользовательское соглашение</div><div class="consent-check-row"><input type="checkbox" id="c2"><label for="c2">Я ознакомился(ась) с Пользовательским соглашением и Политикой конфиденциальности и принимаю их условия</label></div></div>' +
+        '<div class="consent-block"><div class="consent-block-title">📋 Пользовательское соглашение</div><div class="consent-check-row"><input type="checkbox" id="c2"><label for="c2">Я ознакомился(ась) с Пользовательским соглашением и Политикой конфиденциальности</label></div></div>' +
         '<div class="consent-block"><div class="consent-block-title">👤 Подтверждение</div><div class="consent-check-row"><input type="checkbox" id="c3"><label for="c3">Мне исполнилось 18 лет, и я являюсь членом СНТ «Берёзка-2» или его уполномоченным представителем</label></div></div>' +
-        '<p style="font-size:11px;color:var(--text-hint);margin-top:12px;line-height:1.5;">Дата принятия согласия фиксируется. Вы вправе отозвать согласие в настройках приложения.</p></div>' +
+        '<p style="font-size:11px;color:var(--text-hint);margin-top:12px;">Дата принятия фиксируется. Можно отозвать в настройках.</p></div>' +
         '<div class="modal-footer"><button id="acceptBtn" class="btn btn-primary-lg" disabled>✓ Принять и продолжить</button><button id="declineBtn" class="btn btn-text">Отказаться и закрыть</button></div></div>';
     document.body.appendChild(overlay);
     
@@ -1802,6 +1851,9 @@ function showConsentScreen() {
     };
 }
 
+// ================================================================
+// НАСТРОЙКИ
+// ================================================================
 function showSettingsModal() {
     var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -1811,7 +1863,8 @@ function showSettingsModal() {
         '<div class="modal-body">' +
         '<div class="modal-row"><div class="modal-row-info"><strong>Статус согласия</strong><small>ФЗ-152 «О персональных данных»</small></div><span style="background:var(--green-50);color:var(--green-700);padding:4px 14px;border-radius:24px;font-size:13px;font-weight:600;">✓ Принято</span></div>' +
         '<div class="modal-row"><div class="modal-row-info"><strong>Отозвать согласие</strong><small>После отзыва приложение запросит повторное согласие</small></div><button id="revokeBtn" class="btn btn-danger" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;">Отозвать</button></div>' +
-        '<div class="modal-row"><div class="modal-row-info"><strong>Очистить кэш</strong><small>Сбросить загруженные данные</small></div><button id="clearBtn" class="btn" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;background:var(--orange-600);color:white;">Очистить</button></div></div>' +
+        '<div class="modal-row"><div class="modal-row-info"><strong>Очистить кэш</strong><small>Сбросить загруженные данные</small></div><button id="clearBtn" class="btn" style="width:auto;min-width:90px;font-size:13px;padding:8px 14px;background:var(--orange-600);color:white;">Очистить</button></div>' +
+        '</div>' +
         '<div class="modal-footer"><button id="closeModalBtn" class="btn btn-secondary">Закрыть</button></div></div>';
     document.body.appendChild(overlay);
     
@@ -1833,11 +1886,13 @@ function showSettingsModal() {
 }
 
 // ================================================================
-// ИНИЦИАЛИЗАЦИЯ
+// UI
 // ================================================================
 function showMainApp() {
-    document.getElementById('startupState')?.classList.add('hidden');
-    document.getElementById('mainApp')?.classList.remove('hidden');
+    var startup = document.getElementById('startupState');
+    var main = document.getElementById('mainApp');
+    if (startup) startup.classList.add('hidden');
+    if (main) main.classList.remove('hidden');
 }
 
 function initMainApp() {
@@ -1859,7 +1914,8 @@ function initMainApp() {
             if (!plotInput) return;
             var v = plotInput.value.trim();
             if (v && isPlotNumber(v)) {
-                document.getElementById('errorState')?.classList.add('hidden');
+                var es = document.getElementById('errorState');
+                if (es) es.classList.add('hidden');
                 loadPlotData(v);
             } else {
                 plotInput.focus();
@@ -1868,12 +1924,17 @@ function initMainApp() {
         };
     }
     
-    document.getElementById('settingsBtn').onclick = function() { showSettingsModal(); };
-    document.getElementById('retryBtn').onclick = function() {
-        var v = plotInput?.value.trim();
-        if (v && isPlotNumber(v)) loadPlotData(v);
-        else syncAllData().catch(function(e) { console.warn(e); });
-    };
+    var sb = document.getElementById('settingsBtn');
+    if (sb) sb.onclick = showSettingsModal;
+    
+    var rb = document.getElementById('retryBtn');
+    if (rb) {
+        rb.onclick = function() {
+            var v = plotInput ? plotInput.value.trim() : '';
+            if (v && isPlotNumber(v)) loadPlotData(v);
+            else syncAllData().catch(function(e) { console.warn(e); });
+        };
+    }
     
     updateDataStatus();
     syncAllData().catch(function(err) {
@@ -1881,49 +1942,71 @@ function initMainApp() {
     });
 }
 
-// Проверка библиотек
+// ================================================================
+// ПРОВЕРКА БИБЛИОТЕК
+// ================================================================
 function checkLibraries() {
     var ok = true;
-    if (typeof JSZip === 'undefined') { debug('❌ JSZip НЕ ЗАГРУЖЕН!', 'error'); ok = false; }
-    else debug('✅ JSZip версия: ' + (JSZip.version || 'unknown'), 'ok');
-    
-    if (typeof QRCode === 'undefined') { debug('❌ QRCode НЕ ЗАГРУЖЕН!', 'error'); ok = false; }
-    else debug('✅ QRCode загружен', 'ok');
-    
+    if (typeof JSZip === 'undefined') {
+        debug('❌ JSZip НЕ ЗАГРУЖЕН!', 'error');
+        ok = false;
+    } else {
+        debug('✅ JSZip версия: ' + (JSZip.version || 'unknown'), 'ok');
+    }
+    if (typeof QRCode === 'undefined') {
+        debug('❌ QRCode НЕ ЗАГРУЖЕН!', 'error');
+        ok = false;
+    } else {
+        debug('✅ QRCode загружен', 'ok');
+    }
     return ok;
 }
 
 setTimeout(function() {
     var libsOk = checkLibraries();
     if (!libsOk) {
-        document.getElementById('startupMessage').textContent = '⚠️ Ошибка: не удалось загрузить библиотеки.';
-        document.getElementById('startupMessage').style.color = '#C62828';
+        var sm = document.getElementById('startupMessage');
+        if (sm) {
+            sm.textContent = '⚠️ Ошибка: не удалось загрузить библиотеки.';
+            sm.style.color = '#C62828';
+        }
     }
 }, 2000);
 
-// Service Worker
+// ================================================================
+// SERVICE WORKER
+// ================================================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
         navigator.serviceWorker.register('./sw.js')
-            .then(function(reg) { debug('✅ SW зарегистрирован: ' + reg.scope, 'ok'); })
-            .catch(function(err) { debug('❌ SW регистрация: ' + err.message, 'error'); });
+            .then(function(reg) {
+                debug('✅ SW зарегистрирован: ' + reg.scope, 'ok');
+            })
+            .catch(function(err) {
+                debug('❌ SW регистрация: ' + err.message, 'error');
+            });
     });
 }
 
-// Запуск
+// ================================================================
+// ЗАПУСК
+// ================================================================
 try {
     if (isConsentAccepted()) {
         showMainApp();
-        document.getElementById('startupMessage').textContent = 'Приложение готово. Данные загружаются…';
+        var sm = document.getElementById('startupMessage');
+        if (sm) sm.textContent = 'Приложение готово. Данные загружаются…';
         setTimeout(function() {
-            try { initMainApp(); } 
-            catch(e) {
+            try {
+                initMainApp();
+            } catch(e) {
                 console.error('Init error:', e);
                 showToast('Ошибка инициализации. Перезагрузите страницу.');
             }
         }, 300);
     } else {
-        document.getElementById('startupState').classList.add('hidden');
+        var su = document.getElementById('startupState');
+        if (su) su.classList.add('hidden');
         showConsentScreen();
     }
 } catch(err) {
@@ -1940,3 +2023,4 @@ try {
 </script>
 </body>
 </html>
+
