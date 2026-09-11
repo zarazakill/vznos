@@ -1195,64 +1195,120 @@ function parseDebitOds(xml) {
                 hasOverpayment: totalOverpay > 0.01,
                 membershipDebt: 0,
                 targetDebt: 0,
+function parseDebitOds(xml) {
+    debug('📊 Парсинг DEBIT (ODS 1С)…', 'info');
+    var result = new Map();
+    var rows = extractOdsRows(xml);
+    var current = null;
+    
+    debug('   📊 Всего строк: ' + rows.length, 'info');
+    
+    for (var i = 0; i < rows.length; i++) {
+        var cells = rows[i];
+        var col0 = (cells[0] || '').trim();
+        var col0l = col0.toLowerCase();
+        
+        if (!col0) continue;
+        if (['документ', 'взнос', 'итого', 'номер', 'владельцы участка', 'адрес', 
+             'долг', 'переплата', 'начислено', 'оплачено'].indexOf(col0l) !== -1) continue;
+        if (col0l.includes('на начало') || col0l.includes('на конец') || 
+            col0l.includes('сортировка') || col0l.includes('расчеты')) continue;
+        if (col0l.includes('садоводческое некоммерческое')) continue;
+        
+        var isMainRow = isPlotNumber(col0);
+        
+        if (isMainRow) {
+            if (current && (current.totalDebt > 0 || current.overpayEnd > 0)) {
+                if (current.membershipDebt === 0 && current.targetDebt === 0 && 
+                    current.arrearsDebt === 0 && current.workDebt === 0 && 
+                    current.electricityDebt === 0 && current.totalDebt > 0) {
+                    current.membershipDebt = current.totalDebt;
+                }
+                result.set(current.plotNumber, current);
+                
+                if (current.plotNumber === '15' || current.plotNumber === '16' || 
+                    current.plotNumber === '90') {
+                    debug('   📝 ' + current.plotNumber + 
+                          ': долг=' + current.totalDebt.toFixed(2) + 
+                          ' | переплата=' + current.overpayEnd.toFixed(2) + 
+                          ' | член=' + current.membershipDebt.toFixed(2), 'ok');
+                }
+            }
+            
+            // ============================================================
+            // ODS от 1С СКЛЕИВАЕТ ПУСТЫЕ СТОЛБЦЫ!
+            // Структура реального ODS: 
+            // [0]Номер [1]Владелец [2]Долг_на_начало [3]Долг_на_конец
+            // ============================================================
+            
+            // Значения из ODS
+            var c2 = parseNumber(cells[2] || '0');  // Долг на начало
+            var c3 = parseNumber(cells[3] || '0');  // Долг на конец
+            var c4 = parseNumber(cells[4] || '0');  // Переплата?
+            
+            // Определяем долг и переплату
+            var totalDebt = Math.max(c2, c3);  // Долг = максимальное из двух
+            var totalOverpay = 0;
+            
+            // ============================================================
+            // ВАЖНО: как отличить долг от переплаты?
+            // Смотрим на строки-категории: если категория "Электроэнергия"
+            // имеет ту же сумму — это может быть долг по э/э
+            // ============================================================
+            
+            current = {
+                plotNumber: col0.toLowerCase(),
+                owner: (cells[1] || '').trim(),
+                totalDebt: totalDebt,
+                overpayEnd: totalOverpay,
+                hasDebt: totalDebt > 0.01,
+                hasOverpayment: false,
+                membershipDebt: 0,
+                targetDebt: 0,
                 arrearsDebt: 0,
                 workDebt: 0,
-                electricityDebt: 0,
-                // Сохраняем общую переплату для распределения по категориям
-                _rawOverpay: totalOverpay
+                electricityDebt: 0
             };
             
             if (current.plotNumber === '90') {
-                debug('   🔍 Участок 90: debtStart=' + debtStart + 
-                      ' | overpayStart=' + overpayStart + 
-                      ' | debtEnd=' + debtEnd + 
-                      ' | overpayEnd=' + overpayEnd, 'info');
+                debug('   🔍 90: c2=' + c2 + ' | c3=' + c3 + ' | c4=' + c4, 'info');
             }
             
         } else if (current) {
             // ============================================================
-            // Строка-категория
-            // Сумма может быть в столбце 3 (долг) или 4 (переплата)
+            // Строка-категория (Членские, Целевые и т.д.)
+            // В ODS структура: [0]Название [1]Сумма_на_начало [2]Сумма_на_конец
             // ============================================================
-            var debtAmount = parseNumber(cells[3] || '0');
-            var overpayAmount = parseNumber(cells[4] || '0');
+            var catAmount = parseNumber(cells[1] || '0');
+            if (catAmount === 0) catAmount = parseNumber(cells[2] || '0');
             
-            if (current.plotNumber === '90') {
-                debug('   📌 Категория "' + col0 + '" → debt=' + debtAmount + 
-                      ' | overpay=' + overpayAmount, 'info');
-            }
-            
-            var cat = col0l;
-            // Долг по категории
-            if (debtAmount > 0.01) {
+            if (catAmount > 0.01) {
+                var cat = col0l;
                 if (cat.includes('членские') || cat.includes('членск')) {
-                    current.membershipDebt += debtAmount;
+                    current.membershipDebt += catAmount;
                 } else if (cat.includes('целевые') || cat.includes('целев')) {
-                    current.targetDebt += debtAmount;
+                    current.targetDebt += catAmount;
                 } else if (cat.includes('отработка') || cat.includes('отработк')) {
-                    current.workDebt += debtAmount;
-                } else if (cat.includes('прошлых лет') || cat.includes('задолженность прош')) {
-                    current.arrearsDebt += debtAmount;
+                    current.workDebt += catAmount;
+                } else if (cat.includes('задолженность прошлых лет')) {
+                    // Прошлые годы — только если НЕ отработка и НЕ целевые
+                    if (!cat.includes('отработка') && !cat.includes('целевые')) {
+                        current.arrearsDebt += catAmount;
+                    }
                 } else if (cat.includes('электроэнергия') || cat.includes('эл')) {
-                    current.electricityDebt += debtAmount;
-                }
-            }
-            // Переплата по категории
-            if (overpayAmount > 0.01) {
-                if (cat.includes('членские') || cat.includes('членск')) {
-                    current.membershipOverpay = (current.membershipOverpay || 0) + overpayAmount;
-                } else if (cat.includes('электроэнергия') || cat.includes('эл')) {
-                    current.electricityOverpay = (current.electricityOverpay || 0) + overpayAmount;
+                    current.electricityDebt += catAmount;
                 }
             }
         }
     }
     
-    // Последний участок
-    if (current) {
-        if (current.totalDebt > 0 || current.overpayEnd > 0) {
-            result.set(current.plotNumber, current);
+    if (current && (current.totalDebt > 0 || current.overpayEnd > 0)) {
+        if (current.membershipDebt === 0 && current.targetDebt === 0 && 
+            current.arrearsDebt === 0 && current.workDebt === 0 && 
+            current.electricityDebt === 0 && current.totalDebt > 0) {
+            current.membershipDebt = current.totalDebt;
         }
+        result.set(current.plotNumber, current);
     }
     
     debug('✅ DEBIT: ' + result.size + ' записей', 'ok');
