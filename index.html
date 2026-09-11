@@ -1151,86 +1151,108 @@ function parseDebitOds(xml) {
         var isMainRow = isPlotNumber(col0);
         
         if (isMainRow) {
-            if (current && current.totalDebt > 0) {
-                if (current.membershipDebt === 0 && current.targetDebt === 0 && 
-                    current.arrearsDebt === 0 && current.workDebt === 0 && 
-                    current.electricityDebt === 0) {
-                    current.membershipDebt = current.totalDebt;
-                }
-                result.set(current.plotNumber, current);
-                
-                if (current.plotNumber === '15' || current.plotNumber === '16') {
-                    debug('   📝 ' + current.plotNumber + ': долг=' + current.totalDebt.toFixed(2) + 
-                          ' | член=' + current.membershipDebt.toFixed(2) + 
-                          ' | целе=' + current.targetDebt.toFixed(2) + 
-                          ' | прошл=' + current.arrearsDebt.toFixed(2) + 
-                          ' | отраб=' + current.workDebt.toFixed(2) + 
-                          ' | эл=' + current.electricityDebt.toFixed(2), 'ok');
+            if (current) {
+                // Сохраняем предыдущий участок
+                if (current.totalDebt > 0 || current.overpayEnd > 0) {
+                    result.set(current.plotNumber, current);
+                    
+                    if (current.plotNumber === '15' || current.plotNumber === '16' || 
+                        current.plotNumber === '90') {
+                        debug('   📝 ' + current.plotNumber + 
+                              ': долг=' + current.totalDebt.toFixed(2) + 
+                              ' | переплата=' + current.overpayEnd.toFixed(2) + 
+                              ' | член=' + current.membershipDebt.toFixed(2) + 
+                              ' | эл=' + current.electricityDebt.toFixed(2), 'ok');
+                    }
                 }
             }
             
-            // Ищем общий долг
-            var totalDebt = 0;
-            for (var j = 3; j < cells.length; j++) {
-                var num = parseNumber(cells[j]);
-                if (num > 0.01 && num < 10000000) {
-                    totalDebt = num;
-                    break;
-                }
-            }
+            // ============================================================
+            // ПРАВИЛЬНАЯ СТРУКТУРА DEBIT (из вашего файла):
+            // Столбец 3 = Долг на НАЧАЛО
+            // Столбец 4 = Переплата на НАЧАЛО
+            // Столбец 5 = Начислено
+            // Столбец 6 = Оплачено
+            // Столбец 7 = Долг на КОНЕЦ
+            // Столбец 8 = Переплата на КОНЕЦ
+            // ============================================================
+            
+            var debtStart = parseNumber(cells[3] || '0');
+            var overpayStart = parseNumber(cells[4] || '0');
+            var debtEnd = parseNumber(cells[7] || '0');
+            var overpayEnd = parseNumber(cells[8] || '0');
+            
+            // Итоговый долг — берём из "на конец", если пусто — из "на начало"
+            var totalDebt = debtEnd > 0 ? debtEnd : debtStart;
+            var totalOverpay = overpayEnd > 0 ? overpayEnd : overpayStart;
             
             current = {
                 plotNumber: col0.toLowerCase(),
                 owner: (cells[1] || '').trim(),
                 totalDebt: totalDebt,
-                overpayEnd: 0,
+                overpayEnd: totalOverpay,
                 hasDebt: totalDebt > 0.01,
-                hasOverpayment: false,
+                hasOverpayment: totalOverpay > 0.01,
                 membershipDebt: 0,
                 targetDebt: 0,
                 arrearsDebt: 0,
                 workDebt: 0,
-                electricityDebt: 0
+                electricityDebt: 0,
+                // Сохраняем общую переплату для распределения по категориям
+                _rawOverpay: totalOverpay
             };
             
-        } else if (current) {
-            // Строка-категория — ищем сумму в ЛЮБОМ столбце
-            var amount = 0;
-            for (var j = 1; j < cells.length; j++) {
-                var num = parseNumber(cells[j]);
-                if (num > 0.01 && num < 10000000) {
-                    amount = num;
-                    break;
-                }
+            if (current.plotNumber === '90') {
+                debug('   🔍 Участок 90: debtStart=' + debtStart + 
+                      ' | overpayStart=' + overpayStart + 
+                      ' | debtEnd=' + debtEnd + 
+                      ' | overpayEnd=' + overpayEnd, 'info');
             }
             
-            if (amount > 0.01) {
-                var cat = col0l;
+        } else if (current) {
+            // ============================================================
+            // Строка-категория
+            // Сумма может быть в столбце 3 (долг) или 4 (переплата)
+            // ============================================================
+            var debtAmount = parseNumber(cells[3] || '0');
+            var overpayAmount = parseNumber(cells[4] || '0');
+            
+            if (current.plotNumber === '90') {
+                debug('   📌 Категория "' + col0 + '" → debt=' + debtAmount + 
+                      ' | overpay=' + overpayAmount, 'info');
+            }
+            
+            var cat = col0l;
+            // Долг по категории
+            if (debtAmount > 0.01) {
                 if (cat.includes('членские') || cat.includes('членск')) {
-                    current.membershipDebt += amount;
+                    current.membershipDebt += debtAmount;
                 } else if (cat.includes('целевые') || cat.includes('целев')) {
-                    current.targetDebt += amount;
+                    current.targetDebt += debtAmount;
                 } else if (cat.includes('отработка') || cat.includes('отработк')) {
-                    current.workDebt += amount;
+                    current.workDebt += debtAmount;
                 } else if (cat.includes('прошлых лет') || cat.includes('задолженность прош')) {
-                    current.arrearsDebt += amount;
+                    current.arrearsDebt += debtAmount;
                 } else if (cat.includes('электроэнергия') || cat.includes('эл')) {
-                    current.electricityDebt += amount;
-                } else if (cat.includes('аванс')) {
-                    current.overpayEnd += amount;
-                    current.hasOverpayment = true;
+                    current.electricityDebt += debtAmount;
+                }
+            }
+            // Переплата по категории
+            if (overpayAmount > 0.01) {
+                if (cat.includes('членские') || cat.includes('членск')) {
+                    current.membershipOverpay = (current.membershipOverpay || 0) + overpayAmount;
+                } else if (cat.includes('электроэнергия') || cat.includes('эл')) {
+                    current.electricityOverpay = (current.electricityOverpay || 0) + overpayAmount;
                 }
             }
         }
     }
     
-    if (current && current.totalDebt > 0) {
-        if (current.membershipDebt === 0 && current.targetDebt === 0 && 
-            current.arrearsDebt === 0 && current.workDebt === 0 && 
-            current.electricityDebt === 0) {
-            current.membershipDebt = current.totalDebt;
+    // Последний участок
+    if (current) {
+        if (current.totalDebt > 0 || current.overpayEnd > 0) {
+            result.set(current.plotNumber, current);
         }
-        result.set(current.plotNumber, current);
     }
     
     debug('✅ DEBIT: ' + result.size + ' записей', 'ok');
