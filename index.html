@@ -1240,6 +1240,7 @@ function parseDebitOds(xml) {
 // ================================================================
 // ПАРСЕР EE
 // ================================================================
+
 function parseElectricityOds(xml) {
     var result = new Map();
     var rows = extractOdsRows(xml);
@@ -1248,56 +1249,69 @@ function parseElectricityOds(xml) {
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i];
         var col0 = (cells[0] || '').trim();
+        var col0l = col0.toLowerCase();
         
+        // Ищем заголовок
         if (!headerFound) {
-            if (col0 === 'Номер' || col0 === '№' || col0.toLowerCase().includes('участок')) {
+            if (col0 === 'Номер' || col0 === '№' || col0l.includes('участок') || 
+                col0l === 'магазин') {
                 headerFound = true;
                 continue;
             }
             continue;
         }
         
-        if (!col0 || col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) continue;
+        // Пропускаем мусор
+        if (!col0 || col0l === 'итого' || col0l.startsWith('итог')) continue;
         if (!isPlotNumber(col0)) continue;
         
         var plotNum = col0.toLowerCase();
         var owner = (cells[1] || '').trim();
         
-        // Ищем дату
-        var dateStr = 'не указана';
-        var dateRegex = /^\d{1,2}[\.\/\-]\d{1,2}(?:[\.\/\-]\d{2,4})?$/;
-        for (var j = 1; j < cells.length; j++) {
-            if (dateRegex.test((cells[j] || '').trim())) {
-                dateStr = cells[j].trim();
-                break;
-            }
+        // ============================================================
+        // ПРАВИЛЬНАЯ СТРУКТУРА ee.ods:
+        // [3] = дата показаний
+        // [4] = показания на НАЧАЛО (предыдущие)
+        // [5] = показания на КОНЕЦ (текущие)
+        // [6] = общий расход
+        // ============================================================
+        
+        var dateStr = (cells[3] || '').trim();
+        var prevReading = parseNumber(cells[4] || '0');
+        var currReading = parseNumber(cells[5] || '0');
+        var consumption = parseNumber(cells[6] || '0');
+        
+        // Если расход не вычислен, считаем разницу
+        if (consumption === 0 && currReading > 0 && prevReading > 0) {
+            consumption = currReading - prevReading;
         }
         
-        // Ищем показания (максимальное число)
-        var currentReading = 0;
-        var maxNum = 0;
-        for (var j = 1; j < cells.length; j++) {
-            var val = cells[j] || '';
-            if (dateRegex.test(val.trim())) continue;
-            var num = parseNumber(val);
-            if (num > 100 && num < 1000000 && num > maxNum) maxNum = num;
-        }
-        currentReading = maxNum;
+        // ============================================================
+        // ВАЖНАЯ ЗАЩИТА: показания счётчика не могут быть МЕНЬШЕ 10
+        // и не должны совпадать с долгом (если долг > показаний)
+        // ============================================================
+        // Если показания = 0 или отсутствуют — оставляем 0
+        if (prevReading < 10) prevReading = 0;
+        if (currReading < 10) currReading = 0;
+        
+        debug('   📝 EE ' + plotNum + ': дата=' + dateStr + 
+              ' | пред=' + prevReading + ' | тек=' + currReading + 
+              ' | расход=' + consumption, 'info');
         
         result.set(plotNum, {
             plotNumber: plotNum,
             owner: owner,
-            readingDateStr: dateStr,
-            previousReading: 0,
-            currentReading: currentReading,
-            consumption: 0,
+            readingDateStr: dateStr || 'не указана',
+            previousReading: prevReading,
+            currentReading: currReading,
+            consumption: consumption,
             tariff: TARIFF
         });
     }
+    
     debug('✅ EE: ' + result.size + ' записей', 'ok');
     return result;
 }
-
 // ================================================================
 // ЗАГРУЗКА ДАННЫХ
 // ================================================================
