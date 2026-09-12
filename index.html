@@ -915,10 +915,6 @@ function isPlotNumber(s) {
     return s && typeof s === 'string' && /^\d{1,4}[а-яёa-z]?$/i.test(s.trim());
 }
 
-// ================================================================
-// ПАРСИНГ ЧИСЕЛ — игнорирует мусор "string" от 1С
-// Поддерживает: "30 641,50" → 30641.5, "1.38" → 1.38, "string" → 0
-// ================================================================
 function parseNumber(val) {
     if (val === undefined || val === null) return 0;
     var s = String(val).trim();
@@ -964,26 +960,26 @@ async function debugOdsStructure(url, label) {
     debug('═══════════════════════════════', 'title');
     debug('🔬 ДИАГНОСТИКА ' + label, 'title');
     debug('═══════════════════════════════', 'title');
-
+    
     try {
         var response = await fetch(url);
         if (!response.ok) throw new Error('HTTP ' + response.status);
-
+        
         var buf = await response.arrayBuffer();
         debug('📦 Размер: ' + buf.byteLength + ' байт', 'info');
-
+        
         var zip = await JSZip.loadAsync(buf);
         debug('📂 Файлы: ' + Object.keys(zip.files).join(', '), 'info');
-
+        
         var contentXml = zip.file("content.xml");
         if (!contentXml) throw new Error('content.xml не найден');
-
+        
         var xml = await contentXml.async("string");
         debug('📄 content.xml: ' + xml.length + ' символов', 'info');
-
+        
         var rows = extractOdsRows(xml);
         debug('━━━ extractOdsRows: ' + rows.length + ' строк ━━━', 'title');
-
+        
         debug('━━━ ПОИСК КОНТРОЛЬНЫХ УЧАСТКОВ ━━━', 'title');
         var targets = ['15', '16', '17', '90', '5', '1'];
         for (var i = 0; i < rows.length; i++) {
@@ -1004,32 +1000,30 @@ async function debugOdsStructure(url, label) {
                 debug('   ─────────────────────', 'info');
             }
         }
-
         debug('═══════════════════════════════', 'title');
-
     } catch (err) {
         debug('❌ Диагностика: ' + err.message, 'error');
     }
 }
 
 // ================================================================
-// ПАРСЕР ЯЧЕЕК ODS (с учётом number-columns-repeated и office:value)
+// ПАРСЕР ЯЧЕЕК ODS
 // ================================================================
 function extractOdsRows(xml) {
     var rows = [];
     var rowRegex = /<table:table-row[^>]*>([\s\S]*?)<\/table:table-row>/gi;
     var rowMatches = xml.match(rowRegex) || [];
-
+    
     for (var i = 0; i < rowMatches.length; i++) {
         var rowXml = rowMatches[i];
         var cells = [];
         var cellRegex = /<table:table-cell([^>]*?)(?:\/>|>([\s\S]*?)<\/table:table-cell>)/gi;
         var cellMatch;
-
+        
         while ((cellMatch = cellRegex.exec(rowXml)) !== null) {
             var attrs = cellMatch[1] || '';
             var inner = cellMatch[2] || '';
-
+            
             var cellText = '';
             var pRegex = /<text:p[^>]*>([\s\S]*?)<\/text:p>/gi;
             var pMatch;
@@ -1037,29 +1031,27 @@ function extractOdsRows(xml) {
                 var txt = pMatch[1].replace(/<[^>]+>/g, '').trim();
                 if (txt) cellText += (cellText ? ' ' : '') + txt;
             }
-
+            
             if (!cellText) {
                 var valMatch = attrs.match(/office:value="([^"]+)"/);
                 if (valMatch) cellText = valMatch[1];
             }
-
+            
             var repMatch = attrs.match(/table:number-columns-repeated="(\d+)"/);
             var rep = repMatch ? Math.min(parseInt(repMatch[1]), 50) : 1;
-
-            // Пустые ячейки: не размножаем, чтобы не сбивать индексы
+            
             if (cellText === '' && rep > 1) {
                 cells.push('');
                 continue;
             }
-
-            // Артефакт 1С: текстовая ячейка "string" — считаем пустой
+            
             if (cellText === 'string') cellText = '';
-
+            
             for (var r = 0; r < rep; r++) {
                 cells.push(cellText);
             }
         }
-
+        
         if (cells.length > 0) rows.push(cells);
     }
     return rows;
@@ -1072,21 +1064,21 @@ function parseBaseOds(xml) {
     var result = new Map();
     var rows = extractOdsRows(xml);
     var dataStarted = false;
-
+    
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i];
         var col0 = (cells[0] || '').trim();
-
+        
         if (!dataStarted) {
             if (/участок|номер|№/i.test(col0) || isPlotNumber(col0)) {
                 dataStarted = true;
                 if (!isPlotNumber(col0)) continue;
             } else continue;
         }
-
+        
         if (col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) break;
         if (!isPlotNumber(col0)) continue;
-
+        
         var plotKey = col0.toLowerCase();
         result.set(plotKey, {
             plotNumber: plotKey,
@@ -1103,64 +1095,55 @@ function parseBaseOds(xml) {
 }
 
 // ================================================================
-// 🔑 ИСПРАВЛЕННЫЙ ПАРСЕР DEBIT
-// ================================================================
-// Структура ODS от 1С (по вашим логам):
-//   [0] Номер участка
-//   [1] Владелец
-//   [2] Адрес (обычно пусто)
-//   [3] Долг на конец периода (колонка D)
-//   [4] Переплата на конец периода (колонка E)
-// Далее идут строки-категории, у которых:
-//   [0] Название категории (Членские, Целевые и т.д.)
-//   [1] Сумма (дубль)
-//   [2] Сумма (дубль)
+// 🔑 ИСПРАВЛЕННЫЙ ПАРСЕР DEBIT (С ДЕТАЛИЗАЦИЕЙ)
 // ================================================================
 function parseDebitOds(xml) {
     debug('📊 Парсинг DEBIT (ODS 1С)…', 'info');
     var result = new Map();
     var rows = extractOdsRows(xml);
     var current = null;
-
+    
     debug('   📊 Всего строк: ' + rows.length, 'info');
-
+    
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i];
         var col0 = (cells[0] || '').trim();
         var col0l = col0.toLowerCase();
-
+        
+        // Пропускаем заголовки
         if (!col0) continue;
-        if (['документ', 'взнос', 'итого', 'номер', 'владельцы участка', 'адрес',
+        if (['документ', 'взнос', 'итого', 'номер', 'владельцы участка', 'адрес', 
              'долг', 'переплата', 'начислено', 'оплачено'].indexOf(col0l) !== -1) continue;
-        if (col0l.includes('на начало') || col0l.includes('на конец') ||
+        if (col0l.includes('на начало') || col0l.includes('на конец') || 
             col0l.includes('сортировка') || col0l.includes('расчеты')) continue;
         if (col0l.includes('садоводческое некоммерческое')) continue;
-
+        
         var isMainRow = isPlotNumber(col0);
-
+        
         if (isMainRow) {
+            // Сохраняем предыдущий участок
             if (current) {
                 finalizePlot(current);
                 if (current.totalDebt > 0.01 || current.overpayEnd > 0.01) {
                     result.set(current.plotNumber, current);
-
+                    
                     if (['15', '16', '17', '90', '5', '1'].indexOf(current.plotNumber) !== -1) {
-                        debug('   📝 ' + current.plotNumber +
-                              ': долг=' + current.totalDebt.toFixed(2) +
+                        debug('   📝 ' + current.plotNumber + 
+                              ': долг=' + current.totalDebt.toFixed(2) + 
                               ' | переплата=' + current.overpayEnd.toFixed(2) +
                               ' | член=' + current.membershipDebt.toFixed(2) +
                               ' | целе=' + current.targetDebt.toFixed(2) +
-                              ' | прошл=' + current.arrearsDebt.toFixed(2) +
-                              ' | отраб=' + current.workDebt.toFixed(2) +
-                              ' | эл=' + current.electricityDebt.toFixed(2), 'ok');
+                              ' | прошл=' + current.arrearsDebt.toFixed(2), 'ok');
                     }
                 }
             }
-
-            // ГЛАВНАЯ СТРОКА: долг в [3], переплата в [4]
+            
+            // ГЛАВНАЯ СТРОКА
+            // Index 3: Долг (На конец периода)
+            // Index 4: Переплата (На конец периода)
             var rawDebt = cells[3] || "0";
             var rawOver = cells[4] || "0";
-
+            
             current = {
                 plotNumber: col0.toLowerCase(),
                 owner: (cells[1] || '').trim(),
@@ -1172,63 +1155,65 @@ function parseDebitOds(xml) {
                 targetDebt: 0,
                 arrearsDebt: 0,
                 workDebt: 0,
-                electricityDebt: 0
+                electricityDebt: 0,
+                details: [] // Массив для хранения строк детализации
             };
-
+            
             if (['15', '16', '17', '90'].indexOf(current.plotNumber) !== -1) {
-                debug('   🔍 ' + current.plotNumber + ' ГЛАВНАЯ: cells=' +
-                      cells.slice(0, 6).map(function(c, idx){return '['+idx+']'+c;}).join(' | '), 'info');
+                debug('   🔍 ' + current.plotNumber + ' ГЛАВНАЯ: cells=[3]="' + rawDebt + '" [4]="' + rawOver + '"', 'info');
             }
-
+            
         } else if (current) {
-            // СТРОКА-КАТЕГОРИЯ: сумма для контроля (не перетираем главную)
-            var catAmount = parseNumber(cells[1] || '0');
-            if (catAmount === 0) catAmount = parseNumber(cells[2] || '0');
-
+            // СТРОКА ДЕТАЛИЗАЦИИ (категория)
+            // Обычно сумма лежит в той же колонке, что и итог (индекс 3), 
+            // но иногда в индексе 1 или 7. Проверяем основные.
+            var catAmount = parseNumber(cells[3]);
+            if (catAmount === 0) catAmount = parseNumber(cells[7]); // На всякий случай проверяем колонку H
+            if (catAmount === 0) catAmount = parseNumber(cells[1]); // Иногда в B
+            
             if (catAmount > 0.01) {
-                var cat = col0l;
-                if (cat.includes('членские') || cat.includes('членск')) {
+                var catName = col0;
+                var catLower = col0l;
+                
+                // Добавляем в детали для отображения
+                current.details.push({ name: catName, amount: catAmount });
+
+                // Распределяем по категориям для QR
+                if (catLower.includes('членские') || catLower.includes('членск')) {
                     current.membershipDebt += catAmount;
-                } else if (cat.includes('целевые') || cat.includes('целев')) {
+                } else if (catLower.includes('целевые') || catLower.includes('целев')) {
                     current.targetDebt += catAmount;
-                } else if (cat.includes('отработка') || cat.includes('отработк')) {
+                } else if (catLower.includes('отработка') || catLower.includes('отработк')) {
                     current.workDebt += catAmount;
-                } else if (cat.includes('задолженность прошлых лет')) {
-                    if (!cat.includes('отработка') && !cat.includes('целевые')) {
+                } else if (catLower.includes('задолженность прошлых лет')) {
+                    // Исключаем дубли, если отработка уже посчитана выше
+                    if (!catLower.includes('отработка') && !catLower.includes('целевые')) {
                         current.arrearsDebt += catAmount;
                     }
-                } else if (cat.includes('электроэнергия') || cat.includes('эл')) {
+                } else if (catLower.includes('электроэнергия') || catLower.includes('эл')) {
                     current.electricityDebt += catAmount;
                 }
             }
         }
     }
-
+    
+    // Последний участок
     if (current) {
         finalizePlot(current);
         if (current.totalDebt > 0.01 || current.overpayEnd > 0.01) {
             result.set(current.plotNumber, current);
         }
     }
-
+    
     debug('✅ DEBIT: ' + result.size + ' записей', 'ok');
     return result;
 }
 
-// ============================================================
-// 🔑 ФИНАЛИЗАЦИЯ УЧАСТКА
-// ============================================================
-// Логика:
-// - totalDebt берём из ГЛАВНОЙ строки (cells[3]). НЕ перетираем категориями.
-// - Если totalDebt > 0 → это ДОЛГ.
-// - Иначе, если overpayEnd > 0 → это ПЕРЕПЛАТА.
-// - Категории (membershipDebt, targetDebt, …) — только для отображения детализации.
-// ============================================================
 function finalizePlot(plot) {
+    // Логика определения статуса
     if (plot.totalDebt > 0.01) {
         plot.hasDebt = true;
         plot.hasOverpayment = false;
-        plot.overpayEnd = 0; // при долге переплаты быть не должно
     } else if (plot.overpayEnd > 0.01) {
         plot.hasDebt = false;
         plot.hasOverpayment = true;
@@ -1240,40 +1225,35 @@ function finalizePlot(plot) {
 }
 
 // ================================================================
-// 🔑 ПАРСЕР EE
-// ================================================================
-// Структура (по логам):
-//   [0] Номер, [1] Владелец, [2] "Счетчик", [3] Дата,
-//   [4] Предыдущее показание, [5] Текущее показание
+// ПАРСЕР EE
 // ================================================================
 function parseElectricityOds(xml) {
     debug('📊 Парсинг EE (ODS 1С)…', 'info');
     var result = new Map();
     var rows = extractOdsRows(xml);
     var headerFound = false;
-
+    
     for (var i = 0; i < rows.length; i++) {
         var cells = rows[i];
         var col0 = (cells[0] || '').trim();
-
+        
         if (!headerFound) {
-            if (col0 === 'Номер' || col0 === '№' ||
-                col0.toLowerCase().includes('участок') || col0 === 'Магазин') {
+            if (col0 === 'Номер' || col0 === '№' || col0.toLowerCase().includes('участок') || col0 === 'Магазин') {
                 headerFound = true;
             }
             if (!headerFound) continue;
         }
-
+        
         if (!isPlotNumber(col0)) continue;
         if (col0.toLowerCase() === 'итого' || col0.toLowerCase().startsWith('итог')) continue;
-
+        
         var plotNum = col0.toLowerCase();
         var owner = (cells[1] || '').trim();
-
+        
         var dateStr = (cells[3] || '').trim();
         var prevReading = parseNumber(cells[4] || '0');
         var currReading = parseNumber(cells[5] || '0');
-
+        
         var dateRegex = /^\d{1,2}[\.\/\-]\d{1,2}(?:[\.\/\-]\d{2,4})?$/;
         if (!dateRegex.test(dateStr)) {
             for (var j = 2; j < cells.length; j++) {
@@ -1285,11 +1265,11 @@ function parseElectricityOds(xml) {
                 }
             }
         }
-
+        
         if (!dateRegex.test(dateStr)) dateStr = 'не указана';
-
+        
         var consumption = Math.max(0, currReading - prevReading);
-
+        
         result.set(plotNum, {
             plotNumber: plotNum,
             owner: owner,
@@ -1299,14 +1279,12 @@ function parseElectricityOds(xml) {
             consumption: consumption,
             tariff: TARIFF
         });
-
+        
         if (['15', '16', '17', '90', '5', '1'].indexOf(plotNum) !== -1) {
-            debug('   📝 EE ' + plotNum + ': дата=' + dateStr +
-                  ' | пред=' + prevReading + ' | тек=' + currReading +
-                  ' | расход=' + consumption, 'info');
+            debug('   📝 EE ' + plotNum + ': дата=' + dateStr + ' | пред=' + prevReading + ' | тек=' + currReading, 'info');
         }
     }
-
+    
     debug('✅ EE: ' + result.size + ' записей', 'ok');
     return result;
 }
@@ -1344,8 +1322,8 @@ function updateDataStatus() {
         else parts.push('⬜ ' + label);
     });
     statusEl.textContent = parts.join(' · ');
-    timeEl.textContent = lastSyncTime
-        ? 'Обновлено: ' + lastSyncTime.toLocaleDateString('ru-RU') + ' ' +
+    timeEl.textContent = lastSyncTime 
+        ? 'Обновлено: ' + lastSyncTime.toLocaleDateString('ru-RU') + ' ' + 
           lastSyncTime.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})
         : 'Данные не загружены';
 }
@@ -1371,7 +1349,7 @@ function loadSingleOds(url, parserFn, statusKey) {
 function syncAllData() {
     if (syncPromise) return syncPromise;
     debug('🔄 Синхронизация данных', 'title');
-
+    
     syncPromise = Promise.allSettled([
         loadSingleOds(BASE_URL, parseBaseOds, 'base'),
         loadSingleOds(DEBIT_URL, parseDebitOds, 'debt'),
@@ -1381,15 +1359,15 @@ function syncAllData() {
         if (results[0].status === 'fulfilled') cachedBaseMap = results[0].value;
         if (results[1].status === 'fulfilled') cachedDebtMap = results[1].value;
         if (results[2].status === 'fulfilled') cachedElectricityMap = results[2].value;
-
+        
         lastSyncTime = new Date();
         updateDataStatus();
-
+        
         if (currentPlotNumber) loadPlotData(currentPlotNumber, true);
         return { base: cachedBaseMap, debt: cachedDebtMap, ee: cachedElectricityMap };
     })
     .finally(function() { syncPromise = null; });
-
+    
     return syncPromise;
 }
 
@@ -1397,43 +1375,43 @@ function loadPlotData(plotNumber, fromCache) {
     var normalized = plotNumber.trim().toLowerCase();
     currentPlotNumber = normalized;
     debug('🔍 Поиск участка: ' + normalized, 'info');
-
+    
     ['debtCard','electricityCard','manualPaymentCard','bankDetailsCard','warningCard','instructionCard']
-        .forEach(function(id) {
+        .forEach(function(id) { 
             var el = document.getElementById(id);
-            if (el) el.classList.add('hidden');
+            if (el) el.classList.add('hidden'); 
         });
     var nf = document.getElementById('notFoundBlock');
     if (nf) nf.classList.add('hidden');
-
+    
     try {
         if (cachedBaseMap.size === 0 && cachedDebtMap.size === 0 && cachedElectricityMap.size === 0) {
             syncAllData();
             return;
         }
-
+        
         var debt = cachedDebtMap.get(normalized);
         var ee = cachedElectricityMap.get(normalized);
         var member = cachedBaseMap.get(normalized);
-
+        
         if (!debt && !ee && !member) {
-            var stillLoading = dataLoadStatus.base === 'loading' ||
+            var stillLoading = dataLoadStatus.base === 'loading' || 
                 dataLoadStatus.debt === 'loading' || dataLoadStatus.ee === 'loading';
             if (stillLoading) { showToast('Данные ещё загружаются…'); return; }
             if (nf) nf.classList.remove('hidden');
             return;
         }
-
+        
         ['bankDetailsCard','warningCard','instructionCard'].forEach(function(id){
             var el = document.getElementById(id);
             if (el) el.classList.remove('hidden');
         });
         renderBankDetails();
-
+        
         if (debt) renderDebtCard(debt);
         if (ee) renderElectricityCard(ee);
         renderManualPaymentCard(member, debt, ee);
-
+        
         debug('✅ Данные отображены', 'ok');
     } catch(err) {
         debug('❌ loadPlotData: ' + err.message, 'error');
@@ -1441,47 +1419,73 @@ function loadPlotData(plotNumber, fromCache) {
 }
 
 // ================================================================
-// QR
+// QR КОДЫ (ОПТИМИЗИРОВАННЫЕ ДЛЯ БАНКОВ)
 // ================================================================
-function sanitizePurpose(t) {
-    return t.replace(/[|;\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+function sanitizePurpose(t) { 
+    return t.replace(/[|;\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim(); 
 }
 
-function buildDetailedPurpose(debt) {
+// Функция создает короткое и понятное назначение платежа
+function buildSmartPurpose(debt) {
     var parts = [];
-    if (debt.membershipDebt > 0.01) parts.push('Членские: ' + formatAmountShort(debt.membershipDebt) + 'р');
-    if (debt.targetDebt > 0.01) parts.push('Целевые: ' + formatAmountShort(debt.targetDebt) + 'р');
-    if (debt.arrearsDebt > 0.01) parts.push('Прошлых лет: ' + formatAmountShort(debt.arrearsDebt) + 'р');
-    if (debt.workDebt > 0.01) parts.push('Отработка: ' + formatAmountShort(debt.workDebt) + 'р');
-    if (debt.electricityDebt > 0.01) parts.push('Э/э: ' + formatAmountShort(debt.electricityDebt) + 'р');
-    if (parts.length === 0) parts.push('Оплата взносов: ' + formatAmountShort(debt.totalDebt) + 'р');
-    var result = parts.join(', ') + ', уч. ' + debt.plotNumber;
-    if (result.length > 210) result = result.slice(0, 209) + '…';
-    return result;
+    var hasMembership = debt.membershipDebt > 0.01;
+    var hasTarget = debt.targetDebt > 0.01;
+    var hasArrears = debt.arrearsDebt > 0.01;
+    var hasWork = debt.workDebt > 0.01;
+    var hasElec = debt.electricityDebt > 0.01;
+    
+    // Считаем количество типов долга
+    var typesCount = 0;
+    if (hasMembership) typesCount++;
+    if (hasTarget) typesCount++;
+    if (hasArrears) typesCount++;
+    if (hasWork) typesCount++;
+    if (hasElec) typesCount++;
+    
+    // Если тип один - пишем конкретно, если много - пишем обобщенно
+    if (typesCount === 1) {
+        if (hasMembership) parts.push("Членские взносы");
+        if (hasTarget) parts.push("Целевые взносы");
+        if (hasArrears) parts.push("Долг прошлых лет");
+        if (hasWork) parts.push("Отработка");
+        if (hasElec) parts.push("Электроэнергия");
+    } else {
+        parts.push("Взносы СНТ");
+    }
+    
+    // Добавляем номер участка
+    parts.push("уч." + debt.plotNumber);
+    
+    return parts.join(", ");
 }
 
 function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpose) {
     var sumKop = Math.round(amount * 100);
     var purpose;
+    
     if (customPurpose && customPurpose.trim()) {
         purpose = sanitizePurpose(customPurpose) + ' уч.' + plotNumber;
     } else if (isElectricity) {
         var ee = window.currentEeData;
         var consumption = amount / (ee && ee.tariff ? ee.tariff : 3.82);
-        purpose = 'Электроэнергия ' + formatAmountShort(amount) + 'р (' +
+        purpose = 'Электроэнергия ' + formatAmountShort(amount) + 'р (' + 
                   Math.round(consumption) + 'кВт·ч) уч.' + plotNumber;
     } else if (debtData) {
-        purpose = buildDetailedPurpose(debtData);
+        purpose = buildSmartPurpose(debtData);
     } else {
         purpose = 'Оплата взносов уч.' + plotNumber;
     }
-    return 'ST00012|Name=' + ORGANIZATION +
-           '|PersonalAcc=' + PERSONAL_ACC +
-           '|BankName=' + BANK_NAME +
-           '|BIC=' + BIC +
-           '|CorrespAcc=' + CORRESP_ACC +
-           '|PayeeINN=' + INN +
-           '|Purpose=' + sanitizePurpose(purpose) +
+    
+    // Обрезаем если слишком длинно (банки любят до 210 символов)
+    if (purpose.length > 200) purpose = purpose.substring(0, 200);
+    
+    return 'ST00012|Name=' + ORGANIZATION + 
+           '|PersonalAcc=' + PERSONAL_ACC + 
+           '|BankName=' + BANK_NAME + 
+           '|BIC=' + BIC + 
+           '|CorrespAcc=' + CORRESP_ACC + 
+           '|PayeeINN=' + INN + 
+           '|Purpose=' + sanitizePurpose(purpose) + 
            '|Sum=' + sumKop;
 }
 
@@ -1498,7 +1502,7 @@ async function generateAndShowQR(type, btn, qrText) {
     try {
         if (typeof QRCode === 'undefined') throw new Error('QRCode не загружен');
         var dataUrl = await new Promise(function(resolve, reject) {
-            QRCode.toDataURL(qrText, { width: 280, margin: 1, errorCorrectionLevel: 'H' },
+            QRCode.toDataURL(qrText, { width: 280, margin: 1, errorCorrectionLevel: 'H' }, 
                 function(err, url) { if (err) reject(err); else resolve(url); });
         });
         var img = document.createElement('img');
@@ -1539,57 +1543,63 @@ window.saveQR = function(imgId) {
 };
 
 // ================================================================
-// РЕНДЕРИНГ КАРТОЧКИ ДОЛГА
+// РЕНДЕРИНГ КАРТОЧКИ ДОЛГА (С ДЕТАЛИЗАЦИЕЙ)
 // ================================================================
 function renderDebtCard(debt) {
     var c = document.getElementById('debtCard');
     if (!c) return;
     c.classList.remove('hidden');
-
+    
     var html = '<div class="card-body">' +
         '<div class="card-title">💰 Задолженность</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(debt.plotNumber) + '</div>';
-
-    // ПЕРЕПЛАТА
+    
     if (debt.hasOverpayment && !debt.hasDebt) {
         html += '<div class="debt-total green">✓ Переплата: ' + formatMoney(debt.overpayEnd) + ' ₽</div>';
         html += '<div class="debt-words">Переплата зачислена в счёт будущих платежей</div>';
     }
-    // ЗАДОЛЖЕННОСТЬ
     else if (debt.hasDebt) {
         html += '<div class="debt-total">Задолженность: ' + formatMoney(debt.totalDebt) + ' ₽</div>';
-
-        var hasDetails = false;
-        if (debt.membershipDebt > 0.01) {
-            html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
-            hasDetails = true;
+        
+        // Если есть детализация из файла - показываем её
+        if (debt.details && debt.details.length > 0) {
+            debt.details.forEach(function(item) {
+                html += '<div class="debt-line"><span class="debt-line-label">' + escapeHtml(item.name) + '</span><span class="debt-line-amount">' + formatMoney(item.amount) + ' ₽</span></div>';
+            });
+        } else {
+            // Если детализации нет, показываем категории, которые успели распарсить
+            var hasDetails = false;
+            if (debt.membershipDebt > 0.01) {
+                html += '<div class="debt-line"><span class="debt-line-label">Членские взносы</span><span class="debt-line-amount">' + formatMoney(debt.membershipDebt) + ' ₽</span></div>';
+                hasDetails = true;
+            }
+            if (debt.targetDebt > 0.01) {
+                html += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
+                hasDetails = true;
+            }
+            if (debt.arrearsDebt > 0.01) {
+                html += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
+                hasDetails = true;
+            }
+            if (debt.workDebt > 0.01) {
+                html += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
+                hasDetails = true;
+            }
+            if (debt.electricityDebt > 0.01) {
+                html += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
+                hasDetails = true;
+            }
+            
+            if (!hasDetails) {
+                html += '<div class="debt-line"><span class="debt-line-label">Общая задолженность</span><span class="debt-line-amount">' + formatMoney(debt.totalDebt) + ' ₽</span></div>';
+            }
         }
-        if (debt.targetDebt > 0.01) {
-            html += '<div class="debt-line"><span class="debt-line-label">Целевые взносы</span><span class="debt-line-amount">' + formatMoney(debt.targetDebt) + ' ₽</span></div>';
-            hasDetails = true;
-        }
-        if (debt.arrearsDebt > 0.01) {
-            html += '<div class="debt-line"><span class="debt-line-label">Задолженность прошлых лет</span><span class="debt-line-amount">' + formatMoney(debt.arrearsDebt) + ' ₽</span></div>';
-            hasDetails = true;
-        }
-        if (debt.workDebt > 0.01) {
-            html += '<div class="debt-line"><span class="debt-line-label">Отработка</span><span class="debt-line-amount">' + formatMoney(debt.workDebt) + ' ₽</span></div>';
-            hasDetails = true;
-        }
-        if (debt.electricityDebt > 0.01) {
-            html += '<div class="debt-line"><span class="debt-line-label">Электроэнергия</span><span class="debt-line-amount">' + formatMoney(debt.electricityDebt) + ' ₽</span></div>';
-            hasDetails = true;
-        }
-
-        if (!hasDetails) {
-            html += '<div class="debt-line"><span class="debt-line-label">Общая задолженность</span><span class="debt-line-amount">' + formatMoney(debt.totalDebt) + ' ₽</span></div>';
-        }
-
+        
         html += '<div class="debt-line" style="border-top:2px solid var(--gray-300);margin-top:4px;padding-top:8px;font-weight:700;">' +
             '<span class="debt-line-label">Итого к оплате</span>' +
             '<span class="debt-line-amount" style="font-size:16px;">' + formatMoney(debt.totalDebt) + ' ₽</span>' +
             '</div>';
-
+        
         html += '<div class="debt-words">Прописью: ' + numberToWords(debt.totalDebt) + '</div>' +
             '<button id="debtQrBtn" class="btn btn-primary mt-md">📱 QR для оплаты</button>' +
             '<div id="debtQrContainer"></div>' +
@@ -1602,7 +1612,7 @@ function renderDebtCard(debt) {
     }
     html += '</div>';
     c.innerHTML = html;
-
+    
     var qrBtn = document.getElementById('debtQrBtn');
     if (qrBtn && debt.hasDebt) {
         var qrText = buildPaymentQR(debt.plotNumber, debt.totalDebt, debt, false);
@@ -1617,15 +1627,15 @@ function renderElectricityCard(ee) {
     currentEeData = ee;
     var c = document.getElementById('electricityCard');
     if (!c) return;
-
+    
     if (!ee.currentReading || ee.currentReading === 0) {
         c.classList.add('hidden');
         return;
     }
-
+    
     c.classList.remove('hidden');
     var dateDisplay = formatDateDisplay(ee.readingDateStr || "не указана");
-
+    
     c.innerHTML = '<div class="card-body">' +
         '<div class="card-title blue">⚡ Электроэнергия</div>' +
         '<div class="plot-sub">Участок №' + escapeHtml(ee.plotNumber) + '</div>' +
@@ -1650,11 +1660,11 @@ function renderElectricityCard(ee) {
         '<button id="uploadPhotoBtn" class="btn btn-blue" style="flex:1;">☁ Загрузить</button>' +
         '<button id="retakePhotoBtn" class="btn btn-retake" style="flex:1;">↺ Переснять</button></div>' +
         '<div id="ydStatus" class="yd-status">☁ Яндекс.Диск</div></div>';
-
+    
     var input = document.getElementById('newReadingInput');
     var calc = document.getElementById('calcAmountBlock');
     var genBtn = document.getElementById('genEeQrBtn');
-
+    
     if (input && calc && genBtn) {
         input.addEventListener('input', function() {
             var newVal = parseFloat(this.value);
@@ -1672,7 +1682,7 @@ function renderElectricityCard(ee) {
             };
         });
     }
-
+    
     var takeBtn = document.getElementById('takePhotoBtn');
     if (takeBtn) takeBtn.onclick = function() { takePhoto(currentPlotNumber); };
 }
@@ -1696,7 +1706,7 @@ function renderManualPaymentCard(member, debt, ee) {
         '<div id="manualQrButtons" class="qr-buttons mt-sm">' +
         '<button class="btn btn-blue" onclick="shareQR(\'manualQrImg\')">↗ Поделиться</button>' +
         '<button class="btn btn-primary" style="background:var(--gray-700);" onclick="saveQR(\'manualQrImg\')">💾 Сохранить</button></div></div>';
-
+    
     var amountInput = document.getElementById('manualAmountInput');
     var generateBtn = document.getElementById('manualGenerateBtn');
     if (amountInput && generateBtn) {
@@ -1709,9 +1719,9 @@ function renderManualPaymentCard(member, debt, ee) {
         generateBtn.onclick = function() {
             var amount = parseFloat(amountInput.value);
             if (!amount || amount <= 0) return;
-            var purpose = document.getElementById('manualPurposeInput') ?
+            var purpose = document.getElementById('manualPurposeInput') ? 
                           document.getElementById('manualPurposeInput').value.trim() : '';
-            generateAndShowQR('manual', generateBtn,
+            generateAndShowQR('manual', generateBtn, 
                 buildPaymentQR(currentPlotNumber, amount, null, false, purpose));
         };
     }
@@ -1727,24 +1737,24 @@ function renderBankDetails() {
     document.getElementById('bankName').textContent = BANK_NAME;
     document.getElementById('bankBic').textContent = BIC;
     document.getElementById('bankCorresp').textContent = CORRESP_ACC;
-
+    
     document.querySelectorAll('.copy-btn').forEach(function(btn) {
         btn.onclick = function() {
             var text = document.getElementById(btn.dataset.copy).textContent;
             navigator.clipboard.writeText(text).then(function() { showToast('Скопировано'); });
         };
     });
-
+    
     var copyAll = document.getElementById('copyAllBtn');
     if (copyAll) {
         copyAll.onclick = function() {
-            var text = 'Получатель: ' + ORGANIZATION + '\nИНН: ' + INN +
-                       '\nР/счёт: ' + PERSONAL_ACC + '\nБанк: ' + BANK_NAME +
+            var text = 'Получатель: ' + ORGANIZATION + '\nИНН: ' + INN + 
+                       '\nР/счёт: ' + PERSONAL_ACC + '\nБанк: ' + BANK_NAME + 
                        '\nБИК: ' + BIC + '\nК/счёт: ' + CORRESP_ACC;
             navigator.clipboard.writeText(text).then(function() { showToast('Реквизиты скопированы'); });
         };
     }
-
+    
     var toggleBtn = document.getElementById('toggleBankBtn');
     var content = document.getElementById('bankDetailsContent');
     if (toggleBtn && content) {
@@ -1781,7 +1791,7 @@ function takePhoto(plotNumber) {
     input.onchange = async function(e) {
         var file = e.target.files[0];
         if (!file) return;
-        var readingValue = document.getElementById('newReadingInput') ?
+        var readingValue = document.getElementById('newReadingInput') ? 
                            document.getElementById('newReadingInput').value : '';
         var preview = document.getElementById('photoPreview');
         var takeBtn = document.getElementById('takePhotoBtn');
@@ -1790,20 +1800,20 @@ function takePhoto(plotNumber) {
         var errorDiv = document.getElementById('photoUploadError');
         var actions = document.getElementById('photoActions');
         var ydStatus = document.getElementById('ydStatus');
-
+        
         var reader = new FileReader();
         reader.onload = function(ev) {
             if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
         };
         reader.readAsDataURL(file);
-
+        
         if (takeBtn) takeBtn.style.display = 'none';
         if (progress) progress.style.display = 'block';
         if (success) success.style.display = 'none';
         if (errorDiv) errorDiv.style.display = 'none';
         if (actions) actions.style.display = 'flex';
         if (ydStatus) ydStatus.textContent = '☁ Загрузка…';
-
+        
         try {
             await uploadPhotoToServer(plotNumber, readingValue, file);
             if (progress) progress.style.display = 'none';
@@ -1862,18 +1872,18 @@ function showConsentScreen() {
         '<p style="font-size:11px;color:var(--text-hint);margin-top:12px;">Дата принятия фиксируется. Можно отозвать в настройках.</p></div>' +
         '<div class="modal-footer"><button id="acceptBtn" class="btn btn-primary-lg" disabled>✓ Принять и продолжить</button><button id="declineBtn" class="btn btn-text">Отказаться и закрыть</button></div></div>';
     document.body.appendChild(overlay);
-
+    
     var c1 = document.getElementById('c1');
     var c2 = document.getElementById('c2');
     var c3 = document.getElementById('c3');
     var accept = document.getElementById('acceptBtn');
-
+    
     function update() {
         accept.disabled = !(c1.checked && c2.checked && c3.checked);
         accept.style.opacity = accept.disabled ? '0.4' : '1';
     }
     c1.onchange = c2.onchange = c3.onchange = update;
-
+    
     accept.onclick = function() {
         saveConsent();
         overlay.remove();
@@ -1901,11 +1911,11 @@ function showSettingsModal() {
         '</div>' +
         '<div class="modal-footer"><button id="closeModalBtn" class="btn btn-secondary">Закрыть</button></div></div>';
     document.body.appendChild(overlay);
-
+    
     var close = function() { overlay.remove(); };
     document.getElementById('closeModalBtn').onclick = close;
     overlay.onclick = function(e) { if (e.target === overlay) close(); };
-
+    
     document.getElementById('revokeBtn').onclick = function() {
         if (confirm('Отозвать согласие на обработку персональных данных?')) revokeConsent();
     };
@@ -1933,7 +1943,7 @@ function initMainApp() {
     showMainApp();
     var searchBtn = document.getElementById('searchBtn');
     var plotInput = document.getElementById('plotInput');
-
+    
     if (plotInput) {
         plotInput.addEventListener('input', function() {
             this.value = this.value.replace(/[^0-9а-яёa-z]/gi, '').toLowerCase();
@@ -1942,7 +1952,7 @@ function initMainApp() {
             if (e.key === 'Enter' && searchBtn) searchBtn.click();
         };
     }
-
+    
     if (searchBtn) {
         searchBtn.onclick = function() {
             if (!plotInput) return;
@@ -1957,10 +1967,10 @@ function initMainApp() {
             }
         };
     }
-
+    
     var sb = document.getElementById('settingsBtn');
     if (sb) sb.onclick = showSettingsModal;
-
+    
     var rb = document.getElementById('retryBtn');
     if (rb) {
         rb.onclick = function() {
@@ -1969,7 +1979,7 @@ function initMainApp() {
             else syncAllData().catch(function(e) { console.warn(e); });
         };
     }
-
+    
     updateDataStatus();
     syncAllData().catch(function(err) {
         console.warn('Initial sync failed, but UI is ready:', err);
