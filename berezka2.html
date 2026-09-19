@@ -216,6 +216,8 @@ select.filter-sel:focus{border-color:var(--green-400);}
     border-radius: 50px;
     transition: width .5s;
 }
+.ee-col-item.dragging { opacity: 0.4; }
+.ee-col-item.drag-over { border-top: 2px solid var(--green-600); }
 </style>
 <base target="_blank">
 </head>
@@ -573,10 +575,23 @@ select.filter-sel:focus{border-color:var(--green-400);}
 <div class="search-bar">
 <input type="text" class="search-input" id="electricitySearchInput" placeholder="🔍 Поиск по участку или ФИО...">
 <div class="toolbar-right">
+<button class="btn btn-outline btn-sm" id="toggleEeColumnsBtn">⚙️ Колонки</button>
 <button class="btn btn-secondary btn-sm" id="resetElectricityFilters">✕ Сброс</button>
 <button class="btn btn-blue btn-sm" id="printElectricityBtn">🖨 Печать</button>
 <button class="btn btn-secondary btn-sm" id="exportElectricityCsv">📄 CSV</button>
 </div>
+</div>
+<div id="eeColumnSettingsPanel" style="display:none;margin-bottom:12px;padding:12px 14px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-200);">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+    <span style="font-size:.85rem;font-weight:600;color:var(--gray-700);">🔧 Видимость и порядок колонок:</span>
+    <button class="btn btn-secondary btn-sm" id="resetEeColumnsBtn">↺ Сбросить</button>
+  </div>
+  <div style="font-size:.78rem;color:var(--gray-500);margin-bottom:8px;">Перетаскивайте строки мышью (⋮⋮) или используйте кнопки ↑↓. Галочка — видимость колонки.</div>
+  <div id="eeColumnList" style="display:flex;flex-direction:column;gap:4px;"></div>
+</div>
+<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap;">
+  <span id="eeActiveColsInfo" style="font-size:.8rem;color:var(--gray-600);"></span>
+  <span style="font-size:.78rem;color:var(--gray-500);">✍️ Колонка «Новые показания» — при печати будет пустой, для заполнения от руки</span>
 </div>
 <div class="table-wrap">
 <table class="data-table">
@@ -974,70 +989,220 @@ let financialAnalyzer = null;
 let financeChartInstance = null;
 let financePieInstance = null;
 
+// ===================== НАСТРОЙКА КОЛОНОК ЭЛЕКТРОЭНЕРГИИ =====================
+const EE_COLUMNS = [
+  { id: 'plotNumber',  label: '№ уч.',                         icon: '🔢' },
+  { id: 'owner',       label: 'ФИО владельца',                 icon: '👤' },
+  { id: 'prevReading', label: 'Пред. показания',               icon: '📉' },
+  { id: 'currReading', label: 'Тек. показания',                icon: '📈' },
+  { id: 'consumption', label: 'Расход кВт·ч',                  icon: '⚡' },
+  { id: 'tariff',      label: 'Тариф ₽',                       icon: '💵' },
+  { id: 'amount',      label: 'Сумма ₽',                       icon: '💰' },
+  { id: 'readingDate', label: 'Дата съёма',                    icon: '📅' },
+  { id: 'newReading',  label: 'Новые показания (для вписывания)', icon: '✍️' }
+];
+const EE_DEFAULT_COLS = ['plotNumber','owner','prevReading','currReading','consumption','tariff','amount','readingDate'];
+
+function getEeColumnsConfig() {
+  try {
+    const saved = localStorage.getItem('snt_ee_cols');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length) {
+        // дополним новыми колонками, если их нет в сохранённом конфиге
+        const haveIds = new Set(parsed.map(c => c.id));
+        EE_COLUMNS.forEach(def => {
+          if (!haveIds.has(def.id)) parsed.push({ id: def.id, visible: def.id !== 'newReading' });
+        });
+        return parsed;
+      }
+    }
+  } catch(e) {}
+  return EE_DEFAULT_COLS.map(id => ({ id, visible: true }));
+}
+function saveEeColumnsConfig(cfg) { localStorage.setItem('snt_ee_cols', JSON.stringify(cfg)); }
+function getActiveEeColumns() { return getEeColumnsConfig().filter(c => c.visible); }
+
+function getEeColHeader(colId, mode) {
+  const def = EE_COLUMNS.find(c => c.id === colId);
+  if (!def) return mode === 'print' ? '<th style="border:1px solid #ccc;padding:6px;background:#e8f5e9;"></th>' : '<th></th>';
+  const widths = { plotNumber:'90px', prevReading:'120px', currReading:'120px', consumption:'100px', tariff:'100px', amount:'120px', readingDate:'120px', newReading:'130px' };
+  const aligns = { prevReading:'text-align:right;', currReading:'text-align:right;', consumption:'text-align:right;', tariff:'text-align:right;', amount:'text-align:right;', readingDate:'text-align:center;', newReading:'text-align:center;' };
+  const w = widths[colId] ? `width:${widths[colId]};` : '';
+  const a = aligns[colId] || '';
+  if (mode === 'print') return `<th style="border:1px solid #ccc;padding:6px;${w}${a}background:#e8f5e9;">${def.icon} ${def.label}</th>`;
+  return `<th style="${w}${a}">${def.icon} ${def.label}</th>`;
+}
+
+function renderEeCellHtml(item, colId, mode) {
+  const consumption = Math.max(0, (item.currReading || 0) - (item.prevReading || 0));
+  const amount = consumption * (item.tariff || 3.82);
+  const p = (mode === 'print') ? 'border:1px solid #ccc;padding:6px;' : '';
+  switch(colId) {
+    case 'plotNumber':
+      return mode === 'print'
+        ? `<td style="${p}text-align:center;">${item.plotNumber}</td>`
+        : `<td><span class="plot-num-badge">${item.plotNumber}</span></td>`;
+    case 'owner':
+      return `<td style="${p}">${escapeHtml(item.owner || '—')}</td>`;
+    case 'prevReading':
+      return `<td style="${p}text-align:right;">${(item.prevReading || 0).toFixed(2)}</td>`;
+    case 'currReading':
+      return `<td style="${p}text-align:right;">${(item.currReading || 0).toFixed(2)}</td>`;
+    case 'consumption':
+      return mode === 'print'
+        ? `<td style="${p}text-align:right;">${consumption.toFixed(2)}</td>`
+        : `<td style="${p}text-align:right;font-weight:600;">${consumption.toFixed(2)}</td>`;
+    case 'tariff':
+      return `<td style="${p}text-align:right;">${(item.tariff || 3.82).toFixed(2)}</td>`;
+    case 'amount':
+      return mode === 'print'
+        ? `<td style="${p}text-align:right;">${fmt(amount)}</td>`
+        : `<td style="${p}text-align:right;font-weight:600;color:var(--gray-800);">${fmt(amount)}</td>`;
+    case 'readingDate':
+      return `<td style="${p}text-align:center;">${escapeHtml(item.readingDate || '—')}</td>`;
+    case 'newReading':
+      return mode === 'print'
+        ? `<td style="${p}text-align:center;background:#fffde7;min-width:120px;">&nbsp;</td>`
+        : `<td style="text-align:center;background:#fffde7;border:1px dashed #f9a825;min-width:100px;color:var(--gray-400);font-size:.8rem;">—</td>`;
+  }
+  return '<td></td>';
+}
+
+function renderEeColumnList() {
+  const config = getEeColumnsConfig();
+  const list = document.getElementById('eeColumnList');
+  if (!list) return;
+  list.innerHTML = config.map((col, idx) => {
+    const def = EE_COLUMNS.find(c => c.id === col.id);
+    if (!def) return '';
+    return `<div class="ee-col-item" draggable="true" data-id="${col.id}" data-idx="${idx}"
+      style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fff;border:1px solid var(--gray-200);border-radius:6px;cursor:move;user-select:none;">
+      <span style="color:var(--gray-400);cursor:grab;font-size:1rem;line-height:1;" title="Перетащите">⋮⋮</span>
+      <input type="checkbox" ${col.visible ? 'checked' : ''} class="ee-col-vis-cb" data-id="${col.id}" style="width:16px;height:16px;accent-color:var(--green-600);cursor:pointer;">
+      <span style="flex:1;font-size:.85rem;">${def.icon} ${def.label}</span>
+      <button class="btn btn-secondary btn-sm ee-col-up" data-idx="${idx}" ${idx===0?'disabled':''} style="padding:2px 8px;">↑</button>
+      <button class="btn btn-secondary btn-sm ee-col-down" data-idx="${idx}" ${idx===config.length-1?'disabled':''} style="padding:2px 8px;">↓</button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.ee-col-vis-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const cfg = getEeColumnsConfig();
+      const item = cfg.find(c => c.id === cb.dataset.id);
+      if (item) item.visible = cb.checked;
+      saveEeColumnsConfig(cfg);
+      renderElectricityPage();
+      updateEeColsInfo();
+    });
+    cb.addEventListener('click', e => e.stopPropagation());
+  });
+  list.querySelectorAll('.ee-col-up').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      const cfg = getEeColumnsConfig();
+      if (idx > 0) { [cfg[idx-1], cfg[idx]] = [cfg[idx], cfg[idx-1]]; saveEeColumnsConfig(cfg); renderEeColumnList(); renderElectricityPage(); }
+    });
+  });
+  list.querySelectorAll('.ee-col-down').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.idx);
+      const cfg = getEeColumnsConfig();
+      if (idx < cfg.length - 1) { [cfg[idx], cfg[idx+1]] = [cfg[idx+1], cfg[idx]]; saveEeColumnsConfig(cfg); renderEeColumnList(); renderElectricityPage(); }
+    });
+  });
+
+  let dragIdx = null;
+  list.querySelectorAll('.ee-col-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      dragIdx = parseInt(item.dataset.idx);
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      list.querySelectorAll('.ee-col-item').forEach(i => i.classList.remove('drag-over'));
+    });
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', (e) => {
+      e.preventDefault();
+      const dropIdx = parseInt(item.dataset.idx);
+      item.classList.remove('drag-over');
+      if (dragIdx === null || dragIdx === dropIdx) return;
+      const cfg = getEeColumnsConfig();
+      const [moved] = cfg.splice(dragIdx, 1);
+      cfg.splice(dropIdx, 0, moved);
+      saveEeColumnsConfig(cfg);
+      renderEeColumnList();
+      renderElectricityPage();
+    });
+  });
+  updateEeColsInfo();
+}
+function updateEeColsInfo() {
+  const active = getActiveEeColumns();
+  const info = document.getElementById('eeActiveColsInfo');
+  if (info) info.textContent = `Активно колонок: ${active.length} из ${EE_COLUMNS.length}`;
+}
+    
 // ===================== ЭЛЕКТРОЭНЕРГИЯ =====================
 function renderElectricityPage() {
-    const noData = document.getElementById('electricityNoData');
-    const dataView = document.getElementById('electricityDataView');
+  const noData = document.getElementById('electricityNoData');
+  const dataView = document.getElementById('electricityDataView');
+  if (!eeRepo || !eeRepo.getAll || eeRepo.getAll().length === 0) {
+    if (noData) noData.style.display = '';
+    if (dataView) dataView.style.display = 'none';
+    return;
+  }
+  if (noData) noData.style.display = 'none';
+  if (dataView) dataView.style.display = '';
 
-    if (!eeRepo || !eeRepo.getAll || eeRepo.getAll().length === 0) {
-        if(noData) noData.style.display = '';
-        if(dataView) dataView.style.display = 'none';
-        return;
-    }
-
-    if(noData) noData.style.display = 'none';
-    if(dataView) dataView.style.display = '';
-
-    const search = document.getElementById('electricitySearchInput').value;
-    let items = eeRepo.getAll();
-
-    if (search) {
-        const q = search.toLowerCase().trim();
-        items = items.filter(e => {
-            const pn = String(e.plotNumber || '').toLowerCase();
-            const owner = String(e.owner || '').toLowerCase();
-            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
-            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
-            return plotMatch || owner.includes(q);
-        });
-    }
-
-    items.sort((a, b) => {
-        const na = parseFloat(a.plotNumber) || 0;
-        const nb = parseFloat(b.plotNumber) || 0;
-        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  const search = document.getElementById('electricitySearchInput').value;
+  let items = eeRepo.getAll();
+  if (search) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(e => {
+      const pn = String(e.plotNumber || '').toLowerCase();
+      const owner = String(e.owner || '').toLowerCase();
+      const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+      const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+      return plotMatch || owner.includes(q);
     });
+  }
+  items.sort((a, b) => {
+    const na = parseFloat(a.plotNumber) || 0;
+    const nb = parseFloat(b.plotNumber) || 0;
+    return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  });
 
-    const tbody = document.getElementById('electricityTableBody');
-    let totalConsumption = 0;
-    let totalSum = 0;
+  const activeCols = getActiveEeColumns();
+  const thead = document.getElementById('electricityTableHead');
+  const tbody = document.getElementById('electricityTableBody');
 
-    if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-500);">Ничего не найдено</td></tr>`;
-    } else {
-        tbody.innerHTML = items.map(e => {
-            const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
-            const amount = consumption * (e.tariff || 3.82);
-            totalConsumption += consumption;
-            totalSum += amount;
+  if (thead) thead.innerHTML = '<tr>' + activeCols.map(c => getEeColHeader(c.id, 'screen')).join('') + '</tr>';
 
-            return `<tr>
-                <td><span class="plot-num-badge">${e.plotNumber}</span></td>
-                <td>${escapeHtml(e.owner || '—')}</td>
-                <td style="text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
-                <td style="text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
-                <td style="text-align:right;font-weight:600;">${consumption.toFixed(2)}</td>
-                <td style="text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
-                <td style="text-align:right;font-weight:600;color:var(--gray-800);">${fmt(amount)}</td>
-                <td style="text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
-            </tr>`;
-        }).join('');
-    }
-
-    const footer = document.getElementById('electricityTotal');
-    if (footer) {
-        footer.textContent = `Показано: ${items.length} | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽`;
-    }
+  let totalConsumption = 0, totalSum = 0;
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="${Math.max(1, activeCols.length)}" style="text-align:center;padding:30px;color:var(--gray-500);">Ничего не найдено</td></tr>`;
+  } else {
+    tbody.innerHTML = items.map(e => {
+      const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+      const amount = consumption * (e.tariff || 3.82);
+      totalConsumption += consumption;
+      totalSum += amount;
+      return '<tr>' + activeCols.map(c => renderEeCellHtml(e, c.id, 'screen')).join('') + '</tr>';
+    }).join('');
+  }
+  const footer = document.getElementById('electricityTotal');
+  if (footer) footer.textContent = `Показано: ${items.length} | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽`;
+  updateEeColsInfo();
 }
 
 document.getElementById('electricitySearchInput').addEventListener('input', renderElectricityPage);
@@ -1048,86 +1213,101 @@ document.getElementById('resetElectricityFilters').addEventListener('click', () 
 });
 
 document.getElementById('printElectricityBtn').addEventListener('click', () => {
-    const search = document.getElementById('electricitySearchInput').value;
-    let items = eeRepo.getAll ? eeRepo.getAll() : [];
-    if (search) {
-        const q = search.toLowerCase().trim();
-        items = items.filter(e => {
-            const pn = String(e.plotNumber || '').toLowerCase();
-            const owner = String(e.owner || '').toLowerCase();
-            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
-            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
-            return plotMatch || owner.includes(q);
-        });
-    }
-    items.sort((a, b) => {
-        const na = parseFloat(a.plotNumber) || 0;
-        const nb = parseFloat(b.plotNumber) || 0;
-        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  const search = document.getElementById('electricitySearchInput').value;
+  let items = eeRepo.getAll ? eeRepo.getAll() : [];
+  if (search) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(e => {
+      const pn = String(e.plotNumber || '').toLowerCase();
+      const owner = String(e.owner || '').toLowerCase();
+      const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+      const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+      return plotMatch || owner.includes(q);
     });
+  }
+  items.sort((a, b) => {
+    const na = parseFloat(a.plotNumber) || 0;
+    const nb = parseFloat(b.plotNumber) || 0;
+    return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  });
 
-    const rows = items.map(e => {
-        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
-        const amount = consumption * (e.tariff || 3.82);
-        return `<tr>
-            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${e.plotNumber}</td>
-            <td style="border:1px solid #ccc;padding:6px;">${escapeHtml(e.owner || '—')}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${consumption.toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmt(amount)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
-        </tr>`;
-    }).join('');
+  const activeCols = getActiveEeColumns();
+  const headers = activeCols.map(c => getEeColHeader(c.id, 'print')).join('');
+  const rows = items.map(e => '<tr>' + activeCols.map(c => renderEeCellHtml(e, c.id, 'print')).join('') + '</tr>').join('');
+  const totalConsumption = items.reduce((s, e) => s + Math.max(0, (e.currReading || 0) - (e.prevReading || 0)), 0);
+  const totalSum = items.reduce((s, e) => s + Math.max(0, ((e.currReading || 0) - (e.prevReading || 0)) * (e.tariff || 3.82)), 0);
+  const hasNewReading = activeCols.some(c => c.id === 'newReading');
 
-    const totalConsumption = items.reduce((s, e) => s + Math.max(0, (e.currReading || 0) - (e.prevReading || 0)), 0);
-    const totalSum = items.reduce((s, e) => s + Math.max(0, ((e.currReading || 0) - (e.prevReading || 0)) * (e.tariff || 3.82)), 0);
-
-    const w = window.open('', '_blank');
-    w.document.write(`<html><head><meta charset="UTF-8"><title>Электроэнергия — СНТ Берёзка-2</title>
-        <style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:12px;}th,td{border:1px solid #ccc;padding:6px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}.footer{margin-top:12px;font-size:12px;color:#666;}</style>
-        </head><body><h2>⚡ Показания электросчётчиков — СНТ «Берёзка-2» (${new Date().toLocaleDateString('ru-RU')})</h2>
-        <table><thead><tr><th>№ уч.</th><th>ФИО</th><th>Пред. показ.</th><th>Тек. показ.</th><th>Расход кВт·ч</th><th>Тариф</th><th>Сумма ₽</th><th>Дата</th></tr></thead><tbody>${rows}</tbody></table>
-        <div class="footer">Итого: ${items.length} участков | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽</div>
-        </body></html>`);
-    w.document.close();
-    setTimeout(() => w.print(), 600);
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><meta charset="UTF-8"><title>Электроэнергия — СНТ Берёзка-2</title>
+<style>
+  body{font-family:sans-serif;padding:20px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{border:1px solid #ccc;padding:6px;}
+  th{background:#e8f5e9;}
+  h2{margin-bottom:12px;}
+  .footer{margin-top:12px;font-size:12px;color:#666;}
+  @media print { @page { size: landscape; margin: 10mm; } }
+</style>
+</head><body>
+<h2>⚡ Показания электросчётчиков — СНТ «Берёзка-2» (${new Date().toLocaleDateString('ru-RU')})</h2>
+<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+<div class="footer">Итого: ${items.length} участков | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽</div>
+${hasNewReading ? '<p style="margin-top:12px;font-size:11px;color:#666;">✍️ Колонка «Новые показания» — жёлтая, для заполнения от руки после распечатки.</p>' : ''}
+</body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
 });
 
 document.getElementById('exportElectricityCsv').addEventListener('click', () => {
-    let items = eeRepo.getAll ? eeRepo.getAll() : [];
-    const search = document.getElementById('electricitySearchInput').value;
-    if (search) {
-        const q = search.toLowerCase().trim();
-        items = items.filter(e => {
-            const pn = String(e.plotNumber || '').toLowerCase();
-            const owner = String(e.owner || '').toLowerCase();
-            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
-            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
-            return plotMatch || owner.includes(q);
-        });
-    }
-    items.sort((a, b) => {
-        const na = parseFloat(a.plotNumber) || 0;
-        const nb = parseFloat(b.plotNumber) || 0;
-        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  let items = eeRepo.getAll ? eeRepo.getAll() : [];
+  const search = document.getElementById('electricitySearchInput').value;
+  if (search) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(e => {
+      const pn = String(e.plotNumber || '').toLowerCase();
+      const owner = String(e.owner || '').toLowerCase();
+      const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+      const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+      return plotMatch || owner.includes(q);
     });
+  }
+  items.sort((a, b) => {
+    const na = parseFloat(a.plotNumber) || 0;
+    const nb = parseFloat(b.plotNumber) || 0;
+    return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  });
 
-    const header = ['№ участка','ФИО','Пред. показания','Тек. показания','Расход кВт·ч','Тариф','Сумма','Дата'];
-    const rows = items.map(e => {
-        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
-        const amount = consumption * (e.tariff || 3.82);
-        return [e.plotNumber, e.owner || '—', (e.prevReading || 0).toFixed(2), (e.currReading || 0).toFixed(2), consumption.toFixed(2), (e.tariff || 3.82).toFixed(2), fmt(amount), e.readingDate || ''];
+  const activeCols = getActiveEeColumns();
+  const header = activeCols.map(c => {
+    const def = EE_COLUMNS.find(x => x.id === c.id);
+    return def ? def.label : c.id;
+  });
+  const rows = items.map(e => {
+    const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+    const amount = consumption * (e.tariff || 3.82);
+    return activeCols.map(c => {
+      switch(c.id) {
+        case 'plotNumber':  return e.plotNumber;
+        case 'owner':       return e.owner || '—';
+        case 'prevReading': return (e.prevReading || 0).toFixed(2);
+        case 'currReading': return (e.currReading || 0).toFixed(2);
+        case 'consumption': return consumption.toFixed(2);
+        case 'tariff':      return (e.tariff || 3.82).toFixed(2);
+        case 'amount':      return fmt(amount);
+        case 'readingDate': return e.readingDate || '';
+        case 'newReading':  return '';
+      }
+      return '';
     });
-    const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'elektroenergiya_snt.csv';
-    a.click();
+  });
+  const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'elektroenergiya_snt.csv';
+  a.click();
 });
-
 // ===================== НАСТРОЙКИ =====================
 let REQ = {
   Name: localStorage.getItem('snt_Name') || 'СНТ «Берёзка-2»',
@@ -3887,68 +4067,55 @@ document.getElementById('exportFinanceCsv').addEventListener('click', () => {
 });
 // ===================== ЭЛЕКТРОЭНЕРГИЯ =====================
 function renderElectricityPage() {
-    const noData = document.getElementById('electricityNoData');
-    const dataView = document.getElementById('electricityDataView');
+  const noData = document.getElementById('electricityNoData');
+  const dataView = document.getElementById('electricityDataView');
+  if (!eeRepo || !eeRepo.getAll || eeRepo.getAll().length === 0) {
+    if (noData) noData.style.display = '';
+    if (dataView) dataView.style.display = 'none';
+    return;
+  }
+  if (noData) noData.style.display = 'none';
+  if (dataView) dataView.style.display = '';
 
-    if (!eeRepo || !eeRepo.getAll || eeRepo.getAll().length === 0) {
-        if(noData) noData.style.display = '';
-        if(dataView) dataView.style.display = 'none';
-        return;
-    }
-
-    if(noData) noData.style.display = 'none';
-    if(dataView) dataView.style.display = '';
-
-    const search = document.getElementById('electricitySearchInput').value;
-    let items = eeRepo.getAll();
-
-    if (search) {
-        const q = search.toLowerCase().trim();
-        items = items.filter(e => {
-            const pn = String(e.plotNumber || '').toLowerCase();
-            const owner = String(e.owner || '').toLowerCase();
-            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
-            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
-            return plotMatch || owner.includes(q);
-        });
-    }
-
-    items.sort((a, b) => {
-        const na = parseFloat(a.plotNumber) || 0;
-        const nb = parseFloat(b.plotNumber) || 0;
-        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  const search = document.getElementById('electricitySearchInput').value;
+  let items = eeRepo.getAll();
+  if (search) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(e => {
+      const pn = String(e.plotNumber || '').toLowerCase();
+      const owner = String(e.owner || '').toLowerCase();
+      const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+      const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+      return plotMatch || owner.includes(q);
     });
+  }
+  items.sort((a, b) => {
+    const na = parseFloat(a.plotNumber) || 0;
+    const nb = parseFloat(b.plotNumber) || 0;
+    return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  });
 
-    const tbody = document.getElementById('electricityTableBody');
-    let totalConsumption = 0;
-    let totalSum = 0;
+  const activeCols = getActiveEeColumns();
+  const thead = document.getElementById('electricityTableHead');
+  const tbody = document.getElementById('electricityTableBody');
 
-    if (!items.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--gray-500);">Ничего не найдено</td></tr>`;
-    } else {
-        tbody.innerHTML = items.map(e => {
-            const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
-            const amount = consumption * (e.tariff || 3.82);
-            totalConsumption += consumption;
-            totalSum += amount;
+  if (thead) thead.innerHTML = '<tr>' + activeCols.map(c => getEeColHeader(c.id, 'screen')).join('') + '</tr>';
 
-            return `<tr>
-                <td><span class="plot-num-badge">${e.plotNumber}</span></td>
-                <td>${escapeHtml(e.owner || '—')}</td>
-                <td style="text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
-                <td style="text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
-                <td style="text-align:right;font-weight:600;">${consumption.toFixed(2)}</td>
-                <td style="text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
-                <td style="text-align:right;font-weight:600;color:var(--gray-800);">${fmt(amount)}</td>
-                <td style="text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
-            </tr>`;
-        }).join('');
-    }
-
-    const footer = document.getElementById('electricityTotal');
-    if (footer) {
-        footer.textContent = `Показано: ${items.length} | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽`;
-    }
+  let totalConsumption = 0, totalSum = 0;
+  if (!items.length) {
+    tbody.innerHTML = `<tr><td colspan="${Math.max(1, activeCols.length)}" style="text-align:center;padding:30px;color:var(--gray-500);">Ничего не найдено</td></tr>`;
+  } else {
+    tbody.innerHTML = items.map(e => {
+      const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+      const amount = consumption * (e.tariff || 3.82);
+      totalConsumption += consumption;
+      totalSum += amount;
+      return '<tr>' + activeCols.map(c => renderEeCellHtml(e, c.id, 'screen')).join('') + '</tr>';
+    }).join('');
+  }
+  const footer = document.getElementById('electricityTotal');
+  if (footer) footer.textContent = `Показано: ${items.length} | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽`;
+  updateEeColsInfo();
 }
 
 document.getElementById('electricitySearchInput').addEventListener('input', renderElectricityPage);
@@ -3959,84 +4126,100 @@ document.getElementById('resetElectricityFilters').addEventListener('click', () 
 });
 
 document.getElementById('printElectricityBtn').addEventListener('click', () => {
-    const search = document.getElementById('electricitySearchInput').value;
-    let items = eeRepo.getAll ? eeRepo.getAll() : [];
-    if (search) {
-        const q = search.toLowerCase().trim();
-        items = items.filter(e => {
-            const pn = String(e.plotNumber || '').toLowerCase();
-            const owner = String(e.owner || '').toLowerCase();
-            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
-            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
-            return plotMatch || owner.includes(q);
-        });
-    }
-    items.sort((a, b) => {
-        const na = parseFloat(a.plotNumber) || 0;
-        const nb = parseFloat(b.plotNumber) || 0;
-        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  const search = document.getElementById('electricitySearchInput').value;
+  let items = eeRepo.getAll ? eeRepo.getAll() : [];
+  if (search) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(e => {
+      const pn = String(e.plotNumber || '').toLowerCase();
+      const owner = String(e.owner || '').toLowerCase();
+      const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+      const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+      return plotMatch || owner.includes(q);
     });
+  }
+  items.sort((a, b) => {
+    const na = parseFloat(a.plotNumber) || 0;
+    const nb = parseFloat(b.plotNumber) || 0;
+    return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  });
 
-    const rows = items.map(e => {
-        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
-        const amount = consumption * (e.tariff || 3.82);
-        return `<tr>
-            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${e.plotNumber}</td>
-            <td style="border:1px solid #ccc;padding:6px;">${escapeHtml(e.owner || '—')}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.prevReading || 0).toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.currReading || 0).toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${consumption.toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${(e.tariff || 3.82).toFixed(2)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:right;">${fmt(amount)}</td>
-            <td style="border:1px solid #ccc;padding:6px;text-align:center;">${escapeHtml(e.readingDate || '—')}</td>
-        </tr>`;
-    }).join('');
+  const activeCols = getActiveEeColumns();
+  const headers = activeCols.map(c => getEeColHeader(c.id, 'print')).join('');
+  const rows = items.map(e => '<tr>' + activeCols.map(c => renderEeCellHtml(e, c.id, 'print')).join('') + '</tr>').join('');
+  const totalConsumption = items.reduce((s, e) => s + Math.max(0, (e.currReading || 0) - (e.prevReading || 0)), 0);
+  const totalSum = items.reduce((s, e) => s + Math.max(0, ((e.currReading || 0) - (e.prevReading || 0)) * (e.tariff || 3.82)), 0);
+  const hasNewReading = activeCols.some(c => c.id === 'newReading');
 
-    const totalConsumption = items.reduce((s, e) => s + Math.max(0, (e.currReading || 0) - (e.prevReading || 0)), 0);
-    const totalSum = items.reduce((s, e) => s + Math.max(0, ((e.currReading || 0) - (e.prevReading || 0)) * (e.tariff || 3.82)), 0);
-
-    const w = window.open('', '_blank');
-    w.document.write(`<html><head><meta charset="UTF-8"><title>Электроэнергия — СНТ Берёзка-2</title>
-        <style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;font-size:12px;}th,td{border:1px solid #ccc;padding:6px;}th{background:#e8f5e9;}h2{margin-bottom:12px;}.footer{margin-top:12px;font-size:12px;color:#666;}</style>
-        </head><body><h2>⚡ Показания электросчётчиков — СНТ «Берёзка-2» (${new Date().toLocaleDateString('ru-RU')})</h2>
-        <table><thead><tr><th>№ уч.</th><th>ФИО</th><th>Пред. показ.</th><th>Тек. показ.</th><th>Расход кВт·ч</th><th>Тариф</th><th>Сумма ₽</th><th>Дата</th></tr></thead><tbody>${rows}</tbody></table>
-        <div class="footer">Итого: ${items.length} участков | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽</div>
-        </body></html>`);
-    w.document.close();
-    setTimeout(() => w.print(), 600);
+  const w = window.open('', '_blank');
+  w.document.write(`<html><head><meta charset="UTF-8"><title>Электроэнергия — СНТ Берёзка-2</title>
+<style>
+  body{font-family:sans-serif;padding:20px;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{border:1px solid #ccc;padding:6px;}
+  th{background:#e8f5e9;}
+  h2{margin-bottom:12px;}
+  .footer{margin-top:12px;font-size:12px;color:#666;}
+  @media print { @page { size: landscape; margin: 10mm; } }
+</style>
+</head><body>
+<h2>⚡ Показания электросчётчиков — СНТ «Берёзка-2» (${new Date().toLocaleDateString('ru-RU')})</h2>
+<table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+<div class="footer">Итого: ${items.length} участков | Общий расход: ${totalConsumption.toFixed(2)} кВт·ч | Начислено: ${fmt(totalSum)} ₽</div>
+${hasNewReading ? '<p style="margin-top:12px;font-size:11px;color:#666;">✍️ Колонка «Новые показания» — жёлтая, для заполнения от руки после распечатки.</p>' : ''}
+</body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 600);
 });
 
 document.getElementById('exportElectricityCsv').addEventListener('click', () => {
-    let items = eeRepo.getAll ? eeRepo.getAll() : [];
-    const search = document.getElementById('electricitySearchInput').value;
-    if (search) {
-        const q = search.toLowerCase().trim();
-        items = items.filter(e => {
-            const pn = String(e.plotNumber || '').toLowerCase();
-            const owner = String(e.owner || '').toLowerCase();
-            const isPlotLike = /^\d+[а-яё]?$/i.test(q);
-            const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
-            return plotMatch || owner.includes(q);
-        });
-    }
-    items.sort((a, b) => {
-        const na = parseFloat(a.plotNumber) || 0;
-        const nb = parseFloat(b.plotNumber) || 0;
-        return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  let items = eeRepo.getAll ? eeRepo.getAll() : [];
+  const search = document.getElementById('electricitySearchInput').value;
+  if (search) {
+    const q = search.toLowerCase().trim();
+    items = items.filter(e => {
+      const pn = String(e.plotNumber || '').toLowerCase();
+      const owner = String(e.owner || '').toLowerCase();
+      const isPlotLike = /^\d+[а-яё]?$/i.test(q);
+      const plotMatch = isPlotLike ? pn.startsWith(q) : pn.includes(q);
+      return plotMatch || owner.includes(q);
     });
+  }
+  items.sort((a, b) => {
+    const na = parseFloat(a.plotNumber) || 0;
+    const nb = parseFloat(b.plotNumber) || 0;
+    return na - nb || String(a.plotNumber).localeCompare(String(b.plotNumber));
+  });
 
-    const header = ['№ участка','ФИО','Пред. показания','Тек. показания','Расход кВт·ч','Тариф','Сумма','Дата'];
-    const rows = items.map(e => {
-        const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
-        const amount = consumption * (e.tariff || 3.82);
-        return [e.plotNumber, e.owner || '—', (e.prevReading || 0).toFixed(2), (e.currReading || 0).toFixed(2), consumption.toFixed(2), (e.tariff || 3.82).toFixed(2), fmt(amount), e.readingDate || ''];
+  const activeCols = getActiveEeColumns();
+  const header = activeCols.map(c => {
+    const def = EE_COLUMNS.find(x => x.id === c.id);
+    return def ? def.label : c.id;
+  });
+  const rows = items.map(e => {
+    const consumption = Math.max(0, (e.currReading || 0) - (e.prevReading || 0));
+    const amount = consumption * (e.tariff || 3.82);
+    return activeCols.map(c => {
+      switch(c.id) {
+        case 'plotNumber':  return e.plotNumber;
+        case 'owner':       return e.owner || '—';
+        case 'prevReading': return (e.prevReading || 0).toFixed(2);
+        case 'currReading': return (e.currReading || 0).toFixed(2);
+        case 'consumption': return consumption.toFixed(2);
+        case 'tariff':      return (e.tariff || 3.82).toFixed(2);
+        case 'amount':      return fmt(amount);
+        case 'readingDate': return e.readingDate || '';
+        case 'newReading':  return '';
+      }
+      return '';
     });
-    const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'elektroenergiya_snt.csv';
-    a.click();
+  });
+  const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'elektroenergiya_snt.csv';
+  a.click();
 });
 
 // ===================== НАСТРОЙКИ =====================
@@ -4386,6 +4569,19 @@ setInterval(() => {
 }, 300000);
 
 addLog('✅ Приложение готово к работе', 'success');
+
+document.getElementById('toggleEeColumnsBtn').addEventListener('click', () => {
+  const panel = document.getElementById('eeColumnSettingsPanel');
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+  if (panel.style.display !== 'none') renderEeColumnList();
+});
+document.getElementById('resetEeColumnsBtn').addEventListener('click', () => {
+  if (!confirm('Сбросить настройки колонок электроэнергии к стандартным?')) return;
+  localStorage.removeItem('snt_ee_cols');
+  renderEeColumnList();
+  renderElectricityPage();
+});
+
 </script>
 </body>
 </html>
