@@ -573,13 +573,15 @@ select.filter-sel:focus{border-color:var(--green-400);}
 </div>
 <div id="electricityDataView" style="display:none;">
 <div class="search-bar">
-<input type="text" class="search-input" id="electricitySearchInput" placeholder="🔍 Поиск по участку или ФИО...">
-<div class="toolbar-right">
-<button class="btn btn-outline btn-sm" id="toggleEeColumnsBtn">⚙️ Колонки</button>
-<button class="btn btn-secondary btn-sm" id="resetElectricityFilters">✕ Сброс</button>
-<button class="btn btn-blue btn-sm" id="printElectricityBtn">🖨 Печать</button>
-<button class="btn btn-secondary btn-sm" id="exportElectricityCsv">📄 CSV</button>
-</div>
+    <input type="text" class="search-input" id="electricitySearchInput" placeholder="🔍 Поиск по участку или ФИО...">
+    <!-- Добавлен фильтр по дате -->
+    <input type="date" id="electricityDateFilter" class="filter-sel" title="Фильтр по дате снятия показаний">
+    <div class="toolbar-right">
+        <button class="btn btn-outline btn-sm" id="toggleEeColumnsBtn">⚙️ Колонки</button>
+        <button class="btn btn-secondary btn-sm" id="resetElectricityFilters">✕ Сброс</button>
+        <button class="btn btn-blue btn-sm" id="printElectricityBtn">🖨 Печать выбранных</button>
+        <button class="btn btn-secondary btn-sm" id="exportElectricityCsv">📄 CSV</button>
+    </div>
 </div>
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
     <label style="display:flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;">
