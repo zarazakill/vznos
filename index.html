@@ -872,7 +872,7 @@ const PERSONAL_ACC  = "40703810644050040322";
 const BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
 const BIC           = "045004641";
 const CORRESP_ACC   = "30101810500000000641";
-const TARIFF        = 3.82;
+const TARIFF        = 4.21;
 
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
 const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
@@ -1467,7 +1467,7 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpo
         purpose = sanitizePurpose(customPurpose) + ' уч.' + plotNumber;
     } else if (isElectricity) {
         var ee = window.currentEeData;
-        var consumption = amount / (ee && ee.tariff ? ee.tariff : 3.82);
+        var consumption = amount / (ee && ee.tariff ? ee.tariff : 4.21);
         purpose = 'Электроэнергия ' + formatAmountShort(amount) + 'р (' + 
                   Math.round(consumption) + 'кВт·ч) уч.' + plotNumber;
     } else if (debtData) {
