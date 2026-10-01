@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
-    let electricityTariff = 3.82; // Default value, will be updated from localStorage
-    let membershipTariff = 1450; // Default value, will be updated from localStorage
+    let electricityTariff = 4.21; // Default value, will be updated from localStorage
+    let membershipTariff = 1750; // Default value, will be updated from localStorage
 
     // Function to load settings from localStorage
     function loadSettings() {
