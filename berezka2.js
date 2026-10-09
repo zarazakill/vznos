@@ -277,7 +277,7 @@ function getEeColHeader(colId, mode) {
 
 function renderEeCellHtml(item, colId, mode) {
   const consumption = Math.max(0, (item.currReading || 0) - (item.prevReading || 0));
-  const amount = consumption * (item.tariff || 4.21);
+  const amount = consumption * (window.SNT_TARIFFS.electricityTariff);
   const p = (mode === 'print') ? 'border:1px solid #ccc;padding:6px;' : '';
   switch(colId) {
     case 'plotNumber':
@@ -295,7 +295,7 @@ function renderEeCellHtml(item, colId, mode) {
         ? `<td style="${p}text-align:right;">${consumption.toFixed(2)}</td>`
         : `<td style="${p}text-align:right;font-weight:600;">${consumption.toFixed(2)}</td>`;
     case 'tariff':
-      return `<td style="${p}text-align:right;">${(item.tariff || 4.21).toFixed(2)}</td>`;
+      return `<td style="${p}text-align:right;">${(window.SNT_TARIFFS.electricityTariff).toFixed(2)}</td>`;
     case 'amount':
       return mode === 'print'
         ? `<td style="${p}text-align:right;">${fmt(amount)}</td>`
@@ -512,7 +512,7 @@ function renderElectricityPage() {
     } else {
         tbody.innerHTML = items.map(item => {
             const consumption = Math.max(0, (item.currReading || 0) - (item.prevReading || 0));
-            const amount = consumption * (item.tariff || 4.21);
+            const amount = consumption * (window.SNT_TARIFFS.electricityTariff);
             totalConsumption += consumption;
             totalSum += amount;
             const checked = selectedEeIds.has(String(item.plotNumber));
@@ -546,7 +546,7 @@ function printElectricityItems(items, title) {
     const headers = activeCols.map(col => getEeColHeader(col.id, 'print')).join('');
     const rows = items.map(item => `<tr>${activeCols.map(col => renderEeCellHtml(item, col.id, 'print')).join('')}</tr>`).join('');
     const totalConsumption = items.reduce((sum, item) => sum + Math.max(0, (item.currReading || 0) - (item.prevReading || 0)), 0);
-    const totalSum = items.reduce((sum, item) => sum + Math.max(0, (item.currReading || 0) - (item.prevReading || 0)) * (item.tariff || 4.21), 0);
+    const totalSum = items.reduce((sum, item) => sum + Math.max(0, (item.currReading || 0) - (item.prevReading || 0)) * (window.SNT_TARIFFS.electricityTariff), 0);
     const hasNewReading = activeCols.some(col => col.id === 'newReading');
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -594,8 +594,8 @@ function exportElectricityCsv() {
             case 'prevReading': return (item.prevReading || 0).toFixed(2);
             case 'currReading': return (item.currReading || 0).toFixed(2);
             case 'consumption': return consumption.toFixed(2);
-            case 'tariff': return (item.tariff || 4.21).toFixed(2);
-            case 'amount': return fmt(consumption * (item.tariff || 4.21));
+            case 'tariff': return (window.SNT_TARIFFS.electricityTariff).toFixed(2);
+            case 'amount': return fmt(consumption * (window.SNT_TARIFFS.electricityTariff));
             case 'readingDate': return item.readingDate || '';
             case 'newReading': return '';
             default: return '';
@@ -1447,7 +1447,7 @@ class ElectricityRepository {
                 prevReading: this.toNum(r[5]),
                 currReading: this.toNum(r[6]),
                 consumption: this.toNum(r[7]),
-                tariff: 4.21
+                tariff: window.SNT_TARIFFS.electricityTariff
             });
             count++;
         }
@@ -1598,7 +1598,7 @@ function getElectricityInfo(plotNumber) {
     const ee = eeRepo.get(String(plotNumber).toLowerCase());
     return {
         prevReading: ee ? (ee.currReading || ee.prevReading || 0) : null,
-        tariff: ee ? (ee.tariff || 4.21) : 4.21,
+        tariff: window.SNT_TARIFFS.electricityTariff,
         readingDate: ee ? (ee.readingDate || '') : ''
     };
 }
@@ -2241,7 +2241,7 @@ function recalcRow(p, st, updateDom) {
         const cur = parseFloat(ee.currReading);
         if (!isNaN(cur) && cur >= ee.prevReading) {
             ee.consumption = Math.round((cur - ee.prevReading) * 100) / 100;
-            const tariff = (p.ee && p.ee.tariff) || 4.21;
+            const tariff = window.SNT_TARIFFS.electricityTariff;
             ee.amount = Math.round(ee.consumption * tariff * 100) / 100;
         } else {
             ee.consumption = 0;
@@ -2920,7 +2920,7 @@ function renderPassportDetail(pass) {
 
     const base = pass.base || {};
     const debit = pass.debit || {totalDebt:0, membership:0, target:0, arrears:0, work:0, electricity:0, overpayEnd:0, details:[]};
-    const ee = pass.ee || {currReading:0, prevReading:0, consumption:0, tariff:4.21, readingDate:'', owner:''};
+    const ee = pass.ee || {currReading:0, prevReading:0, consumption:0, tariff:window.SNT_TARIFFS.electricityTariff, readingDate:'', owner:''};
     const debtTotal = debit.totalDebt || 0;
     const electricityDebt = debit.electricity || 0;
     const overpay = debit.overpayEnd || 0;
@@ -2967,14 +2967,14 @@ function renderPassportDetail(pass) {
     `;
     document.getElementById('tabFinance').innerHTML = financeHtml;
 
-    const eeAmount = ((ee.currReading || 0) - (ee.prevReading || 0)) * (ee.tariff || 4.21);
+    const eeAmount = ((ee.currReading || 0) - (ee.prevReading || 0)) * window.SNT_TARIFFS.electricityTariff;
     document.getElementById('tabElectricity').innerHTML = `
         <div class="info-row"><div class="info-label">Владелец по ee:</div><div class="info-value">${escapeHtml(String(ee.owner || '—'))}</div></div>
         <div class="info-row"><div class="info-label">Текущие показания:</div><div class="info-value">${(ee.currReading || 0).toFixed(2)} кВт·ч</div></div>
         <div class="info-row"><div class="info-label">Предыдущие показания:</div><div class="info-value">${(ee.prevReading || 0).toFixed(2)} кВт·ч</div></div>
         <div class="info-row"><div class="info-label">Расход:</div><div class="info-value">${(ee.consumption || 0).toFixed(2)} кВт·ч</div></div>
         <div class="info-row"><div class="info-label">Начислено:</div><div class="info-value">${eeAmount.toFixed(2)} ₽</div></div>
-        <div class="info-row"><div class="info-label">Тариф:</div><div class="info-value">${(ee.tariff || 4.21).toFixed(2)} ₽/кВт·ч</div></div>
+        <div class="info-row"><div class="info-label">Тариф:</div><div class="info-value">${window.SNT_TARIFFS.electricityTariff.toFixed(2)} ₽/кВт·ч</div></div>
         <div class="info-row"><div class="info-label">Дата показаний:</div><div class="info-value">${escapeHtml(String(ee.readingDate || '—'))}</div></div>
     `;
 

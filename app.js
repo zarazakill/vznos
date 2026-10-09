@@ -1,21 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
-    let electricityTariff = 4.21; // Default value, will be updated from localStorage
-    let membershipTariff = 1750; // Default value, will be updated from localStorage
+    let electricityTariff = window.SNT_TARIFFS.electricityTariff;
+    let membershipTariff = window.SNT_TARIFFS.membershipTariff;
 
-    // Function to load settings from localStorage
     function loadSettings() {
-        const savedElectricityTariff = localStorage.getItem('electricityTariff');
-        if (savedElectricityTariff) {
-            electricityTariff = parseFloat(savedElectricityTariff);
-        }
         const electricityLabelSpan = document.querySelector('#electricityFeeLabel span');
         if (electricityLabelSpan) {
             electricityLabelSpan.textContent = `Электроэнергия (${electricityTariff.toFixed(2)} руб/кВт·ч)`;
-        }
-
-        const savedMembershipTariff = localStorage.getItem('membershipTariff');
-        if (savedMembershipTariff) {
-            membershipTariff = parseFloat(savedMembershipTariff);
         }
         const membershipLabelSpan = document.querySelector('#membershipFeeLabel span');
         if (membershipLabelSpan) {
@@ -24,48 +14,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     loadSettings();
-
-    function updateTariffDisplay() {
-        const membershipLabelSpan = document.querySelector('#membershipFeeLabel span');
-        if (membershipLabelSpan) {
-            membershipLabelSpan.textContent = `Членские взносы (${membershipTariff.toFixed(2)} руб/сотка)`;
-        }
-        const electricityLabelSpan = document.querySelector('#electricityFeeLabel span');
-        if (electricityLabelSpan) {
-            electricityLabelSpan.textContent = `Электроэнергия (${electricityTariff.toFixed(2)} руб/кВт·ч)`;
-        }
-    }
-
-    // Слушать изменения тарифов в localStorage
-    window.addEventListener('storage', function(e) {
-        if (e.key === 'membershipTariff' && e.newValue) {
-            membershipTariff = parseFloat(e.newValue);
-            updateTariffDisplay();
-            if (plotSotkasInput && plotSotkasInput.value && membershipCheck.checked) {
-                const sotkas = parseFloat(plotSotkasInput.value);
-                if (!isNaN(sotkas) && sotkas > 0) {
-                    membershipSumInput.value = (sotkas * membershipTariff).toFixed(2);
-                } else if (membershipSumInput.value && parseFloat(membershipSumInput.value) > 0) {
-                    plotSotkasInput.value = (parseFloat(membershipSumInput.value) / membershipTariff).toFixed(2);
-                }
-                calculateTotal();
-            }
-        }
-        if (e.key === 'electricityTariff' && e.newValue) {
-            electricityTariff = parseFloat(e.newValue);
-            updateTariffDisplay();
-            if (meterReadingCurrInput.value && meterReadingPrevInput.value && electricityCheck.checked) {
-                updateElectricityFields();
-            } else if (electricitySumInput.value && parseFloat(electricitySumInput.value) > 0 && electricityCheck.checked) {
-                const prev = parseFloat(meterReadingPrevInput.value) || 0;
-                const sum = parseFloat(electricitySumInput.value);
-                const kwh = sum / electricityTariff;
-                meterReadingCurrInput.value = Math.round(prev + kwh);
-                kwhUsedElement.textContent = Math.round(kwh);
-                calculateTotal();
-            }
-        }
-    });
 
     // Constants for element IDs
     const ELEM_PAYER_NAME = 'payerName';

@@ -1,8 +1,9 @@
 // sw.js - Service Worker для кеширования и офлайн-доступа
-const CACHE_NAME = 'berezka2-v2';
+const CACHE_NAME = 'berezka2-v3';
 const urlsToCache = [
     './',
 './index.html',
+    './tariffs.js',
 './favicon.ico',
 './favicon-16x16.png',
 './favicon-32x32.png',

@@ -15,12 +15,6 @@ class DataSync {
                     console.error('Error parsing plotData:', err);
                 }
             }
-            if (e.key === 'membershipTariff' && e.newValue) {
-                this.notifyListeners('membershipTariff', parseFloat(e.newValue));
-            }
-            if (e.key === 'electricityTariff' && e.newValue) {
-                this.notifyListeners('electricityTariff', parseFloat(e.newValue));
-            }
         });
     }
 
@@ -46,35 +40,17 @@ class DataSync {
         }));
     }
 
-    static saveMembershipTariff(value) {
-        localStorage.setItem('membershipTariff', value.toString());
-        window.dispatchEvent(new StorageEvent('storage', {
-            key: 'membershipTariff',
-            newValue: value.toString()
-        }));
-    }
-
-    static saveElectricityTariff(value) {
-        localStorage.setItem('electricityTariff', value.toString());
-        window.dispatchEvent(new StorageEvent('storage', {
-            key: 'electricityTariff',
-            newValue: value.toString()
-        }));
-    }
-
     static getPlotData() {
         const data = localStorage.getItem('plotData');
         return data ? JSON.parse(data) : null;
     }
 
     static getMembershipTariff() {
-        const tariff = localStorage.getItem('membershipTariff');
-        return tariff ? parseFloat(tariff) : 1450;
+        return window.SNT_TARIFFS.membershipTariff;
     }
 
     static getElectricityTariff() {
-        const tariff = localStorage.getItem('electricityTariff');
-        return tariff ? parseFloat(tariff) : 3.82;
+        return window.SNT_TARIFFS.electricityTariff;
     }
 }
 

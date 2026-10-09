@@ -857,6 +857,7 @@ body {
         </div>
     </main>
 </div>
+<script src="./tariffs.js"></script>
 <script>
 // ================================================================
 // КОНСТАНТЫ
@@ -872,7 +873,6 @@ const PERSONAL_ACC  = "40703810644050040322";
 const BANK_NAME     = "Сибирский Банк ПАО Сбербанк г. Новосибирск";
 const BIC           = "045004641";
 const CORRESP_ACC   = "30101810500000000641";
-const TARIFF        = 4.21;
 
 const DEBIT_URL = "https://raw.githubusercontent.com/zarazakill/vznos/main/debit.ods";
 const EE_URL    = "https://raw.githubusercontent.com/zarazakill/vznos/main/ee.ods";
@@ -1277,7 +1277,7 @@ function parseElectricityOds(xml) {
             previousReading: prevReading,
             currentReading: currReading,
             consumption: consumption,
-            tariff: TARIFF
+            tariff: window.SNT_TARIFFS.electricityTariff
         });
         
         if (['15', '16', '17', '90', '5', '1'].indexOf(plotNum) !== -1) {
@@ -1467,7 +1467,7 @@ function buildPaymentQR(plotNumber, amount, debtData, isElectricity, customPurpo
         purpose = sanitizePurpose(customPurpose) + ' уч.' + plotNumber;
     } else if (isElectricity) {
         var ee = window.currentEeData;
-        var consumption = amount / (ee && ee.tariff ? ee.tariff : 4.21);
+        var consumption = amount / window.SNT_TARIFFS.electricityTariff;
         purpose = 'Электроэнергия ' + formatAmountShort(amount) + 'р (' + 
                   Math.round(consumption) + 'кВт·ч) уч.' + plotNumber;
     } else if (debtData) {
@@ -1641,7 +1641,7 @@ function renderElectricityCard(ee) {
         '<div class="plot-sub">Участок №' + escapeHtml(ee.plotNumber) + '</div>' +
         '<div class="debt-line"><span class="debt-line-label">Текущие показания</span><strong>' + formatNumber(ee.currentReading) + ' кВт·ч</strong></div>' +
         '<div class="debt-line"><span class="debt-line-label">Дата снятия</span><span>' + escapeHtml(dateDisplay) + '</span></div>' +
-        '<div class="debt-line"><span class="debt-line-label">Тариф</span><span>' + TARIFF.toFixed(2) + ' ₽/кВт·ч</span></div>' +
+        '<div class="debt-line"><span class="debt-line-label">Тариф</span><span>' + window.SNT_TARIFFS.electricityTariff.toFixed(2) + ' ₽/кВт·ч</span></div>' +
         '<label class="manual-label mt-md">Введите новые показания:</label>' +
         '<input type="number" id="newReadingInput" class="reading-input" placeholder="' + ee.currentReading + '" step="any" inputmode="decimal">' +
         '<div id="calcAmountBlock" class="calc-block"></div>' +
@@ -1673,7 +1673,7 @@ function renderElectricityCard(ee) {
                 genBtn.disabled = true;
                 return;
             }
-            var amount = (newVal - ee.currentReading) * TARIFF;
+            var amount = (newVal - ee.currentReading) * window.SNT_TARIFFS.electricityTariff;
             calc.textContent = '📊 Сумма к оплате: ' + formatAmountShort(amount) + ' ₽';
             calc.style.display = 'block';
             genBtn.disabled = false;

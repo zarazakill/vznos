@@ -1,0 +1,36 @@
+BASELINE MANIFEST
+Captured before audit documents were written: 2026-10-03
+Algorithm: SHA-256
+Baseline branch: baseline/pre-websim
+Baseline source commit: 64eb6b7 (local only; source and static assets, no data files)
+Excluded from Git for privacy/unknown-content reasons: all ODS, XLSX, data.json, Berezka2.apk. Their full pre-documentation hashes are listed below. No .websim.json or .websim-manifest.json was present.
+
+5997a1b9ccc62828bdf554a2564297c8f2aea28194ca59d93491e5972f722e84  ./50.ods
+6b999b514ea88d6429805d408756a17f9b725a305cd8485cb60a81a6f595497b  ./51.ods
+000fbda698c85c5062a7ba2733c2c7c1a249919352b4f6150ec7f452555e31fd  ./71-01.ods
+e21406e76c7781cb408e07b048b1aa16cf60b7826476a76091375125e52db20f  ./71.ods
+41c360d4240aaa5c9ebc0791a736e45467fa8d4707e98c1673db7299352a91ec  ./71_01.ods
+ab2fd3d3419d18f38522d4798d950a5014a72fdb58b7bc784a0d450fd0c533b1  ./admin.html
+c755e100d2db6da34fde9fd7f2bc50ab560ff1469e51217389568f66e1306764  ./admin.js
+a8bc927ba455808fdc253f068163a0a3cb27513e2078b4e640556a60cffbf278  ./app.js
+7e258c6343b68fb0495c29117808e7069b0d97374bfe32276aa3184e6454e04a  ./base.ods
+1757c5fba075abb60455eeed429f12c7a3950a99b934ae90c082791c7de7dd69  ./berezka2.css
+c4d26ee4b4bc0c629d1450d57d637f24c53ed245f0db06207003504146b965af  ./berezka2.html
+1357882a925c8037174a73ad5d6e6ad6e59064bcc0624c577f1fc65e2d23998a  ./berezka2.js
+214f66043fa5b74b881fae1550682d18251063047d9cc3754083f8625f835fbd  ./data.json
+8481bc433229366ff195f78a3cb34eee3513236245ef03497bcd447b0ee40005  ./debit.ods
+cce3f7398648b12a1fd4191a96279d295a79f1e17e3564f8a8baf13fc9378945  ./debit.xlsx
+acdae356087e70bbec8bd9c68c8a4d1bb9bfe70f7178fd6c0c6021f1fd1ac039  ./ee.ods
+188ba02b641e5b2df30664a38668aadbbf5f8fd4dd83ea1676adf9998f18f357  ./ee.xlsx
+45b3adc6d780b84bee67acce3945b31b660aa363db3c1823dc7a808801debaa9  ./index.html
+90babde0c01cf391b91c0d1a5c249f23baf2c79b21d6f5599da07767bfa8b23d  ./login.html
+4e896cafe51b19f71314945a53be94ef1d5f05f16802306f1411abaaead6525a  ./login.js
+1257a8be8aacf5d2776c246f769b4dfebcf7070a41b8324cc322437d1d489770  ./manifest.json
+8a3d12cff4a4cbc37308e44dd38c13c16452328f47490231b55c0bf3cab52772  ./payment.html
+17868c8b16aba8b09adfeb9c24b8782eb658909b4394ad8aa2673a8bb3756f21  ./smeta2026.xlsx
+78c06eb4c91bd6ad1fdde195dd7cf0aafb12e67d83843743b18f26ba602d5701  ./style.css
+8755148aec46f0ead85078a1b70e5278659ca2e0801e7a0738d6fd865500c3e5  ./sw.js
+c09b4b2c7191106df35abe73a48bca02ee5d02fe1bd72ab665d6d7357c24cc78  ./sync.js
+62cf536a40ed4ca75efe9e88ac59e56d685268d9ec61b6e41bb2aec2f6dc7ab4  ./version.json
+
+Hash scope: *.html, *.js, *.css, *.json, *.ods, *.xlsx, *.websim.json, *.websim-manifest.json, sw.js, manifest.json.

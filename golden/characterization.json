@@ -1,0 +1,23 @@
+{
+  "base": {
+    "owner": "Synthetic Owner A"
+  },
+  "debt": {
+    "totalDebt": 1500.5,
+    "membershipDebt": 1000.25,
+    "targetDebt": 500.25
+  },
+  "electricity": {
+    "tariff": 4.21,
+    "previousReading": 20,
+    "currentReading": 27,
+    "consumption": 7
+  },
+  "multipleOwners": [
+    "Synthetic Owner A (6 сот.)",
+    "Synthetic Owner B (8 сот.)"
+  ],
+  "total": "20.00 руб.",
+  "qrPublic": "ST00012|Name=Synthetic Garden|PersonalAcc=00000000000000000000|BankName=Synthetic Bank|BIC=000000000|CorrespAcc=00000000000000000000|PayeeINN=0000000000|Purpose=Synthetic fee note уч.9876z|Sum=1234",
+  "qrFinancePurpose": "Synthetic fee, уч. 9876z"
+}

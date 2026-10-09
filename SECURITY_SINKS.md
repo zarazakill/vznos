@@ -1,0 +1,37 @@
+# Security Sink Inventory
+
+Static inventory only; no sink was patched. "Trusted" means trust was demonstrated by a fixed literal or a producer reviewed in this limited audit, not by UI visibility. Encoding is context-dependent; no blanket sanitizer is inferred. Line references are source line numbers at baseline.
+
+| file:line | input | source | sink | trusted? | sanitized? | encoding? | risk | replacement/review |
+|---|---|---|---|---|---|---|---|---|
+| index.html:71 | clear button action | fixed inline handler | innerHTML='' | yes, fixed empty value | N/A | N/A | low | no change needed based on current literal |
+| index.html:1614,1639,1697 | debt/electricity/plot values | remote ODS parser maps | innerHTML templates | no, remote public data | escapeHtml helper exists, per-template coverage UNKNOWN | HTML context uncertain | stored XSS | enumerate interpolation and use text nodes or context-specific escaping; retain intended markup |
+| index.html:1865,1904 | settings/consent state | DOM/user selection | innerHTML templates | mixed | UNKNOWN | HTML context uncertain | DOM XSS if user text enters templates | inspect each dynamic field before replacement |
+| index.html:2064 | error/status state | fetch/error details | innerHTML append | no | fixed markup part; error interpolation UNKNOWN | HTML context uncertain | reflected XSS | render message as text and construct fixed button DOM after characterization |
+| admin.js:247 | table body clear | fixed empty string | innerHTML | yes | N/A | N/A | low | no action required |
+| admin.js:648,651 | selected plots/no-data state | local data and fixed string | innerHTML | mixed | fixed message only at 651; plot list built via DOM nearby | HTML context | low/unknown | verify complete block and preserve behavior |
+| admin.js:666 | label/checkbox output | plotData | innerHTML | no | UNKNOWN | HTML context | XSS through imported names | build DOM/text nodes for data while preserving label behavior |
+| admin.js:685-721 | generated receipt templates | plotData/imported values/QR data | innerHTML | no | partial escaping not established | HTML + URL context | XSS in print/admin | audit each field and use context-specific renderer |
+| admin.js:911 | QR data URL | QRCode result | img src inside HTML string | producer library | no URL allowlist | URL context | low if producer remains trusted | use DOM src assignment after validating expected data:image URL |
+| app.js:408,517 | owner list | plotData/data.json | innerHTML | no | UNKNOWN | HTML context | XSS from JSON records | DOM/text node for records; preserve fixed presentation |
+| app.js:836 | receipt form data | user inputs/plotData | innerHTML | no | UNKNOWN | HTML context | reflected/stored XSS | audit/escape values per context; don't remove intended HTML |
+| app.js:789 | QR data URL | QRCode result | img src in receipt HTML | producer library | no explicit URL validation | URL context | low/unknown | validate generated data URL and assign via DOM |
+| berezka2.js:317 | col config | defaults + localStorage snt_ee_cols | innerHTML | partially; config can persist/edit | labels/ids not proven escaped at every interpolation | HTML/attribute/style context | markup/attribute injection | validate config against fixed schema and use DOM construction |
+| berezka2.js:506,511-513 | electricity rows | remote ODS/import | innerHTML | no | some fields call escapeHtml; per-field coverage mixed | HTML context | XSS | complete column-level source/sanitizer mapping |
+| berezka2.js:556 | readings/table print output | remote/import rows | document.write | no | UNKNOWN | HTML document context | XSS in print popup | preserve print feature, construct validated DOM or escaped template |
+| berezka2.js:1529,1580-1591 | finance file/status text | fetch errors, computed totals | innerHTML | mixed | error message interpolation uncertain | HTML context | reflected XSS | render error text separately from fixed markup |
+| berezka2.js:1858,1863-1941 | chart/statistics | finance data | innerHTML | no | UNKNOWN | HTML context; some dimensions/styles computed | XSS/style injection | validate categories and numeric dimensions; DOM/text nodes |
+| berezka2.js:2031-2034,2204 | debtor rows and print | ODS/import/user-controlled data | innerHTML/document.write | no | UNKNOWN | HTML/document context | XSS | context-escape row fields and keep intentional template structure |
+| berezka2.js:2351,2713-2732,2789 | receipts/print batch | owner/debt/purpose inputs | innerHTML/document.write | no | mixed; some escapeHtml usage nearby | HTML/document context | XSS and QR data URL injection | map each dynamic interpolation; use validated QR URL and escaped text |
+| berezka2.js:2880-2982,3049,3313-3326 | passport/finance views | imported finance/base data | innerHTML | no | some escaping, coverage UNKNOWN | HTML context | stored XSS | per-field characterization and contextual output encoding |
+| berezka2.js:3558-3589,3718 | users/roles/result text | users.json and user form | innerHTML | no | username/labels not fully established | HTML context | XSS/account-management UI injection | render untrusted fields as text; keep fixed labels/markup |
+| index.html:150,154; admin.html:149-151; berezka2.html:7-11; payment.html:10,251 | remote scripts | pinned CDN URLs | script src | external supplier | no SRI attribute found | browser script loading | supply-chain risk | document exact version/integrity; do not update in Phase 0 |
+| index.html:1777 | plot_number, reading_value, photo | selected plot/form/file | fetch POST to external endpoint | endpoint UNKNOWN | no payload schema validation found here | multipart | privacy disclosure | document owner/consent/server behavior; no removal proposed |
+| index.html:1510,1529,1532,1541 | QR image | QRCode data URL | img.src/fetch/href/download | generated library output | no explicit scheme allowlist | URL/data URL | low unless QR source changes | accept only expected image data URL; preserve share/download |
+| index.html:1806 | selected photo | FileReader result | preview img.src | browser-produced data URL | browser-generated | data URL | resource exhaustion/large file unknown | test file size/type before any later change |
+| app.js:481; berezka2.js:607,2158,3390 | QR/blob | canvas or URL.createObjectURL | anchor.href/download | generated by browser/library | browser-generated | URL | low | revoke object URLs as existing lifecycle allows; characterize |
+| berezka2.js:2043 | phone | remote owner phone | tel href | data-controlled | href keeps digits/plus only; visible text calls escapeHtml | URI | malformed URI/context | retain validation and test edge cases |
+| login.js/admin.js:8,29 and admin.js:4,106 | fixed route | source literal | window.location.href | yes, fixed | N/A | URL path | low | no change indicated |
+| *.js dynamic style assignments listed in source | percent/toggle/state/notification | computed number or fixed UI literal; localStorage column config in berezka | element.style / cssText / style attribute | mixed | numeric progress/toast colors bounded in inspected use; persisted column style values UNKNOWN | CSS context | style injection/layout deception | distinguish fixed styling from data-derived style; schema-validate dynamic CSS values |
+
+No matches for outerHTML, insertAdjacentHTML, eval, new Function, setTimeout(string), or setInterval(string) were found in the static scan. This is not proof against dynamically constructed code outside the searched source set.
